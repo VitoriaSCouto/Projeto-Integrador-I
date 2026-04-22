@@ -1,0 +1,112 @@
+<!-- <!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SOS Vale — Login</title>
+</head>
+<body>
+  <h2>SOS Vale — Painel Administrativo</h2>
+
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="senha" placeholder="Senha" />
+  <button onclick="fazerLogin()">Entrar</button>
+  <p id="erro" style="color:red;"></p>
+
+  <!-- SDK do Firebase -->
+  <!-- <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    // Cole aqui o firebaseConfig que você copiou do painel
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "sos-vale.firebaseapp.com",
+      projectId: "sos-vale",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.fazerLogin = async function() {
+      const email = document.getElementById("email").value;
+      const senha = document.getElementById("senha").value;
+
+      try {
+        const resultado = await signInWithEmailAndPassword(auth, email, senha);
+        const token = await resultado.user.getIdToken();
+
+        // Salva o token no navegador e vai para o painel
+        localStorage.setItem("token", token);
+        window.location.href = "painel.html";
+
+      } catch (erro) {
+        document.getElementById("erro").textContent = "Email ou senha incorretos.";
+      }
+    }
+  </script>
+</body>
+</html>
+```
+
+--- -->
+
+<!-- **Passo 3 — Backend C# valida o token**
+
+Instale o pacote no projeto C#:
+```
+dotnet add package FirebaseAdmin  -->
+
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SOS Vale — Login</title>
+</head>
+<body>
+  <h2>SOS Vale — Login</h2>
+  <input type="email" id="email" placeholder="Email" /><br><br>
+  <input type="password" id="senha" placeholder="Senha" /><br><br>
+  <button onclick="fazerLogin()">Entrar</button>
+  <p id="resultado"></p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    // Substitua pelos dados do SEU projeto Firebase
+    // Configurações do projeto → Geral → Seus aplicativos
+    const firebaseConfig = {
+      apiKey: "AIzaSyBBj6aCgmBkQHewM0I5tMn4tPHlK_1q11Q",
+      authDomain: "sos-vale.firebaseapp.com",
+      projectId: "sos-vale",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.fazerLogin = async function() {
+      const email = document.getElementById("email").value;
+      const senha = document.getElementById("senha").value;
+
+      try {
+        const resultado = await signInWithEmailAndPassword(auth, email, senha);
+        const token = await resultado.user.getIdToken();
+
+        // Envia o token para o backend C# validar
+          const resposta = await fetch("http://localhost:5168/api/auth/validar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: token })
+        });
+
+        const dados = await resposta.json();
+        document.getElementById("resultado").textContent = dados.mensagem;
+
+      } catch (erro) {
+        document.getElementById("resultado").textContent = "Erro: " + erro.message;
+      }
+    }
+  </script>
+</body>
+</html>

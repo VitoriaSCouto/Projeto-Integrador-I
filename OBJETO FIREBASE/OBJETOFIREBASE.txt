@@ -1,0 +1,90 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBBj6aCgmBkQHewM0I5tMn4tPHlK_1q11Q",
+  authDomain: "sos-vale.firebaseapp.com",
+  projectId: "sos-vale",
+  storageBucket: "sos-vale.firebasestorage.app",
+  messagingSenderId: "277574163694",
+  appId: "1:277574163694:web:afb03aeecebcc7ff3227ff",
+  measurementId: "G-FEN6EMDPBQ"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+
+
+
+HTML ------------------
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SOS Vale — Login</title>
+</head>
+<body>
+  <h2>SOS Vale — Painel Administrativo</h2>
+
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="senha" placeholder="Senha" />
+  <button onclick="fazerLogin()">Entrar</button>
+  <p id="erro" style="color:red;"></p>
+
+  <!-- SDK do Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    // Cole aqui o firebaseConfig que você copiou do painel
+    const firebaseConfig = {
+      apiKey: "AIzaSyBBj6aCgmBkQHewM0I5tMn4tPHlK_1q11Q",
+      authDomain: "sos-vale.firebaseapp.com",
+      projectId: "sos-vale",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.fazerLogin = async function() {
+      const email = document.getElementById("email").value;
+      const senha = document.getElementById("senha").value;
+
+      try {
+        const resultado = await signInWithEmailAndPassword(auth, email, senha);
+        const token = await resultado.user.getIdToken();
+
+        // Salva o token no navegador e vai para o painel
+        localStorage.setItem("token", token);
+        window.location.href = "painel.html";
+
+      } catch (erro) {
+        document.getElementById("erro").textContent = "Email ou senha incorretos.";
+      }
+    }
+  </script>
+</body>
+</html>
+```
+
+---
+
+**Passo 3 — Backend C# valida o token**
+
+Instale o pacote no projeto C#:
+```
+dotnet add package FirebaseAdmin
+
+
+
+
+
+C#---------------------------------

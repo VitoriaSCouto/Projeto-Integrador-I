@@ -1,0 +1,6 @@
+@SOS_Vale_HostAddress = http://localhost:5168
+
+GET {{SOS_Vale_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
