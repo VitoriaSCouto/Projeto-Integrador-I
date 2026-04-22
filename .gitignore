@@ -2,3 +2,5 @@
 node_modules/
 bin/
 obj/
+serviceAccountKey.json/
+*.json
