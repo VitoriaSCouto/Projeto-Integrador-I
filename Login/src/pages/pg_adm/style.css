@@ -1,0 +1,100 @@
+.dashboard {
+    display: flex;
+    min-width: 100%;
+}
+
+.sidebar {
+    width: 220px;
+    height: 100vh;
+    background: #2d1f6b;
+    color: white;
+    padding: 20px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    padding: 12px;
+    margin: 8px 0;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.sidebar li:hover,
+.sidebar .active {
+    background: #3f2db3;
+}
+
+.icon {
+    width: 30px;
+}
+
+.icon2 {
+    width: 35px;
+    height: 35px;
+    color: rgb(97, 0, 0);
+}
+
+.icon3 {
+    width: 35px;
+    height: 35px;
+}
+
+.main {
+    flex: 1;
+    padding: 20px;
+}
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alerts {
+    margin-top: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+}
+
+.alert {
+    background: #f5dede;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 10px 0;
+    display: flex;
+    justify-content: space-between;
+}
+
+.actions {
+    margin-top: 20px;
+}
+
+.cards {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    width: 140px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+}
+
+.card img {
+    width: 80px;
+}
+
+.card:hover {
+    transform: scale(1.05);
+    transition: 0.2s;
+}
