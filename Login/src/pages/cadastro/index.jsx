@@ -29,7 +29,7 @@ const Cadastro = () => {
             <div className="button-cad">
                     <button>Enviar</button>
                 <div className="signup-link">
-                    <a href="/login">Já possui uma conta? Faça login.</a>
+                    <a href="/login">Já possui uma conta? Faça LOGIN.</a>
                 </div>
             </div>
 
