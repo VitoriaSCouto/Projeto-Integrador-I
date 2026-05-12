@@ -1,3 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700&display=swap');
+* {
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: #f0f0f0;
+}
+
 .dashboard {
     display: flex;
     min-width: 100%;
@@ -45,20 +54,30 @@
 
 .main {
     flex: 1;
-    padding: 20px;
 }
 
 .top {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 10px 0px 10px 30px;
+    font-size: 30px;
+    font-weight: 600;
+    background-color: #d9d9d9;
+}
+
+.text-alert {
+    margin-top: 40px;
+    margin-left: 50px;
+    color: #0039ac;
 }
 
 .alerts {
-    margin-top: 20px;
-    background: white;
-    padding: 20px;
+    margin: 10px 50px 10px 50px;
+    padding: 10px 30px 10px 30px;
     border-radius: 15px;
+    background-color: white;
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
 }
 
 .alert {
@@ -70,8 +89,19 @@
     justify-content: space-between;
 }
 
+.alert span {
+    color: #ff0000;
+}
+
 .actions {
-    margin-top: 20px;
+    padding-top: 30px;
+    padding-left: 50px;
+    border-radius: 15px;
+}
+
+.text-acoes {
+    margin: 40px 0px -30px 50px;
+    color: #0039ac;
 }
 
 .cards {
@@ -84,9 +114,9 @@
     background: white;
     padding: 20px;
     border-radius: 15px;
-    width: 140px;
+    width: 220px;
     text-align: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     cursor: pointer;
 }
 
