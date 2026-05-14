@@ -25,3 +25,19 @@ model Admin {
 
   @@map("admin")
 }
+
+model Abrigo {
+  id                      Int      @id @default(autoincrement())
+  nome                    String
+  endereco                String
+  telefone                String?
+  responsavel             String
+  tipoAbrigo              String
+  capacidadeTotal         Int
+  capacidadeOcupada       Int      @default(0)
+  possuiAtendimentoMedico Boolean  @default(false)
+  status                  String   @default("ativo")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  @@map("abrigo")
+}

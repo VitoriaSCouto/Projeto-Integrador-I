@@ -4,6 +4,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import fastifyJwt from '@fastify/jwt'
 import authRoutes from './routes/auth.js'
+import abrigoRoutes from './routes/abrigos.js'
 import 'dotenv/config' // Garante que o process.env funcione
 
 //cria a instância
@@ -21,7 +22,7 @@ app.register(fastifyJwt, {
 
 // Registra as suas rotas
 app.register(authRoutes, { prefix: '/api/auth' })
-
+app.register(abrigoRoutes, { prefix: '/api/abrigos' })
 // Inicia o servidor
 const start = async () => {
   try {
