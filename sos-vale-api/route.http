@@ -1,2 +1,6 @@
 POST http://localhost:3000/api/abrigos/cadastrar
+<<<<<<< HEAD
 Content-Type: application/json
+=======
+Content-Type: application/json
+>>>>>>> 07cd450ba87d01fda8d6fe79c31389eaca4d9aa5
