@@ -6,6 +6,7 @@ import LoginAdm from './pages/login_adm';
 import Login from './pages/login'; 
 import PgAdm from './pages/pg_adm';
 import Cadastro from './pages/cadastro';
+import CadastroAbrigo from './pages/cadastro_abrigo';
 
 function App() {
   return (
@@ -21,6 +22,8 @@ function App() {
           <Route path="/pg_adm" element={<PgAdm />} />
           
           <Route path="/cadastro" element={<Cadastro />} /> 
+
+          <Route path="/cadastro-abrigo" element={<CadastroAbrigo />} />  
         </Routes>
       </Router>
     </div>

@@ -1,11 +1,2 @@
 POST http://localhost:3000/api/abrigos/cadastrar
 Content-Type: application/json
-
-{
-  "nome": "Abrigo Esperança",
-  "endereco": "Rua das Flores, 123",
-  "telefone": "11999999999",
-  "responsavel": "João Silva",
-  "tipoAbrigo": "emergencial",
-  "capacidadeTotal": 50
-}
