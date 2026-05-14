@@ -41,3 +41,17 @@ model Abrigo {
 
   @@map("abrigo")
 }
+
+model Regiao {
+  id                 Int      @id @default(autoincrement())
+  nome               String
+  cidade             String
+  estado             String
+  populacaoEstimada  Int?
+  areaKm2            Float?
+  nivelRisco         String   @default("baixo")
+  statusAlerta       Boolean  @default(false)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@map("regiao")
+}
