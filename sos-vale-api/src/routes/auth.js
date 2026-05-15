@@ -53,8 +53,7 @@ export default async function authRoutes(app) {
   })
 
 
-
-  // rota de login 
+  // Rota de login 
   // POST /api/auth/login
   // Recebe email e senha, retorna o token JWT
   app.post('/login', async (request, reply) => {

@@ -1,3 +1,4 @@
+//A linha 
 import { useState } from "react";
 
 const CadastroAbrigo = () => {
@@ -14,6 +15,8 @@ const CadastroAbrigo = () => {
       tipoAbrigo: e.target.tipoAbrigo.value,
       capacidadeTotal: Number(e.target.capacidadeTotal.value)
     }
+    // Envia os dados para o backend
+  
 
     const resposta = await fetch('http://localhost:3000/api/abrigos/cadastrar', {
       method: 'POST',

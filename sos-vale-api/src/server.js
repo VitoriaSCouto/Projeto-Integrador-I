@@ -1,4 +1,4 @@
-
+//Os imports necessários para o servidor
 
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
@@ -23,6 +23,8 @@ app.register(fastifyJwt, {
 // Registra as suas rotas
 app.register(authRoutes, { prefix: '/api/auth' })
 app.register(abrigoRoutes, { prefix: '/api/abrigos' })
+
+
 // Inicia o servidor
 const start = async () => {
   try {
