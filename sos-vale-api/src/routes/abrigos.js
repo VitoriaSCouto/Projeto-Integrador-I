@@ -10,6 +10,7 @@ const prisma = new PrismaClient()
 export default async function abrigoRoutes(app) {
 
   //Rota utilizando o método POST para cadastrar um novo abrigo
+  //URL http://localhost:3000/api/abrigos/cadastrar
   app.post('/cadastrar', async (request, reply) => {
 
     const { nome, endereco, telefone, responsavel, tipoAbrigo, capacidadeTotal } = request.body
@@ -42,11 +43,31 @@ export default async function abrigoRoutes(app) {
   })
 
   //Rota utilizando o método GET para listar todos os abrigos
+  //Rota também com a possibilidade de filtrar por nome ou cidade, usando query params
+  //URL http://localhost:3000/api/abrigos/listar?nome=
+  //URL http://localhost:3000/api/abrigos/listar?endereco=
   app.get('/listar', async (request, reply) => {
 
     //Busca todos os abrigos no banco de dados
     //e armazena na variavel abrigo como array
-    const abrigo = await prisma.abrigo.findMany()
+
+    //Se quiser filtrar por nome ou cidade, pode usar query params
+    const { nome, endereco } = request.query
+
+    
+    //Busca todos os abrigos no banco de dados com base nos filtros de nome e cidade, se fornecidos
+    //e armazena na variavel abrigo como array
+    const abrigo = await prisma.abrigo.findMany({
+      where: {
+
+        //O contains é para buscar por partes do nome ou cidade,
+        //e o mode: 'insensitive' é para não diferenciar maiúsculas de minúsculas
+        //undefined é para não aplicar o filtro se o query param não for informado
+
+        nome: nome ? { contains: nome, mode: 'insensitive' } : undefined,
+        endereco: endereco ? { contains: endereco, mode: 'insensitive' } : undefined
+      }
+    })
 
     //Aqui o Array é ITERADO
     //Iterar =>
@@ -63,6 +84,7 @@ export default async function abrigoRoutes(app) {
   })
 
   //Rota utilizando o método PUT para atualizar as informações de um abrigo
+  //URL http://localhost:3000/api/abrigos/atualizar/:id
   app.put('/atualizar/:id', async (request, reply) => {
 
     // Extrai o ID do abrigo dos parâmetros da URL
@@ -110,6 +132,32 @@ export default async function abrigoRoutes(app) {
       capacidadeOcupada: abrigoAtualizado.capacidadeOcupada,
       possuiAtendimentoMedico: abrigoAtualizado.possuiAtendimentoMedico,
       status: abrigoAtualizado.status
+    })
+  })
+
+//Rota utilizando o método DELETE para excluir um abrigo
+//URL http://localhost:3000/api/abrigos/excluir/:id
+  app.delete('/excluir/:id', async (request, reply) => {
+    // Extrai o ID do abrigo dos parâmetros da URL
+     const {id} = request.params
+     
+    // Verifica se o abrigo existe
+    const abrigoExistente = await prisma.abrigo.findUnique({
+      where: { id: Number(id) }
+    })
+
+    // Senão existir, retorna erro 404
+    if (!abrigoExistente) {
+      return reply.status(404).send({ mensagem: 'Abrigo não encontrado.' })
+    }
+
+    // Exclui o abrigo do banco de dados
+    await prisma.abrigo.delete({
+      where: { id: Number(id) }
+    })  
+
+    return reply.status(200).send({
+      mensagem: 'Abrigo excluído com sucesso!'
     })
   })
 
