@@ -19,6 +19,7 @@
     "@fastify/cors": "^10.0.0",
     "@fastify/jwt": "^9.0.0",
     "@prisma/client": "^6.19.3",
+    "@prisma/config": "^7.8.0",
     "dotenv": "^16.0.0",
     "fastify": "^5.8.5",
     "prisma": "^6.19.3",
