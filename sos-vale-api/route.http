@@ -1,0 +1,107 @@
+//ROUTE.HTTP tem a função de testar as ROTAS URL.
+//NÃO é necessario para o código,
+//necessario apenas para manter sanidade mental
+
+// --------------------------
+// Abrigos
+
+POST http://localhost:3000/api/abrigos/cadastrar
+Content-Type: application/json
+
+{
+  "nome": "Abrigo Rua Apple",
+  "endereco": "Rua Teste, 123",
+  "telefone": "11999999999",
+  "responsavel": "João Silva",
+  "tipoAbrigo": "emergencial",
+  "capacidadeTotal": 50,
+  "capacidadeOcupada": 20,
+  "possuiAtendimentoMedico": false,
+  "status": "ativo"
+}
+
+###
+
+GET http://localhost:3000/api/abrigos/listar
+
+###
+
+GET http://localhost:3000/api/abrigos/listar?nome=Apple
+// GET com filtro por nome
+
+###
+
+GET http://localhost:3000/api/abrigos/listar?endereco=Rua
+// GET com filtro por endereco
+
+###
+
+PUT http://localhost:3000/api/abrigos/atualizar/2
+Content-Type: application/json
+
+{
+  "nome": "AppleHouse",
+  "endereco": "Rua apple, 123",
+  "telefone": "11999999999",
+  "responsavel": "João Silva",
+  "tipoAbrigo": "emergencial",
+  "capacidadeTotal": 50,
+  "capacidadeOcupada": 20,
+  "possuiAtendimentoMedico": false,
+  "status": "ativo"
+}
+
+###
+
+DELETE http://localhost:3000/api/abrigos/excluir/3
+
+// --------------------------
+// Regioes
+
+POST http://localhost:3000/api/regioes/cadastrar
+Content-Type: application/json
+
+{
+  "nome": "Centro",
+  "cidade": "Taubaté",
+  "estado": "SP",
+  "populacaoEstimada": 50000,
+  "areaKm2": 12.5,
+  "nivelRisco": "alto",
+  "statusAlerta": true
+}
+
+###
+
+GET http://localhost:3000/api/regioes/listar
+
+###
+
+GET http://localhost:3000/api/regioes/listar?cidade=Taubaté
+// GET com filtro por cidade
+
+###
+
+GET http://localhost:3000/api/regioes/listar?nome=Centro
+// GET com filtro por nome
+
+###
+
+PUT http://localhost:3000/api/regioes/atualizar/1
+Content-Type: application/json
+
+{
+  "nome": "Centro",
+  "cidade": "Taubaté",
+  "estado": "SP",
+  "populacaoEstimada": 55000,
+  "areaKm2": 12.5,
+  "nivelRisco": "medio",
+  "statusAlerta": false
+}
+
+###
+
+DELETE http://localhost:3000/api/regioes/excluir/1
+
+// --------------------------
