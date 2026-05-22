@@ -57,13 +57,14 @@ DELETE http://localhost:3000/api/abrigos/excluir/3
 
 // --------------------------
 // Regioes
+###
 
 POST http://localhost:3000/api/regioes/cadastrar
 Content-Type: application/json
 
 {
   "nome": "Centro",
-  "cidade": "Taubaté",
+  "cidade": "Taubate",
   "estado": "SP",
   "populacaoEstimada": 50000,
   "areaKm2": 12.5,
