@@ -7,6 +7,7 @@ import Login from './pages/login';
 import PgAdm from './pages/pg_adm';
 import Cadastro from './pages/cadastro';
 import CadastroAbrigo from './pages/cadastro_abrigo';
+import ListarAbrigos from './pages/listarabrigo'
 
 function App() {
   return (
@@ -23,7 +24,9 @@ function App() {
           
           <Route path="/cadastro" element={<Cadastro />} /> 
 
-          <Route path="/cadastro-abrigo" element={<CadastroAbrigo />} />  
+          <Route path="/cadastro-abrigo" element={<CadastroAbrigo />} /> 
+          
+          <Route path="/abrigos" element={<ListarAbrigos />} /> 
         </Routes>
       </Router>
     </div>
