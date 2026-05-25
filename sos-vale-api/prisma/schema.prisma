@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -43,15 +37,44 @@ model Abrigo {
 }
 
 model Regiao {
-  id                 Int      @id @default(autoincrement())
-  nome               String
-  cidade             String
-  estado             String
-  populacaoEstimada  Int?
-  areaKm2            Float?
-  nivelRisco         String   @default("baixo")
-  statusAlerta       Boolean  @default(false)
-  createdAt          DateTime @default(now()) @map("created_at")
+  id                Int      @id @default(autoincrement())
+  nome              String
+  cidade            String
+  estado            String
+  populacaoEstimada Int?
+  areaKm2           Float?
+  nivelRisco        String   @default("baixo")
+  statusAlerta      Boolean  @default(false)
+  createdAt         DateTime @default(now()) @map("created_at")
 
   @@map("regiao")
+}
+
+model Vitima {
+  id_vitima      Int      @id @default(autoincrement())
+  nome           String
+  cpf            String?  @default("Ainda não informado")
+  telefone       String?  @unique @default("Ainda não informado")
+  dataNascimento DateTime @db.Date
+  genero         String
+  fotoPerfil     Bytes?
+
+  deficiencias VitimaDeficiencia[]
+}
+
+model Deficiencia {
+  id_deficiencia Int    @id @default(autoincrement())
+  nome           String @unique
+
+  vitimas VitimaDeficiencia[]
+}
+
+model VitimaDeficiencia {
+  id_vitima      Int
+  id_deficiencia Int
+
+  vitima      Vitima      @relation(fields: [id_vitima], references: [id_vitima])
+  deficiencia Deficiencia @relation(fields: [id_deficiencia], references: [id_deficiencia])
+
+  @@id([id_vitima, id_deficiencia])
 }
