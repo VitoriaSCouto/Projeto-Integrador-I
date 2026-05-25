@@ -1,8 +1,18 @@
-//A linha 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const CadastroAbrigo = () => {
   const [mensagem, setMensagem] = useState('')
+  const [regioes, setRegioes] = useState([])
+
+  const buscarRegioes = async () => {
+    const resposta = await fetch('http://localhost:3000/api/regioes/listar')
+    const dados = await resposta.json()
+    setRegioes(dados.regioes)
+  }
+
+  useEffect(() => {
+    buscarRegioes()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -13,10 +23,9 @@ const CadastroAbrigo = () => {
       telefone: e.target.telefone.value,
       responsavel: e.target.responsavel.value,
       tipoAbrigo: e.target.tipoAbrigo.value,
-      capacidadeTotal: Number(e.target.capacidadeTotal.value)
+      capacidadeTotal: Number(e.target.capacidadeTotal.value),
+      capacidadeOcupada: Number(e.target.capacidadeOcupada.value) || 0
     }
-    // Envia os dados para o backend
-  
 
     const resposta = await fetch('http://localhost:3000/api/abrigos/cadastrar', {
       method: 'POST',
@@ -33,11 +42,19 @@ const CadastroAbrigo = () => {
       <form onSubmit={handleSubmit}>
         <h1>Cadastro de Abrigo</h1>
         <input type="text" name="nome" placeholder="Nome do Abrigo" /><br/>
-        <input type="text" name="endereco" placeholder="Endereço" /><br/>
+        <select name="endereco">
+          <option value="">Selecione a região</option>
+          {regioes.map((regiao) => (
+            <option key={regiao.id} value={regiao.cidade}>
+              {regiao.cidade} - {regiao.estado}
+            </option>
+          ))}
+        </select><br/>
         <input type="text" name="telefone" placeholder="Telefone" /><br/>
         <input type="text" name="responsavel" placeholder="Responsável" /><br/>
         <input type="text" name="tipoAbrigo" placeholder="Tipo do Abrigo" /><br/>
         <input type="number" name="capacidadeTotal" placeholder="Capacidade Total" /><br/>
+        <input type="number" name="capacidadeOcupada" placeholder="Capacidade Ocupada" /><br/>
         <button type="submit">Cadastrar</button>
         {mensagem && <p>{mensagem}</p>}
       </form>

@@ -9,10 +9,10 @@ POST http://localhost:3000/api/abrigos/cadastrar
 Content-Type: application/json
 
 {
-  "nome": "Abrigo Rua Apple",
+  "nome": "Abrigo Teste",
   "endereco": "Rua Teste, 123",
-  "telefone": "11999999999",
-  "responsavel": "João Silva",
+  "telefone": "12123456789",
+  "responsavel": "João Abrigos",
   "tipoAbrigo": "emergencial",
   "capacidadeTotal": 50,
   "capacidadeOcupada": 20,
@@ -26,7 +26,7 @@ GET http://localhost:3000/api/abrigos/listar
 
 ###
 
-GET http://localhost:3000/api/abrigos/listar?nome=Apple
+GET http://localhost:3000/api/abrigos/listar?nome=Teste
 // GET com filtro por nome
 
 ###
@@ -36,17 +36,17 @@ GET http://localhost:3000/api/abrigos/listar?endereco=Rua
 
 ###
 
-PUT http://localhost:3000/api/abrigos/atualizar/2
+PUT http://localhost:3000/api/abrigos/atualizar/3
 Content-Type: application/json
 
 {
-  "nome": "AppleHouse",
-  "endereco": "Rua apple, 123",
-  "telefone": "11999999999",
-  "responsavel": "João Silva",
+  "nome": "Abrigo Teste Atualizado",
+  "endereco": "Rua Teste, 123",
+  "telefone": "12123456789",
+  "responsavel": "João Abrigos",
   "tipoAbrigo": "emergencial",
   "capacidadeTotal": 50,
-  "capacidadeOcupada": 20,
+  "capacidadeOcupada": 30,
   "possuiAtendimentoMedico": false,
   "status": "ativo"
 }
@@ -55,9 +55,12 @@ Content-Type: application/json
 
 DELETE http://localhost:3000/api/abrigos/excluir/3
 
+
+###
+
+
 // --------------------------
 // Regioes
-###
 
 POST http://localhost:3000/api/regioes/cadastrar
 Content-Type: application/json
