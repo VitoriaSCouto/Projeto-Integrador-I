@@ -12,16 +12,14 @@ const ListarVitimas = () => {
   const navigate = useNavigate()
 
   // Função que busca as vítimas da API
-  const buscarVitimas = async () => {
+  useEffect(() => {
+  const buscarVitimas = async () => { // função dentro
     const resposta = await fetch('http://localhost:3000/api/vitimas/listar')
     const dados = await resposta.json()
     setVitimas(dados.vitimas)
   }
-
-  // Chama buscarVitimas quando a página carrega
-  useEffect(() => {
-    buscarVitimas()
-  }, [])
+  buscarVitimas() // chama logo em seguida
+}, [])
 
   // Filtra as vítimas pelo nome digitado na busca
   const vitimasFiltradas = vitimas.filter(vitima =>
