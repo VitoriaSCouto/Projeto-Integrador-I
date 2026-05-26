@@ -4,15 +4,14 @@ const CadastroAbrigo = () => {
   const [mensagem, setMensagem] = useState('')
   const [regioes, setRegioes] = useState([])
 
-  const buscarRegioes = async () => {
+  useEffect(() => {
+  const buscarRegioes = async () => { // função dentro
     const resposta = await fetch('http://localhost:3000/api/regioes/listar')
     const dados = await resposta.json()
     setRegioes(dados.regioes)
   }
-
-  useEffect(() => {
-    buscarRegioes()
-  }, [])
+  buscarRegioes() // chama logo em seguida
+}, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
