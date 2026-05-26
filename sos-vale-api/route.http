@@ -107,5 +107,20 @@ Content-Type: application/json
 ###
 
 DELETE http://localhost:3000/api/regioes/excluir/1
+###
 
 // --------------------------
+
+// Vitimas
+
+POST http://localhost:3000/api/vitimas/cadastrar
+Content-Type: application/json
+
+{
+  "nome": "Maria Silva",
+  "cpf": "123.456.789-00",
+  "telefone": "12123456789",
+  "dataNascimento": "1990-01-01",
+  "genero": "feminino",
+  "fotoPerfil": "https://example.com/foto.jpg"
+}

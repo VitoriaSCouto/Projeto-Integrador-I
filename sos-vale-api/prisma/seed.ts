@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  await prisma.Deficiencia.createMany({
+  await prisma.deficiencia.createMany({
     data: [
       { nome: "Física" },
       { nome: "Visual" },
