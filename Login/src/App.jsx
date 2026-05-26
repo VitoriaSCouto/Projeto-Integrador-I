@@ -7,7 +7,9 @@ import Login from './pages/login';
 import PgAdm from './pages/pg_adm';
 import Cadastro from './pages/cadastro';
 import CadastroAbrigo from './pages/cadastro_abrigo';
-import ListarAbrigos from './pages/listarabrigo'
+import ListarAbrigos from './pages/listarabrigo';
+import CadastroVitima from './pages/cadastro_vitima';
+import ListarVitimas from './pages/listarvitima';
 
 function App() {
   return (
@@ -24,9 +26,13 @@ function App() {
           
           <Route path="/cadastro" element={<Cadastro />} /> 
 
-          <Route path="/cadastro-abrigo" element={<CadastroAbrigo />} /> 
+          <Route path="/cadastro_abrigo" element={<CadastroAbrigo />} /> 
           
-          <Route path="/abrigos" element={<ListarAbrigos />} /> 
+          <Route path="/listar_abrigos" element={<ListarAbrigos />} /> 
+
+          <Route path="/cadastro_vitima" element={<CadastroVitima />} />
+          
+          <Route path="/listar_vitimas" element={<ListarVitimas />} />
         </Routes>
       </Router>
     </div>

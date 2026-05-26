@@ -6,6 +6,7 @@ import fastifyJwt from '@fastify/jwt'
 import authRoutes from './routes/auth.js'
 import abrigoRoutes from './routes/abrigos.js'
 import regiaoRoutes from './routes/regiao.js'
+import vitimaRoutes from './routes/vitima.js'
 import 'dotenv/config' // Garante que o process.env funcione
 
 //cria a instância
@@ -25,7 +26,7 @@ app.register(fastifyJwt, {
 app.register(authRoutes, { prefix: '/api/auth' })
 app.register(abrigoRoutes, { prefix: '/api/abrigos' })
 app.register(regiaoRoutes, { prefix: '/api/regioes' })
-
+app.register(vitimaRoutes, { prefix: '/api/vitimas' })
 
 // Inicia o servidor
 const start = async () => {

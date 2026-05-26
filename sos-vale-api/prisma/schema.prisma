@@ -57,7 +57,7 @@ model Vitima {
   telefone       String?  @unique @default("Ainda não informado")
   dataNascimento DateTime @db.Date
   genero         String
-  fotoPerfil     Bytes?
+  fotoPerfil     String?
 
   deficiencias VitimaDeficiencia[]
   createdAt         DateTime @default(now()) @map("created_at")
