@@ -38,7 +38,7 @@ model Abrigo {
 
 model Regiao {
   id                Int      @id @default(autoincrement())
-  nome              String
+  bairro            String   // era nome
   cidade            String
   estado            String
   populacaoEstimada Int?
@@ -60,6 +60,7 @@ model Vitima {
   fotoPerfil     Bytes?
 
   deficiencias VitimaDeficiencia[]
+  createdAt         DateTime @default(now()) @map("created_at")
 }
 
 model Deficiencia {

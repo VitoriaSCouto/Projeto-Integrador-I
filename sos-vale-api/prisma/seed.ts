@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  await prisma.deficiencia.createMany({
+  await prisma.Deficiencia.createMany({
     data: [
       { nome: "Física" },
       { nome: "Visual" },
@@ -20,7 +20,8 @@ async function main() {
       { nome: "Transtorno de Aprendizagem" },
       { nome: "Síndrome de Down" },
       { nome: "Epilepsia" }
-    ]
+    ],
+    skipDuplicates: true
   })
 
   console.log("Deficiências cadastradas!")
