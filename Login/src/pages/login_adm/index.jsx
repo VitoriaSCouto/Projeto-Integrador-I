@@ -9,18 +9,34 @@ const LoginAdm = () => {
     const [senha, setSenha] = useState("");
 
     // Rodando quando o admin clica em Entrar
-    const fazerLogin = (e) => {
-        e.preventDefault(); // impede a página de recarregar
-        
+    const fazerLogin = async (e) => {
+    e.preventDefault(); // impede a página de recarregar
 
+    try {
+        const response = await fetch("http://localhost:3000/api/auth/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, senha }),
+        });
 
-        // Pulando o fetch e simulando que deu certo
-        console.log("Login simulado com sucesso!");
+        const data = await response.json();
 
+            if (response.ok) {
+                console.log("Login realizado com sucesso!");
+                
+                // Salva o token JWT retornado pelo Fastify no localStorage
+                localStorage.setItem("token_adm", data.token); 
 
-        navigate('/pg_adm');
-    };
-
+                // Redireciona para a página do administrador
+                navigate('/pg_adm');
+            }
+        } catch (error) {
+            console.error("Erro ao conectar com a API:", error);
+            
+        }
+    }
     return (
         <div className="containerLogin">
             <div className="img-logo">
@@ -44,6 +60,7 @@ const LoginAdm = () => {
             </form>
         </div>
     );
-    };
+}
+    
 
     export default LoginAdm;
