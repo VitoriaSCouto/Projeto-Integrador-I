@@ -110,8 +110,33 @@ DELETE http://localhost:3000/api/regioes/excluir/1
 ###
 
 // --------------------------
+// Autenticacao
 
+
+POST http://localhost:3000/api/auth/cadastrar
+Content-Type: application/json
+
+{
+  "nome": "Admin",
+  "email": "admin@sosvale.com",
+  "senha": "123456",
+  "cargo": "operador"
+}
+###
+
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "marcos@email.com",
+  "senha": "12345"
+}
+
+###
+
+// --------------------------
 // Vitimas
+
 
 POST http://localhost:3000/api/vitimas/cadastrar
 Content-Type: application/json

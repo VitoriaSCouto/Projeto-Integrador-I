@@ -75,7 +75,7 @@ const ListarVitimas = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {/* Se tiver foto mostra a imagem, senão mostra um emoji */}
               {vitima.fotoPerfil
-                ? <img src={vitima.fotoPerfil} alt={vitima.nome} style={{ width: '10px', height: '10px', borderRadius: '50%', objectFit: 'cover' }} />
+                ? <img src={vitima.fotoPerfil} alt={vitima.nome} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
                 : <span style={{ fontSize: '40px' }}>👤</span>
               }
               <h3 style={{ margin: 0 }}>{vitima.nome}</h3>
