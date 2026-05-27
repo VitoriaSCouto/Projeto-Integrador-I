@@ -79,3 +79,371 @@ model VitimaDeficiencia {
 
   @@id([id_vitima, id_deficiencia])
 }
+
+// enum pra ficar mais facil na hora de relacionar
+// na hora q for fazer os select tipo "EM_BUSCA" tem q por o valor certinho 
+
+
+enum StatusDesaparecimento {
+  DESAPARECIDO     // sumiu, familiar registrou
+  EM_BUSCA         // busca em campo e tals
+  LOCALIZADO_VIVO  // encontrado com vida
+  LOCALIZADO_MORTO // corpo encontrado
+  //correção#13 NAO_IDENTIFICADO e IDENTIFICADO_IML removidos daqui
+  //ficam melhor no fluxo do IML
+  //sao inseridos no model RegistroIML
+  ARQUIVADO
+}
+
+
+enum TipoVinculo {
+  CONJUGE
+  PAI
+  FILHO
+  IRMAO
+  AMIGO
+  AVO
+  VIZINHO
+  RESPONSAVEL_LEGAL
+  OUTRO_FAMILIAR // seria tipo tio, tio-avô, primo... etc
+}
+
+enum MeioContatoFamiliar {
+  TELEFONE
+  WHATSAPP 
+  EMAIL
+  PRESENCIAL
+}
+
+enum OrigemRegistro {
+  FAMILIAR // familiar q registrou
+  EQUIPE_CAMPO // pode ser policia, SAR, qualquer orgao destinado a isso.. e cadastrou (sem familiar)
+  ABRIGO // a pessoa ter aparecido num abrigo sem doc
+  HOSPITAL //  entrada hospitalar sem doc
+  IML // corpo entrou no IML sem doc/id
+}
+
+enum Prioridade {
+  BAIXA // 1 - sem urgencia imediaata
+  MEDIA // 2 - monitoramento
+  ALTA // 3 - busca ativa necessaria
+  CRITICA // 4 - risco de vida (no caso seria alguem que precisa de medicamentos, crianças, idosos, PcDs... etc)
+}
+
+enum MetodoBusca {
+  AEREA // equipe aerea - SAR; Helicoptero; Patrulha Area - reconhecimento de area.
+  TERRESTRE
+  AQUATICA // vitima possivelmente presa em enchentes 
+  CAESFAREJADORES
+  MERGULHO // vitima possivelmente levada a obito, tambem em enchentes.
+  DRONE // mais comum doq parece
+}
+
+enum CriticidadeMedicamento {
+  MONITORAR // vitima desaparecida pode ficar alguns dias sem 
+  URGENTE // precisa até 24h, remedio controlado
+  ESSENCIAL // risco de vida sem o medicamento
+}
+
+// correção#13 status exclusivo só para o fluxo do iml
+enum StatusIML {
+  NAO_IDENTIFICADO //corpo entrou sem identidade conhecida
+  IDENTIFICADO //IML confirmou quem é
+}
+
+
+
+model Desaparecido {
+  id_desaparecido   Int @id @default(autoincrement())
+  numeroCaso        String @unique // ex: DSP-2026-0001...
+  origemRegistro    OrigemRegistro
+
+  //adicionei#7 especificamente quem criou o caso - uma fk para agente (registro inicial)
+  agenteCriadorId   Int?
+  agenteCriador     Agente? @relation(fields: [agenteCriadorId], references: [id_agente])
+
+//vou ir separando cada seção pra normalizar algumas e ficar mais dinamico
+
+
+//Identificação (Pode ser corpo sem id entao tudo opcional)
+
+
+  nome              String? @default("Não Identificado")
+  nomeSocial        String?
+  cpf               String?
+  rg                String?
+  dataNascimento    DateTime @db.Date
+  idadeAproximada   Int? // estimativa |||correção#10 validar na aplicacao se dataNascimento preenchida, entao idadeAproximada deve ser obrigadotoriamente nula!!!!!
+  genero            String?
+  nacionalidade     String? @default("Brasileira")
+  
+  //correção#8 fotoPerfil removida daqui, agora é FotoDestaque boolean em FotoDesaparecido
+  //no caso pra evitar a duplicidade em relacao as fotos
+
+
+//Características Físicas 
+
+
+  altura            Float?
+  pesoAproximado    Float?
+  corPele           String?
+  corCabelo         String?
+  corOlhos          String?
+  sinaisParticulares String? //cicatrizes, tattos, marcas de nascença
+  usaOculos         Boolean @default(false)
+  descricaoOculos   String?
+  roupasUsadas      String? // o q estava vestindo
+
+
+//Ultima aparição (familiar registra)
+
+
+  //correção#1 dataUltimaVez e horaUltimaVez unifcados em um unico datetime (mosquei anteskk)
+  dataUltimaVez     DateTime? 
+
+  //correção#9 localUltimaVez mantido como descricao auxiliar
+  localUltimaVez    String? //descricao livre, teria dados mais confiaveis com coordenadas
+  objetosPessoais   String? //mochila, bolsa, possiveis docs
+
+
+//Local encontrado (equipe registra)
+
+
+  //correção#9 localEncontrado mantido como descricao auxiliar tambem
+  localEncontrado   String? //descricao livre mesma ideia de cima
+  
+  dataHoraEncontrado DateTime? //correção#1 unificado (era só dataEnconrtado sem hora)
+  condicaoEncontrado String? //estado de saude, ferimentos
+  encaminhadoPara   String? //Hospital, abrigo, iml...
+
+
+//Contexto do desastre relacionada a vitima desaparecida
+
+
+  tipoDesastre      String
+  localDesastre     String
+  dataDesastre      DateTime @db.Date
+  zonaRisco         String? //ex: "CECAP"
+  //ideia protocoloEvento   String? 
+
+
+//status e controle operacional q eu tinha destinado
+
+
+  status StatusDesaparecimento @default(DESAPARECIDO)
+
+  //correção#11 prioridade nao devera ser preenchida manualmente pelo agente
+  //devera ser calculada automaticamente pela aplicacao com base em:
+  // - criticidade dos medicamentos... exemplo: CriticidadeMedicamento.ESSENCIAL --->> CRITICA
+  // - presenca de deficiencias
+  // - idadeAproximada ou dataNascimento... exemplo: criança/idoso -> ALTA ou CRITICA!!!
+
+  prioridade Prioridade @default(BAIXA)
+
+  //correcao#2 corpoIdentificado removido daqui. identificacao é responsa do iml e precisa de um certo rastreio
+
+  //correcao#15 dataRegistro removido pois é a msm coisa que createdAt
+
+  dataAtualizacao   DateTime @updateAt
+  dataEncerramento  DateTime?
+  motivoEncerramento String?
+
+  //#adicionei#14 soft delete pois o registros de Desaparecido nao devem
+  //ser apagados permamentemente em contexto de desastre
+  deletedAt DateTime?
+
+
+//vinculo com vitima (quando ele é encontrado e a familia ja tinha registrado desaparecimento)
+
+
+  vitimaId Int?
+  vitima Vitima? @relation(fields: [vitimaId], references: [id_vitima])
+
+
+//relacoes
+
+
+  contatos          ContatoDesaparecido[] //só existirá se origemRegistro == FAMILIAR
+  //atencao, regra que tem q ser garantida na aplicacao
+
+  buscas            RegistroBusca[]
+  deficiencias      DesaparecidoDeficiencia[]
+  medicamentos      MedicamentoDesaparecido[]
+  atualizacoes      AtualizacaoDesaparecido[]
+  fotos             FotoDesaparecido[]
+  registroIML       RegistroIML? //adicionei#2 #13 vinculo com o floxu do iml
+
+  createdAt         DateTime @default(now()) @map("created_at") // banco de dados geralmente usa snake_case, código javaScript/typeScript usa camelCase. 
+}
+
+
+//fotos adicionais para reconhecimento em busca/campo
+
+
+model FotoDesaparecido{
+  id                Int @id @default(autoincrement())
+  desaparecidoId    Int
+  desaparecido      Desaparecido @relation(fields: [desaparecidoId], references: [id_desaparecido])
+  url               String
+  descricao         String? //"foto de frente", "vestimenta no dia", "tatto"
+
+  //adicionei substitui o campo fotoPerfil q estava solto em desaparecido
+  //fotoDestaque sera a foto principal
+  fotoDestaque Boolean @default(false)
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+}
+
+
+//familiares/responsaveis que acionaram o sistema
+// so existe quando origemRegistro == FAMILIAR, regra aplicada na aplicacao
+
+
+model ContatoDesaparecido{
+  id                Int @id @default(autoincrement())
+  desaparecidoId    Int
+  desaparecido      Desaparecido @relation(fields: [desaparecidoId], references: [id_desaparecido])
+
+  nomeContato       String
+  vinculo           TipoVinculo
+  telefone          String
+  telefoneAlt       String?
+  email             String?
+  meioPreferido     MeioContatoFamiliar
+  enderecoContato   String?
+  tambemAfetado     Boolean @default(false)
+
+  createdAt         DateTime  @default(now()) @map("created_at")
+}
+
+
+//Registro de operacao de busca realizadas
+
+
+model RegistroBusca {
+  id                Int @id @default(autoincrement())
+  desaparecidoId    Int
+  desaparecido      Desaparecido @relation(fields: [desaparecidoId], references: [id_desaparecido])
+
+  //adicionei#12 dataHoraInicio e dataHoraFim pois da a liberdade do sistema calulcar a duração e por aqui tambem sabe se a busca esta ativa
+  dataHoraInicio    DateTime
+  dataHoraFim       DateTime?
+  equipeResponsavel String // nome ou codigo da equipe
+
+  //correcao#6 areaVarredura mantida como descricao auxiliar (algo relacionado a coordenadas poderiam representar a area melhor)
+  areaVarredura     String //descricao ou setor - auxiliar
+  metodo            MetodoBusca
+  resultado         String //"sem indicios pipipi popopo"
+  evidencias        String? //descricao de vestigios encontrados
+  fotoEvidencia     String?
+  observacoes       String?
+
+  createdAt         DateTime @default(now()) @map("created_at")
+}
+
+
+// Medicamentos de uso contínuo — afeta prioridade da busca
+
+
+model MedicamentoDesaparecido {
+  id                Int          @id @default(autoincrement())
+  desaparecidoId    Int
+  desaparecido      Desaparecido @relation(fields: [desaparecidoId], references: [id_desaparecido])
+
+  nomeMedicamento   String
+  dosagem           String
+  frequencia        String                 // "2x ao dia", "contínuo"
+  criticidade       CriticidadeMedicamento
+  observacoes       String?
+
+  createdAt         DateTime @default(now()) @map("created_at")
+}
+
+
+// Log auditável de todas as mudanças do caso
+
+
+model AtualizacaoDesaparecido {
+  id                Int          @id @default(autoincrement())
+  desaparecidoId    Int
+  desaparecido      Desaparecido @relation(fields: [desaparecidoId], references: [id_desaparecido])
+
+  statusAnterior    StatusDesaparecimento?
+  statusNovo        StatusDesaparecimento
+  descricao         String
+
+  //correcao#3 registradoPor era uma string solta,  agora é FK para Agente.
+  agenteId          Int
+  agente            Agente @relation(fields: [agenteId], references: [id_agente])
+
+  fonte             String?  // "Defesa Civil", "SAMU", "familiar", "IML"
+
+  //aq podia de coordenadas da localizacao atual do momento da Atualizacao
+
+  criadoEm          DateTime @default(now())
+}
+
+
+// Deficiências 
+// ALERTA TEM Q JUNTAR COM A DEFICIENCIAS DA VITIMA
+
+
+model DesaparecidoDeficiencia {
+  id                Int          @id @default(autoincrement())
+  desaparecidoId    Int
+  desaparecido      Desaparecido @relation(fields: [desaparecidoId], references: [id_desaparecido])
+
+  deficiencia       String
+  descricao         String?
+
+  createdAt         DateTime @default(now()) @map("created_at")
+}
+
+
+// adicionei#2 #13 Registro do fluxo do iml separado do Desaparecido
+// para ter rastreabilidade, tipo quem identificou, quando, como.
+// os status NAO_IDENTIFICADO / IDENTIFICADO para cá,
+
+
+// evitando mistura com o enum de StatusDesaparecimento.
+model RegistroIML {
+  id                Int          @id @default(autoincrement())
+  desaparecidoId    Int          @unique
+  desaparecido      Desaparecido @relation(fields: [desaparecidoId], references: [id_desaparecido])
+
+  status            StatusIML   @default(NAO_IDENTIFICADO)
+  dataEntradaIML    DateTime
+  dataIdentificacao DateTime?   // preenchida quando status → IDENTIFICADO
+  metodoIdentificacao String?     // "reconhecimento familiar", "DNA", "impressão digital"
+  observacoes       String?
+
+  // quem do IML registrou / confirmou a identificação
+  agenteId          Int
+  agente            Agente @relation(fields: [agenteId], references: [id_agente])
+
+  createdAt         DateTime @default(now()) @map("created_at")
+}
+
+
+// a intecao minha seria por meio q roleagentes: admin, operador(agente), consulta, iml
+// adicionei#3 #7 Agentes/operadores do sistema
+
+
+model Agente {
+  id_agente         Int     @id @default(autoincrement())
+  nome              String
+  codigo            String  @unique  // ex: "SGT-MAURICIO-042"
+  orgao             String           // "Defesa Civil", "SAMU", "IML", "Bombeiros"
+  ativo             Boolean @default(true)
+
+  // adicionei#14 um soft delete para agentes também 
+  
+  deletedAt         DateTime?
+
+  atualizacoes      AtualizacaoDesaparecido[]
+  registrosIML      RegistroIML[]
+  desaparecidosCriados Desaparecido[]
+
+  createdAt         DateTime @default(now()) @map("created_at")
+}
