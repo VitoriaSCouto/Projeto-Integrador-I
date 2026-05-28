@@ -8,15 +8,14 @@ const ListarAbrigos = () => {
   const [busca, setBusca] = useState('')
   const navigate = useNavigate()
 
-  const buscarAbrigos = async () => {
+  useEffect(() => {
+  const buscarAbrigos = async () => { // função dentro
     const resposta = await fetch('http://localhost:3000/api/abrigos/listar')
     const dados = await resposta.json()
     setAbrigos(dados.abrigos)
   }
-
-  useEffect(() => {
-    buscarAbrigos()
-  }, [])
+  buscarAbrigos() // chama logo em seguida
+}, [])
 
   const abrigosFiltrados = abrigos.filter(abrigo =>
     abrigo.nome.toLowerCase().includes(busca.toLowerCase())
