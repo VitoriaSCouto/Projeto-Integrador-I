@@ -12,11 +12,15 @@ const PgAdm = () => {
       <aside class="sidebar">
         <ul>
           <li classNme="active"><FaHome className= "icon" /> Home</li>
-          <a href="/cadastro-abrigo"><li><FaBoxOpen  className= "icon" /> Abrigos</li></a>
+          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_abrigos">
+            <li><FaBoxOpen  className= "icon" /> Abrigos</li>
+          </a>
+          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">
+            <li><FaUser className= "icon" /> Vítimas</li>
+          </a>
           <li><FaDonate className= "icon" /> Doações</li>
           <li><FaMapPin className= "icon" />Região Afetada</li>
           <li><GoAlertFill className= "icon" /> Ocorrências</li>
-          <li><FaHeart className= "icon" /> ?</li>
           <li><FaUser className= "icon" /> Perfil</li>
         </ul>
       </aside>

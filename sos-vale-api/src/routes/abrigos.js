@@ -13,7 +13,7 @@ export default async function abrigoRoutes(app) {
   //URL http://localhost:3000/api/abrigos/cadastrar
   app.post('/cadastrar', async (request, reply) => {
 
-    const { nome, endereco, telefone, responsavel, tipoAbrigo, capacidadeTotal } = request.body
+    const { nome, endereco, telefone, responsavel, tipoAbrigo, capacidadeTotal, capacidadeOcupada } = request.body
 
     const abrigoExistente = await prisma.abrigo.findFirst({
       where: { nome, endereco }
@@ -30,7 +30,8 @@ export default async function abrigoRoutes(app) {
         telefone,
         responsavel,
         tipoAbrigo,
-        capacidadeTotal
+        capacidadeTotal,
+        capacidadeOcupada
       }
     })
 

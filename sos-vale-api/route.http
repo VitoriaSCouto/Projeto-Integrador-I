@@ -66,12 +66,12 @@ POST http://localhost:3000/api/regioes/cadastrar
 Content-Type: application/json
 
 {
-  "nome": "Centro",
-  "cidade": "Taubate",
+  "bairro": "Centro",
+  "cidade": "Caçapava",
   "estado": "SP",
-  "populacaoEstimada": 50000,
+  "populacaoEstimada": 40000,
   "areaKm2": 12.5,
-  "nivelRisco": "alto",
+  "nivelRisco": "medio",
   "statusAlerta": true
 }
 
@@ -86,8 +86,8 @@ GET http://localhost:3000/api/regioes/listar?cidade=Taubaté
 
 ###
 
-GET http://localhost:3000/api/regioes/listar?nome=Centro
-// GET com filtro por nome
+GET http://localhost:3000/api/regioes/listar?bairro=Centro
+// GET com filtro por bairro
 
 ###
 
@@ -95,7 +95,7 @@ PUT http://localhost:3000/api/regioes/atualizar/1
 Content-Type: application/json
 
 {
-  "nome": "Centro",
+  "bairro": "Centro",
   "cidade": "Taubaté",
   "estado": "SP",
   "populacaoEstimada": 55000,
@@ -149,3 +149,7 @@ Content-Type: application/json
   "genero": "feminino",
   "fotoPerfil": "https://example.com/foto.jpg"
 }
+###
+GET http://localhost:3000/api/vitimas/listar
+###
+DELETE http://localhost:3000/api/vitimas/excluir/13

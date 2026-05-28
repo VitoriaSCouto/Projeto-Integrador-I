@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaHeart } from "react-icons/fa";
+import { GoAlertFill } from "react-icons/go";
 
 const ListarVitimas = () => {
   // Estado para guardar a lista de vítimas
@@ -27,7 +29,28 @@ const ListarVitimas = () => {
   )
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+    <div className="dashboard">
+      {/* Sidebar */}
+     <aside className="sidebar">
+             <ul>
+               <li className="active"><FaHome className="icon" /> Home</li>
+               <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_abrigos">
+                 <li><FaBoxOpen className="icon" /> Abrigos</li>
+               </a>
+               <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">
+                 <li><FaUser className="icon" /> Vítimas</li>
+               </a>
+               <li><FaDonate className="icon" /> Doações</li>
+               <li><FaMapPin className="icon" /> Região Afetada</li>
+               <li><GoAlertFill className="icon" /> Ocorrências</li>
+               <li><FaUser className="icon" /> Perfil</li>
+             </ul>
+     </aside>
+
+      {/* Conteúdo principal */}
+      <div className="main">
+
+      <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
 
       {/* Barra de busca e botão de cadastro */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -75,7 +98,7 @@ const ListarVitimas = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {/* Se tiver foto mostra a imagem, senão mostra um emoji */}
               {vitima.fotoPerfil
-                ? <img src={vitima.fotoPerfil} alt={vitima.nome} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
+                ? <img src={vitima.fotoPerfil} alt={vitima.nome} style={{ width: '60px', height: '60px', borderRadius: '20%', objectFit: 'cover' }} />
                 : <span style={{ fontSize: '40px' }}>👤</span>
               }
               <h3 style={{ margin: 0 }}>{vitima.nome}</h3>
@@ -108,6 +131,8 @@ const ListarVitimas = () => {
           </div>
         ))}
       </div>
+    </div>
+    </div>
     </div>
   )
 }
