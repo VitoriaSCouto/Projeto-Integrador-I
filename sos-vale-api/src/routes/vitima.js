@@ -130,7 +130,7 @@ export default async function vitimaRoutes(app) {
       const buffer = Buffer.from(fotoPerfil, 'base64')
       const { data, error } = await supabase.storage
         .from('fotos-perfil')
-        .upload(`vitima-${Date.now()}.jpg`, buffer, {
+        .upload(`vitima-${vitimaExistente.id_vitima}.jpg`, buffer, {
           contentType: 'image/jpeg'
         })
 
@@ -185,8 +185,27 @@ export default async function vitimaRoutes(app) {
       where: { id_vitima: Number(id) }
     })
 
-    return reply.status(200).send({
-      mensagem: 'Vítima excluída com sucesso!'
-    })
+
+ // Só tenta remover a foto se ela existir
+  if (vitimaExistente.fotoPerfil) {
+    // Extrai o caminho relativo a partir do nome do bucket
+    const url = vitimaExistente.fotoPerfil
+    const bucketName = 'fotos-perfil'
+    const filePath = url.split(`/${bucketName}/`)[1]
+
+    if (filePath) {
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .remove([filePath])
+
+      if (error) {
+        console.error('Erro ao deletar foto do storage:', error)
+      }
+    }
+  }
+
+  return reply.status(200).send({
+    mensagem: 'Vítima excluída com sucesso!'
   })
+})
 }
