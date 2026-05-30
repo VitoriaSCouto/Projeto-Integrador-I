@@ -12,14 +12,13 @@
   "license": "ISC",
   "dependencies": {
     "@fastify/cors": "^11.2.0",
-    "@fastify/jwt": "^10.0.0",
     "@supabase/supabase-js": "^2.106.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6"
   },
   "devDependencies": {
     "@fastify/cors": "^10.0.0",
-    "@fastify/jwt": "^9.0.0",
+    "@fastify/jwt": "^10.1.0",
     "@prisma/client": "^6.19.3",
     "@prisma/config": "^7.8.0",
     "dotenv": "^16.0.0",
