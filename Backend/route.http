@@ -152,4 +152,4 @@ Content-Type: application/json
 ###
 GET http://localhost:3000/api/vitimas/listar
 ###
-DELETE http://localhost:3000/api/vitimas/excluir/24
+DELETE http://localhost:3000/api/vitimas/excluir/29

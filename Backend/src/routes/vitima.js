@@ -196,9 +196,13 @@ export default async function vitimaRoutes(app) {
     if (filePath) {
       const { error } = await supabase.storage
         .from(bucketName)
-        .remove([filePath])
-
+        .remove(filePath)
+        return reply.status(200).send({
+          mensagem: 'Vítima excluída com sucesso, mas houve um erro ao deletar a foto do storage.',
+          erro: error ? error.message : null
+        })
       if (error) {
+        return reply.status(404).send({'Erro ao deletar foto do storage': error.message})
         console.error('Erro ao deletar foto do storage:', error)
       }
     }
