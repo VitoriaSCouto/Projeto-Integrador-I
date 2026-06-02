@@ -31,21 +31,21 @@ const ListarVitimas = () => {
   return (
     <div className="dashboard">
       {/* Sidebar */}
-     <aside className="sidebar">
-             <ul>
-               <li className="active"><FaHome className="icon" /> Home</li>
-               <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_abrigos">
-                 <li><FaBoxOpen className="icon" /> Abrigos</li>
-               </a>
-               <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">
-                 <li><FaUser className="icon" /> Vítimas</li>
-               </a>
-               <li><FaDonate className="icon" /> Doações</li>
-               <li><FaMapPin className="icon" /> Região Afetada</li>
-               <li><GoAlertFill className="icon" /> Ocorrências</li>
-               <li><FaUser className="icon" /> Perfil</li>
-             </ul>
-     </aside>
+      <aside className="sidebar">
+        <ul>
+          <li className="active"><FaHome className="icon" /> Home</li>
+          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigo">
+            <li><FaBoxOpen  className= "icon" /> Abrigos</li>
+          </a>
+          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">
+            <li><FaUser className= "icon" /> Vítimas</li>
+          </a>
+          <li><FaDonate className="icon" /> Doações</li>
+          <li><FaMapPin className="icon" /> Região Afetada</li>
+          <li><GoAlertFill className="icon" /> Ocorrências</li>
+          <li><FaUser className="icon" /> Perfil</li>
+        </ul>
+      </aside>
 
       {/* Conteúdo principal */}
       <div className="main">

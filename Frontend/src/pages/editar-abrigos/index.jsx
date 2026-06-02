@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const CadastroAbrigo = () => {
+const EditarAbrigo = () => {
   const [mensagem, setMensagem] = useState('')
   const [regioes, setRegioes] = useState([])
 
@@ -61,4 +61,4 @@ const CadastroAbrigo = () => {
   );
 };
 
-export default CadastroAbrigo;
+export default EditarAbrigo;

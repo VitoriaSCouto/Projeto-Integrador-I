@@ -1,36 +1,33 @@
-import './App.css'
+import './App.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-//importa as rotas das paginas 
-import Sosvale from './pages/sosvale'; 
-import LoginAdm from './pages/login_adm'; 
-import Login from './pages/login'; 
+
+import Sosvale from './pages/sosvale';
+import LoginAdm from './pages/login_adm';
+import Login from './pages/login';
 import PgAdm from './pages/pg_adm';
 import Cadastro from './pages/cadastro';
-import CadastroAbrigo from './pages/abrigo/cadastrar_abrigo';
 import ListarAbrigos from './pages/abrigo';
 import CadastroVitima from './pages/cadastro_vitima';
 import ListarVitimas from './pages/listarvitima';
+import CadastrarAbrigo from './pages/cadastrar-abrigos';
+import EditarAbrigo from './pages/editar-abrigos';     
 
 function App() {
   return (
     <div className="App">
       <Router>
         <Routes>
+          {/* 2. DEFINIÇÃO DAS ROTAS */}
           <Route path="/" element={<Sosvale />} />
-          
           <Route path="/login-adm" element={<LoginAdm />} />
-          
-          <Route path="/login" element={<Login />} /> 
-          
+          <Route path="/login" element={<Login />} />
           <Route path="/pg_adm" element={<PgAdm />} />
-          
-          <Route path="/cadastro" element={<Cadastro />} /> 
-
-          <Route path="abrigos" element={<ListarAbrigos />} /> 
-
+          <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/abrigo" element={<ListarAbrigos />} />
           <Route path="/cadastro_vitima" element={<CadastroVitima />} />
-          
           <Route path="/listar_vitimas" element={<ListarVitimas />} />
+          <Route path="/cadastrar-abrigo" element={<CadastrarAbrigo />} />
+          <Route path="/editar-abrigo" element={<EditarAbrigo />} />
         </Routes>
       </Router>
     </div>

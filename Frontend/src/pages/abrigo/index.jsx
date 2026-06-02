@@ -35,7 +35,7 @@ const ListarAbrigos = () => {
       <aside className="sidebar">
         <ul>
           <li className="active"><FaHome className="icon" /> Home</li>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_abrigos">
+          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigo">
             <li><FaBoxOpen className="icon" /> Abrigos</li>
           </a>
           <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">

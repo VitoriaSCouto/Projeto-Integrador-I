@@ -6,13 +6,11 @@ import { FaHeart, FaGear } from "react-icons/fa6";
 
 const PgAdm = () => {
   return (
-    
     <div className="dashboard">
- 
       <aside class="sidebar">
         <ul>
           <li classNme="active"><FaHome className= "icon" /> Home</li>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_abrigos">
+          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigo">
             <li><FaBoxOpen  className= "icon" /> Abrigos</li>
           </a>
           <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">
