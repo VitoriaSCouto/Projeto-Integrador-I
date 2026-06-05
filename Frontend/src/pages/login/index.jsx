@@ -21,7 +21,7 @@ const Login = () => {
             <div className="button-cad">
                     <button>Entrar</button>
                 <div className="signup-link">
-                    <a href="/cadastro">Cadastre-se</a>
+                    <a href="cadastro/index.jsx">Cadastre-se</a>
                 </div>
             </div>
 

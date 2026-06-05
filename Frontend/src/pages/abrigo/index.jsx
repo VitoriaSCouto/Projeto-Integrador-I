@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaHeart } from "react-icons/fa";
+import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaSearch, FaPlus } from "react-icons/fa";
 import { GoAlertFill } from "react-icons/go";
+
+import "../pg_adm/style.css";    
+import "./abrigo.css";  
 
 const ListarAbrigos = () => {
   const [abrigos, setAbrigos] = useState([])
@@ -9,13 +12,13 @@ const ListarAbrigos = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-  const buscarAbrigos = async () => { // função dentro
-    const resposta = await fetch('http://localhost:3000/api/abrigos/listar')
-    const dados = await resposta.json()
-    setAbrigos(dados.abrigos)
-  }
-  buscarAbrigos() // chama logo em seguida
-}, [])
+    const buscarAbrigos = async () => {
+      const resposta = await fetch('http://localhost:3000/api/abrigos/listar')
+      const dados = await resposta.json()
+      setAbrigos(dados.abrigos)
+    }
+    buscarAbrigos()
+  }, [])
 
   const abrigosFiltrados = abrigos.filter(abrigo =>
     abrigo.nome.toLowerCase().includes(busca.toLowerCase())
@@ -23,131 +26,93 @@ const ListarAbrigos = () => {
 
   const getStatus = (ocupada, total) => {
     const porcentagem = (ocupada / total) * 100
-    if (porcentagem >= 100) return { label: 'Lotado', cor: '#e74c3c' }
-    if (porcentagem >= 80) return { label: 'Últimas Vagas', cor: '#f39c12' }
-    return { label: 'Com vagas', cor: '#27ae60' }
+    if (porcentagem >= 100) return { label: 'Lotado', classe: 'status-lotado' }
+    if (porcentagem >= 80) return { label: 'Últimas Vagas', classe: 'status-atencao' }
+    return { label: 'Com vagas', classe: 'status-vagas' }
   }
 
   return (
     <div className="dashboard">
-
-      {/* Sidebar */}
       <aside className="sidebar">
         <ul>
-          <li className="active"><FaHome className="icon" /> Home</li>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigo">
-            <li><FaBoxOpen className="icon" /> Abrigos</li>
+          <a href="/pg_adm">
+            <li><FaHome className="icon" /> Home</li>
           </a>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">
+          <a href="/abrigo">
+            <li className="active"><FaBoxOpen className="icon" /> Abrigos</li>
+          </a>
+          <a href="/listar_vitimas">
             <li><FaUser className="icon" /> Vítimas</li>
           </a>
           <li><FaDonate className="icon" /> Doações</li>
           <li><FaMapPin className="icon" /> Região Afetada</li>
           <li><GoAlertFill className="icon" /> Ocorrências</li>
-  
           <li><FaUser className="icon" /> Perfil</li>
         </ul>
       </aside>
 
-      {/* Conteúdo principal */}
       <div className="main">
-        <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+        <header className="main-header">
+          <div>
+            <h1>Abrigos Cadastrados</h1>
+            <p className="subtitle">Gerencie os locais de acolhimento e o nível de ocupação</p>
+          </div>
+        </header>
 
-          {/* Barra de busca e botão de cadastro */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div className="search-container">
+          <div className="search-box">
+            <FaSearch className="search-icon" />
             <input
               type="text"
-              placeholder="🔍 Pesquise por nome"
+              placeholder="Pesquise por nome do abrigo..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              style={{
-                padding: '10px 15px',
-                borderRadius: '20px',
-                border: '1px solid #ccc',
-                width: '300px',
-                fontSize: '14px'
-              }}
             />
-            <button
-              onClick={() => navigate('/cadastro_abrigo')}
-              style={{
-                backgroundColor: '#3498db',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                fontSize: '24px',
-                cursor: 'pointer'
-              }}
-            >+</button>
           </div>
+          <button className="btn-add-abrigo" onClick={() => navigate('/cadastro_abrigo')}>
+            <FaPlus /> Novo Abrigo
+          </button>
+        </div>
 
-          {/* Grid de cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            {abrigosFiltrados.map((abrigo) => {
-              const status = getStatus(abrigo.capacidadeOcupada, abrigo.capacidadeTotal)
-              const porcentagem = (abrigo.capacidadeOcupada / abrigo.capacidadeTotal) * 100
+        <div className="abrigos-grid">
+          {abrigosFiltrados.map((abrigo) => {
+            const status = getStatus(abrigo.capacidadeOcupada, abrigo.capacidadeTotal)
+            const porcentagem = (abrigo.capacidadeOcupada / abrigo.capacidadeTotal) * 100
 
-              return (
-                <div key={abrigo.id} style={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  backgroundColor: 'white',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0 }}>{abrigo.nome}</h3>
-                    <span>🏠</span>
-                  </div>
+            return (
+              <div key={abrigo.id} className="abrigo-card">
+                
+                <div className="abrigo-card-header">
+                  <h3>{abrigo.nome}</h3>
+                  <span className="home-badge-icon">🏠</span>
+                </div>
 
-                  <span style={{
-                    backgroundColor: status.cor,
-                    color: 'white',
-                    padding: '4px 10px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    display: 'inline-block',
-                    marginTop: '10px'
-                  }}>
+                <div className="abrigo-status-row">
+                  <span className={`status-badge ${status.classe}`}>
                     {status.label}
                   </span>
-
-                  <div style={{ marginTop: '10px', backgroundColor: '#e0e0e0', borderRadius: '10px', height: '8px' }}>
-                    <div style={{
-                      width: `${Math.min(porcentagem, 100)}%`,
-                      backgroundColor: status.cor,
-                      height: '8px',
-                      borderRadius: '10px'
-                    }} />
-                  </div>
-
-                  <p style={{ fontSize: '14px', color: '#555' }}>
-                    Capacidade: {abrigo.capacidadeOcupada}/{abrigo.capacidadeTotal}
-                  </p>
-
-                  <p style={{ fontSize: '14px', color: '#555' }}>
-                    📍 {abrigo.endereco}
-                  </p>
-
-                  <button style={{
-                    backgroundColor: '#2c3e7a',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '20px',
-                    padding: '8px 20px',
-                    cursor: 'pointer',
-                    width: '100%',
-                    marginTop: '10px'
-                  }}>
-                    Detalhes
-                  </button>
                 </div>
-              )
-            })}
-          </div>
+
+                <div className="progress-container">
+                  <div 
+                    className={`progress-bar ${status.classe}`} 
+                    style={{ width: `${Math.min(porcentagem, 100)}%` }} 
+                  />
+                </div>
+
+                <div className="abrigo-info">
+                  <p><strong>Capacidade:</strong> {abrigo.capacidadeOcupada} / {abrigo.capacidadeTotal}</p>
+                  <p className="endereco">📍 {abrigo.endereco}</p>
+                </div>
+
+                <button className="btn-detalhes">
+                  Ver Detalhes
+                </button>
+              </div>
+            )
+          })}
         </div>
+
       </div>
     </div>
   )

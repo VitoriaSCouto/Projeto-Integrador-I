@@ -1,21 +1,166 @@
-/* login */
+/* LOGIN*/
 
-.body {
-    background-image: url("/assets/images/3.png");
+.container-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 100vh;
+    background-color: #f8f9fa;
+    font-family: 'Inter', sans-serif;
+    padding: 20px;
 }
 
-.containerLogin {
-    width: 480px;
-    height: 370px;
-    background-color: #e3e3e3;
+.card-cadastro {
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 460px;
     padding: 40px;
-    border-radius: 30px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.06);
 }
 
-.containerLogin {
+.header-card {
     text-align: center;
-    font-size: 30px;
-    color: #00167a;
+    margin-bottom: 30px;
+}
+
+.icon-user-header {
+    color: #0b3168;
+    margin-bottom: 12px;
+}
+
+.header-card h1 {
+    font-size: 26px;
+    color: #0c1a30;
+    margin: 0 0 6px 0;
+    font-weight: 700;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: #667085;
+    margin: 0;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2939;
+}
+
+.box1 {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.box1 .icon {
+    position: absolute;
+    left: 14px;
+    color: #98a2b3;
+    font-size: 16px;
+}
+
+.box1 .icon-eye {
+    position: absolute;
+    right: 14px;
+    color: #98a2b3;
+    cursor: pointer;
+}
+
+.box1 input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px 12px 42px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #344054;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.box1 input:focus {
+    border-color: #0b3168;
+}
+
+.forgot-password {
+    margin-bottom: 20px;
+}
+
+.forgot-password a {
+    font-size: 13.5px;
+    color: #0b3168;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.button-cad1 button {
+    width: 100%;
+    background-color: #0b3168;
+    color: #ffffff;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.button-cad1 button:hover {
+    background-color: #072249;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #98a2b3;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 20px 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.divider:not(:empty)::before {
+    margin-right: .75em;
+}
+
+.divider:not(:empty)::after {
+    margin-left: .75em;
+}
+
+.signup-link {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 14px;
+    color: #475467;
+}
+
+.signup-link a {
+    color: #0b3168;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.signup-link a:hover,
+.forgot-password a:hover {
+    text-decoration: underline;
 }
 
 
@@ -208,7 +353,7 @@
 .icone_M {
     width: 120px;
     height: 120px;
-    background: #004c99;
+    background: #061f42;
     color: white;
     display: flex;
     justify-content: center;
@@ -235,7 +380,7 @@
     padding: 12px 25px;
     border: none;
     border-radius: 8px;
-    background: #004c99;
+    background: #061f42;
     color: white;
     font-size: 15px;
     cursor: pointer;
@@ -243,5 +388,5 @@
 }
 
 .btnEntrar_M:hover {
-    background: #003366;
+    background: #061f42;
 }

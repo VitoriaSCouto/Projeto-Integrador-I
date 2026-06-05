@@ -1,44 +1,44 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaHeart } from "react-icons/fa";
+import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaSearch, FaPlus } from "react-icons/fa";
 import { GoAlertFill } from "react-icons/go";
 
+// IMPORTAÇÃO DOS DOIS CSS (Global e o Específico de Vítimas)
+import "../pg_adm/style.css";      
+import "./vitima.css";   
+
 const ListarVitimas = () => {
-  // Estado para guardar a lista de vítimas
   const [vitimas, setVitimas] = useState([])
-
-  // Estado para guardar o termo de busca
   const [busca, setBusca] = useState('')
-
-  // Hook para navegar entre páginas
   const navigate = useNavigate()
 
-  // Função que busca as vítimas da API
   useEffect(() => {
-  const buscarVitimas = async () => { // função dentro
-    const resposta = await fetch('http://localhost:3000/api/vitimas/listar')
-    const dados = await resposta.json()
-    setVitimas(dados.vitimas)
-  }
-  buscarVitimas() // chama logo em seguida
-}, [])
+    const buscarVitimas = async () => {
+      const resposta = await fetch('http://localhost:3000/api/vitimas/listar')
+      const dados = await resposta.json()
+      setVitimas(dados.vitimas)
+    }
+    buscarVitimas()
+  }, [])
 
-  // Filtra as vítimas pelo nome digitado na busca
   const vitimasFiltradas = vitimas.filter(vitima =>
     vitima.nome.toLowerCase().includes(busca.toLowerCase())
   )
 
   return (
     <div className="dashboard">
-      {/* Sidebar */}
+      
+      {/* Sidebar - Puxando o estilo estrutural do style.css global */}
       <aside className="sidebar">
         <ul>
-          <li className="active"><FaHome className="icon" /> Home</li>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigo">
-            <li><FaBoxOpen  className= "icon" /> Abrigos</li>
+          <a href="/pg_adm">
+            <li><FaHome className="icon" /> Home</li>
           </a>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">
-            <li><FaUser className= "icon" /> Vítimas</li>
+          <a href="/abrigo">
+            <li><FaBoxOpen className="icon" /> Abrigos</li>
+          </a>
+          <a href="/listar_vitimas">
+            <li className="active"><FaUser className="icon" /> Vítimas</li>
           </a>
           <li><FaDonate className="icon" /> Doações</li>
           <li><FaMapPin className="icon" /> Região Afetada</li>
@@ -49,90 +49,61 @@ const ListarVitimas = () => {
 
       {/* Conteúdo principal */}
       <div className="main">
-
-      <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
-
-      {/* Barra de busca e botão de cadastro */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <input
-          type="text"
-          placeholder="🔍 Pesquise por nome"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          style={{
-            padding: '10px 15px',
-            borderRadius: '20px',
-            border: '1px solid #ccc',
-            width: '300px',
-            fontSize: '14px'
-          }}
-        />
-        {/* Botão + para cadastrar nova vítima */}
-        <button
-          onClick={() => navigate('/cadastro_vitima')}
-          style={{
-            backgroundColor: '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '50%',
-            width: '40px',
-            height: '40px',
-            fontSize: '24px',
-            cursor: 'pointer'
-          }}
-        >+</button>
-      </div>
-
-      {/* Grid de cards de vítimas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        {vitimasFiltradas.map((vitima) => (
-          <div key={vitima.id} style={{
-            border: '1px solid #e0e0e0',
-            borderRadius: '12px',
-            padding: '20px',
-            backgroundColor: 'white',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-          }}>
-
-            {/* Foto e nome da vítima */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {/* Se tiver foto mostra a imagem, senão mostra um emoji */}
-              {vitima.fotoPerfil
-                ? <img src={vitima.fotoPerfil} alt={vitima.nome} style={{ width: '60px', height: '60px', borderRadius: '20%', objectFit: 'cover' }} />
-                : <span style={{ fontSize: '40px' }}>👤</span>
-              }
-              <h3 style={{ margin: 0 }}>{vitima.nome}</h3>
-            </div>
-
-            {/* Informações da vítima */}
-            <p style={{ fontSize: '14px', color: '#555' }}>
-              📋 CPF: {vitima.cpf}
-            </p>
-            <p style={{ fontSize: '14px', color: '#555' }}>
-              📞 Telefone: {vitima.telefone}
-            </p>
-            <p style={{ fontSize: '14px', color: '#555' }}>
-              👤 Gênero: {vitima.genero}
-            </p>
-
-            {/* Botão de detalhes */}
-            <button style={{
-              backgroundColor: '#2c3e7a',
-              color: 'white',
-              border: 'none',
-              borderRadius: '20px',
-              padding: '8px 20px',
-              cursor: 'pointer',
-              width: '100%',
-              marginTop: '10px'
-            }}>
-              Detalhes
-            </button>
+        
+        <header className="main-header">
+          <div>
+            <h1>Vítimas Registradas</h1>
+            <p className="subtitle">Consulte, gerencie informações de contato e faça a triagem dos cidadãos afetados</p>
           </div>
-        ))}
+        </header>
+
+        {/* Barra de busca e botão de cadastro */}
+        <div className="search-container">
+          <div className="search-box">
+            <FaSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Pesquise por nome da vítima..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </div>
+          <button className="btn-add-vitima" onClick={() => navigate('/cadastro_vitima')}>
+            <FaPlus /> Nova Vítima
+          </button>
+        </div>
+
+        {/* Grid de cards de vítimas */}
+        <div className="vitimas-grid">
+          {vitimasFiltradas.map((vitima) => (
+            <div key={vitima.id} className="vitima-card">
+
+              {/* Foto/Avatar maior e Nome da vítima alinhados */}
+              <div className="vitima-card-header">
+                {vitima.fotoPerfil ? (
+                  <img src={vitima.fotoPerfil} alt={vitima.nome} className="vitima-avatar" />
+                ) : (
+                  <div className="vitima-avatar-placeholder">👤</div>
+                )}
+                <h3>{vitima.nome}</h3>
+              </div>
+
+              {/* Corpo de informações da vítima */}
+              <div className="vitima-info">
+                <p><strong>📋 CPF:</strong> {vitima.cpf}</p>
+                <p><strong>📞 Telefone:</strong> {vitima.telefone}</p>
+                <p><strong>👤 Gênero:</strong> {vitima.genero}</p>
+              </div>
+
+              {/* Botão de detalhes */}
+              <button className="btn-detalhes">
+                Ver Detalhes
+              </button>
+            </div>
+          ))}
+        </div>
+
       </div>
-    </div>
-    </div>
     </div>
   )
 }

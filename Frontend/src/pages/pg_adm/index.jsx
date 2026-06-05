@@ -7,30 +7,29 @@ import { FaHeart, FaGear } from "react-icons/fa6";
 const PgAdm = () => {
   return (
     <div className="dashboard">
-      <aside class="sidebar">
+      <aside className="sidebar"> {/* Corrigido de class para className para seguir o padrão React */}
         <ul>
-          <li classNme="active"><FaHome className= "icon" /> Home</li>
+          {/* AQUI: Corrigido de classNme para className */}
+          <li className="active"><FaHome className="icon" /> Home</li>
+          
           <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigo">
-            <li><FaBoxOpen  className= "icon" /> Abrigos</li>
+            <li><FaBoxOpen className="icon" /> Abrigos</li>
           </a>
           <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">
-            <li><FaUser className= "icon" /> Vítimas</li>
+            <li><FaUser className="icon" /> Vítimas</li>
           </a>
-          <li><FaDonate className= "icon" /> Doações</li>
-          <li><FaMapPin className= "icon" />Região Afetada</li>
-          <li><GoAlertFill className= "icon" /> Ocorrências</li>
-          <li><FaUser className= "icon" /> Perfil</li>
+          <li><FaDonate className="icon" /> Doações</li>
+          <li><FaMapPin className="icon" />Região Afetada</li>
+          <li><GoAlertFill className="icon" /> Ocorrências</li>
+          <li><FaUser className="icon" /> Perfil</li>
         </ul>
       </aside>
 
-
       <main className="main">
-
-        
         <header className="top">
           <p>Olá, Administrador(a)!</p>
-          <div class="top-icons">
-           <img src="src/assets/logo.png" width= "80px" />
+          <div className="top-icons">
+           <img src="src/assets/logo.png" width="80px" />
           </div>
         </header>
 
@@ -38,7 +37,7 @@ const PgAdm = () => {
           <h3>Alertas Recentes</h3>
         </div>
         <section className="alerts">
-          <div class="alert">
+          <div className="alert">
             ⚠️ Níveis de água estão subindo no canal de drenagem de Caçapava
             <span>20min</span>
           </div>
@@ -63,9 +62,7 @@ const PgAdm = () => {
             <div className="card"><img src="src/assets/voluntario.jpeg" /><p>Visualizar Voluntários</p></div>
           </div>
         </section>
-
       </main>
-
     </div>
   );
 }
