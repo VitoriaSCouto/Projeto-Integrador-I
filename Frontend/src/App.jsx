@@ -10,7 +10,8 @@ import ListarAbrigos from './pages/abrigo';
 import CadastroVitima from './pages/cadastro_vitima';
 import ListarVitimas from './pages/listarvitima';
 import CadastrarAbrigo from './pages/cadastrar-abrigos';
-import EditarAbrigo from './pages/editar-abrigos';     
+import EditarAbrigo from './pages/editar-abrigos';
+import DetalhesAbrigo from './pages/detalhes-abrigos';       
 
 function App() {
   return (
@@ -26,8 +27,9 @@ function App() {
           <Route path="/abrigo" element={<ListarAbrigos />} />
           <Route path="/cadastro_vitima" element={<CadastroVitima />} />
           <Route path="/listar_vitimas" element={<ListarVitimas />} />
-          <Route path="/cadastrar-abrigo" element={<CadastrarAbrigo />} />
+          <Route path="/cadastrar-abrigos" element={<CadastrarAbrigo />} />
           <Route path="/editar-abrigo" element={<EditarAbrigo />} />
+          <Route path="/detalhes-abrigos" element={<DetalhesAbrigo />} />
         </Routes>
       </Router>
     </div>
