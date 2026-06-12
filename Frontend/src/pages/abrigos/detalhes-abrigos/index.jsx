@@ -8,7 +8,8 @@ import {
 } from 'react-icons/fa';
 import { GoAlertFill } from "react-icons/go";
 
-import "../pg_adm/style.css";
+/// Página de detalhes do abrigo, onde é possível ver e editar as informações do abrigo selecionado
+import "../../pg_adm/style.css";
 import './DetalhesAbrigos.css';
 
 function DetalhesAbrigo() {
@@ -243,15 +244,27 @@ function DetalhesAbrigo() {
               />
             </div>
 
+            
             <div className="form-group">
               <label><FaBuilding /> Tipo de Abrigo</label>
-              <input
-                type="text"
-                placeholder="Digite o tipo do abrigo..."
+              <select
+                className="select-tipo-abrigo"
                 value={tipoAbrigo}
                 onChange={(e) => setTipoAbrigo(e.target.value)}
                 required
-              />
+              >
+
+                <option value=""disabled>Selecione o tipo de abrigo</option>
+                <option value="Escola">Escola</option>
+                <option value="Ginásio">Ginásio</option>
+                <option value="Igreja">Igreja</option>
+                <option value="Hotel">Hotel</option>
+                <option value="Pousada">Pousada</option>
+                <option value="CentroCultural">Centro Cultural</option>
+                <option value="CentroComunitário">Centro Comunitário</option>
+                <option value="Campo">Campo</option>
+
+              </select>
             </div>
 
             <div className="form-group">
@@ -282,6 +295,7 @@ function DetalhesAbrigo() {
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', marginBottom: '12px' }}>
                 Infraestrutura
               </h3>
+
 
               <label className="checkbox-card">
                 <input

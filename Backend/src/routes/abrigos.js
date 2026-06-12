@@ -100,6 +100,7 @@ export default async function abrigoRoutes(app) {
       nome: abrigo.nome,
       endereco: abrigo.endereco,
       status: abrigo.status,
+      tipoAbrigo: abrigo.tipoAbrigo,
       capacidadeTotal: abrigo.capacidadeTotal,
       capacidadeOcupada: abrigo.capacidadeOcupada
     }))

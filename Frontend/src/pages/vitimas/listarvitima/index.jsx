@@ -4,7 +4,7 @@ import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaSearch, FaPlus } from 
 import { GoAlertFill } from "react-icons/go";
 
 // IMPORTAÇÃO DOS DOIS CSS (Global e o Específico de Vítimas)
-import "../pg_adm/style.css";      
+import "../../pg_adm/style.css";      
 import "./vitima.css";   
 
 const ListarVitimas = () => {

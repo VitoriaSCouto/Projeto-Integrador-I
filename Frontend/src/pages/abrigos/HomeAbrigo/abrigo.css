@@ -200,3 +200,15 @@
     background-color: #0b3168;
     color: #ffffff;
 }
+.endereco {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #95c1ff;
+}
+.endereco-icon {
+    font-size: 13px;
+    color: #2c1e1f;
+    flex-shrink: 0;
+    margin-top: 1px;
+}

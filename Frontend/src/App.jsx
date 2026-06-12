@@ -6,12 +6,12 @@ import LoginAdm from './pages/login_adm';
 import Login from './pages/login';
 import PgAdm from './pages/pg_adm';
 import Cadastro from './pages/cadastro';
-import ListarAbrigos from './pages/abrigo';
-import CadastroVitima from './pages/cadastro_vitima';
-import ListarVitimas from './pages/listarvitima';
-import CadastrarAbrigo from './pages/cadastrar-abrigos';
-import EditarAbrigo from './pages/editar-abrigos';
-import DetalhesAbrigo from './pages/detalhes-abrigos';       
+import ListarAbrigos from './pages/abrigos/HomeAbrigo';
+import CadastroVitima from './pages/vitimas/cadastro_vitima';
+import ListarVitimas from './pages/vitimas/listarvitima';
+import CadastrarAbrigo from './pages/abrigos/cadastrar-abrigos';
+import EditarAbrigo from './pages/abrigos/editar-abrigos';
+import DetalhesAbrigo from './pages/abrigos/detalhes-abrigos';
 
 function App() {
   return (
