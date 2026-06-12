@@ -105,9 +105,10 @@ const ListarAbrigos = () => {
                   <p className="endereco">📍 {abrigo.endereco}</p>
                 </div>
 
-                <button className="btn-detalhes">
+                <a href={`/detalhes-abrigos/${abrigo.id}`} className="detalhes-link"><button className="btn-detalhes">
+                  
                   Ver Detalhes
-                </button>
+                </button></a>
               </div>
             )
           })}

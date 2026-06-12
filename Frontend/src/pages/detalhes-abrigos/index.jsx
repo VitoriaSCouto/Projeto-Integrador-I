@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaUpload, FaMapMarkerAlt, FaPhoneAlt, FaDog, FaWheelchair, FaUtensils } from 'react-icons/fa';
 import { GoAlertFill } from "react-icons/go";
+
+export default function DetalhesAbrigo() {
+  const { id } = useParams(); // Captura o :id da URL
+  const navigate = useNavigate();
 
 // IMPORTAÇÃO DOS DOIS CSS (Global e o Específico de Detalhes)
 import "../pg_adm/style.css";      
@@ -9,6 +13,7 @@ import './DetalhesAbrigos.css';
 
 export default function DetalhesAbrigo() {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // Estados necessários para o funcionamento dos inputs e formulário
   const [status, setStatus] = useState('com_vagas');
@@ -67,8 +72,8 @@ export default function DetalhesAbrigo() {
         {/* Cabeçalho superior no mesmo padrão */}
         <header className="top">
           <div>
-            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Abrigos &gt; <span>Cadastrar ou Editar</span></p>
-            <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>Cadastrar / Editar Abrigo</h1>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Abrigos &gt; <span>Vizualize ou Edite</span></p>
+            <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>Detalhes / Editar Abrigo</h1>
           </div>
           <div className="top-icons">
             <img src="src/assets/logo.png" width="80px" alt="Logo" />

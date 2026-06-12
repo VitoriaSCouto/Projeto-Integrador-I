@@ -53,7 +53,7 @@ export default async function abrigoRoutes(app) {
     //e armazena na variavel abrigo como array
 
     //Se quiser filtrar por nome ou cidade, pode usar query params
-    const { nome, endereco } = request.query
+    const { id, nome, endereco } = request.query
 
     
     //Busca todos os abrigos no banco de dados com base nos filtros de nome e cidade, se fornecidos
@@ -66,7 +66,8 @@ export default async function abrigoRoutes(app) {
         //undefined é para não aplicar o filtro se o query param não for informado
 
         nome: nome ? { contains: nome, mode: 'insensitive' } : undefined,
-        endereco: endereco ? { contains: endereco, mode: 'insensitive' } : undefined
+        endereco: endereco ? { contains: endereco, mode: 'insensitive' } : undefined,
+        id: id ? { equals: Number(id) } : undefined
       }
     })
 
