@@ -156,13 +156,13 @@
     width: 100%;
 }
 
-.select-status.com_vagas {
+.select-status.ativo {
     background-color: #def7ec;
     color: #03543f;
     border-color: #bcef86;
 }
 
-.select-status.sem_vagas {
+.select-status.desativado {
     background-color: #fde8e8;
     color: #9b1c1c;
 }

@@ -31,6 +31,9 @@ model Abrigo {
   capacidadeTotal         Int
   capacidadeOcupada       Int      @default(0)
   possuiAtendimentoMedico Boolean  @default(false)
+  possuiPets          Boolean @default(false)
+  possuiAcessibilidade Boolean @default(false)
+  possuiCozinha       Boolean @default(false)
   status                  String   @default("ativo")
   createdAt               DateTime @default(now()) @map("created_at")
 

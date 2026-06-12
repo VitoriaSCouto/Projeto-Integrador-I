@@ -117,19 +117,20 @@ POST http://localhost:3000/api/auth/cadastrar
 Content-Type: application/json
 
 {
-  "nome": "Admin",
-  "email": "admin@sosvale.com",
-  "senha": "123456",
-  "cargo": "operador"
+  "nome": "Miguel Marques",
+  "email": "miguelmarques1504@gmail.com",
+  "senha": "150407",
+  "cargo": "Administrador"
 }
+
 ###
 
 POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "marcos@email.com",
-  "senha": "12345"
+  "email": "miguelmarques1504@gmail.com",
+  "senha": "150407"
 }
 
 ###

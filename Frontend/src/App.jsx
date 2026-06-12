@@ -29,7 +29,7 @@ function App() {
           <Route path="/listar_vitimas" element={<ListarVitimas />} />
           <Route path="/cadastrar-abrigos" element={<CadastrarAbrigo />} />
           <Route path="/editar-abrigo" element={<EditarAbrigo />} />
-          <Route path="/detalhes-abrigos" element={<DetalhesAbrigo />} />
+          <Route path="/detalhes-abrigos/:id" element={<DetalhesAbrigo />} />
         </Routes>
       </Router>
     </div>
