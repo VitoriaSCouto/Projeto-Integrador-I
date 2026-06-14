@@ -6,9 +6,9 @@ import LoginAdm from './pages/login_adm';
 import Login from './pages/login';
 import PgAdm from './pages/pg_adm';
 import Cadastro from './pages/cadastro';
-import ListarAbrigos from './pages/abrigos/HubAbrigo';
+import ListarAbrigos from './pages/abrigos/HubAbrigos';
 import CadastroVitima from './pages/vitimas/cadastro_vitima';
-import ListarVitimas from './pages/vitimas/listarvitima';
+import ListarVitimas from './pages/vitimas/HubVitimas';
 import CadastrarAbrigo from './pages/abrigos/cadastrar-abrigos';
 import DetalhesAbrigo from './pages/abrigos/detalhes-abrigos';
 

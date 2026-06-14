@@ -96,9 +96,11 @@ const ListarVitimas = () => {
               </div>
 
               {/* Botão de detalhes */}
+              <a href={`/detalhes-vitimas/${vitima.id}`}>
               <button className="btn-detalhes">
                 Ver Detalhes
               </button>
+              </a>
             </div>
           ))}
         </div>

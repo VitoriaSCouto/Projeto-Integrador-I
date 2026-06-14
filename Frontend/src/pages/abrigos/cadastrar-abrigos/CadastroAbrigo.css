@@ -1,0 +1,55 @@
+.select-cidade {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #f8fafc;
+}
+
+.select-cidade option {
+  font-size: 14px;
+}
+
+.select-tipo-abrigo {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #f8fafc;
+}
+
+.select-tipo-abrigo option {
+  font-size: 14px;
+}
+.select-status {
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #f8fafc;
+}
+
+
+/* Select Estilizado Dinamicamente baseado no Status */
+
+.select-status {
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+}
+
+.select-status.ativo {
+    background-color: #def7ec;
+    color: #03543f;
+    border-color: #bcef86;
+}
+
+.select-status.desativado {
+    background-color: #fde8e8;
+    color: #9b1c1c;
+}
+
+.select-status.manutencao {
+    background-color: #fef08a;
+    color: #713f12;
+}
