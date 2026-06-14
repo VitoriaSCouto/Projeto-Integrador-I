@@ -42,9 +42,7 @@ export default async function vitimaRoutes(app) {
           contentType: 'image/jpeg'
         })
 
-      // Log para debug — remove depois que funcionar
-      console.log('erro upload:', error)
-      console.log('data upload:', data)
+        
 
       // Pega a URL pública da imagem salva
       const { data: urlData } = supabase.storage

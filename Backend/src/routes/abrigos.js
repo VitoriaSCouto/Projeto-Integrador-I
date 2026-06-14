@@ -1,39 +1,35 @@
 import { PrismaClient } from '@prisma/client'
+import supabase from '../supabase.js'
 
-// Cria uma instância do Prisma Client
-// Instancia é a conexão com o banco de dados, e é através dela que vamos fazer as consultas
 const prisma = new PrismaClient()
 
-// Exporta a função que define as rotas de abrigo
 export default async function abrigoRoutes(app) {
 
-  // Rota utilizando o método POST para cadastrar um novo abrigo
-  // URL http://localhost:3000/api/abrigos/cadastrar
+  // ─── CADASTRAR ───────────────────────────────────────────────
+  // Método POST para cadastrar um novo abrigo
+  // URL: http://localhost:3000/api/abrigos/cadastrar
   app.post('/cadastrar', async (request, reply) => {
 
-    // Extrai os dados do body da requisição
-    // Os campos booleanos já vêm com default false do banco, mas são extraídos aqui
-    // para quando a tela de cadastro tiver os checkboxes, já funcionar automaticamente
-    const { nome, endereco, telefone, responsavel, tipoAbrigo, capacidadeTotal,
-      capacidadeOcupada, possuiAtendimentoMedico, possuiPets,
-      possuiAcessibilidade, possuiCozinha, status } = request.body
+    const { nome, cidade, endereco, telefone, responsavel, tipoAbrigo,
+      capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
+      possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
+      status, fotoAbrigo } = request.body
 
-    // Verifica se já existe um abrigo com o mesmo nome e endereço no banco de dados
-    // O findFirst retorna o primeiro registro que corresponder aos filtros
+    // Verifica se já existe um abrigo com o mesmo nome e endereço
     const abrigoExistente = await prisma.abrigo.findFirst({
       where: { nome, endereco }
     })
 
-    // Se já existir um abrigo com o mesmo nome e endereço, retorna erro 400
     if (abrigoExistente) {
       return reply.status(400).send({ mensagem: 'Abrigo já cadastrado.' })
     }
 
-    // Cria o novo abrigo no banco de dados com os dados recebidos no body
-    // Os campos booleanos usam ?? para garantir o valor padrão caso não sejam enviados
+    // Cria o abrigo primeiro sem foto para gerar o ID
+    // O ID é necessário para nomear o arquivo no Storage
     const abrigo = await prisma.abrigo.create({
       data: {
         nome,
+        cidade,
         endereco,
         telefone,
         responsavel,
@@ -41,19 +37,52 @@ export default async function abrigoRoutes(app) {
         capacidadeTotal,
         capacidadeOcupada,
         possuiAtendimentoMedico: possuiAtendimentoMedico ?? false,
+        possuiEnfermagem: possuiEnfermagem ?? false,
         possuiPets: possuiPets ?? false,
         possuiAcessibilidade: possuiAcessibilidade ?? false,
         possuiCozinha: possuiCozinha ?? false,
-        status: status ?? 'ativo'
+        status: status ?? 'ativo',
+        fotoAbrigo: null
       }
     })
 
-    // Retorna o status 201 (Created) com os dados do abrigo criado
-    // Retorna também os campos booleanos para confirmar o que foi salvo
+    // Se veio uma foto em base64, faz o upload usando o ID do abrigo + timestamp como nome do arquivo
+    // O timestamp é necessário para quebrar o cache do CDN do Supabase:
+    // Como a URL pública não muda quando o arquivo é sobrescrito, o navegador servia a foto antiga.
+    // Agora cada upload gera um nome único (abrigo-{id}-{timestamp}.jpg), forçando uma URL nova.
+    if (fotoAbrigo) {
+      const buffer = Buffer.from(fotoAbrigo, 'base64')
+      const nomeArquivo = `abrigo-${abrigo.id}-${Date.now()}.jpg`
+
+      const { data, error } = await supabase.storage
+        .from('fotos-abrigo')
+        .upload(nomeArquivo, buffer, {
+          contentType: 'image/jpeg',
+          upsert: false // cada upload tem nome único, não precisa sobrescrever
+        })
+
+      if (error) {
+        return reply.status(500).send({ mensagem: 'Abrigo criado, mas erro ao salvar a foto.' })
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('fotos-abrigo')
+        .getPublicUrl(data.path)
+
+      // Atualiza o abrigo com a URL pública da foto
+      await prisma.abrigo.update({
+        where: { id: abrigo.id },
+        data: { fotoAbrigo: urlData.publicUrl }
+      })
+
+      abrigo.fotoAbrigo = urlData.publicUrl
+    }
+
     return reply.status(201).send({
       mensagem: 'Abrigo cadastrado com sucesso!',
       id: abrigo.id,
       nome: abrigo.nome,
+      cidade: abrigo.cidade,
       endereco: abrigo.endereco,
       telefone: abrigo.telefone,
       responsavel: abrigo.responsavel,
@@ -61,114 +90,160 @@ export default async function abrigoRoutes(app) {
       capacidadeTotal: abrigo.capacidadeTotal,
       capacidadeOcupada: abrigo.capacidadeOcupada,
       possuiAtendimentoMedico: abrigo.possuiAtendimentoMedico,
+      possuiEnfermagem: abrigo.possuiEnfermagem,
       possuiPets: abrigo.possuiPets,
       possuiAcessibilidade: abrigo.possuiAcessibilidade,
       possuiCozinha: abrigo.possuiCozinha,
-      status: abrigo.status
+      status: abrigo.status,
+      fotoAbrigo: abrigo.fotoAbrigo
     })
   })
 
-  // Rota utilizando o método GET para listar todos os abrigos
-  // Rota também com a possibilidade de filtrar por nome, endereço ou id, usando query params
-  // URL http://localhost:3000/api/abrigos/listar
-  // URL http://localhost:3000/api/abrigos/listar?nome=
-  // URL http://localhost:3000/api/abrigos/listar?endereco=
+
+  // ─── LISTAR TODOS ────────────────────────────────────────────
+  // Método GET para listar todos os abrigos, com filtros opcionais via query params
+  // URL: http://localhost:3000/api/abrigos/listar
+  // URL: http://localhost:3000/api/abrigos/listar?nome=
+  // URL: http://localhost:3000/api/abrigos/listar?cidade=
+  // URL: http://localhost:3000/api/abrigos/listar?endereco=
   app.get('/listar', async (request, reply) => {
 
-    // Extrai os filtros opcionais da query string da URL
-    const { id, nome, endereco } = request.query
+    const { id, nome, endereco, cidade } = request.query
 
-    // Busca todos os abrigos no banco de dados com base nos filtros, se fornecidos
-    // O findMany retorna um array com todos os registros que corresponderem aos filtros
-    const abrigo = await prisma.abrigo.findMany({
+    const abrigos = await prisma.abrigo.findMany({
       where: {
-
-        // O contains é para buscar por partes do nome ou endereço
-        // O mode: 'insensitive' é para não diferenciar maiúsculas de minúsculas
-        // undefined é para não aplicar o filtro se o query param não for informado
-        nome: nome ? { contains: nome, mode: 'insensitive' } : undefined,
+        // O contains busca por partes do texto (ex: "escola" acha "Escola Municipal")
+        // O mode: 'insensitive' ignora maiúsculas e minúsculas
+        // undefined remove o filtro se o query param não for informado
+        nome:     nome     ? { contains: nome,     mode: 'insensitive' } : undefined,
         endereco: endereco ? { contains: endereco, mode: 'insensitive' } : undefined,
-        id: id ? { equals: Number(id) } : undefined
+        cidade:   cidade   ? { contains: cidade,   mode: 'insensitive' } : undefined,
+        id:       id       ? { equals: Number(id) }                      : undefined,
       }
     })
 
-    // Aqui o Array é ITERADO
-    // Iterar => percorrer cada item do array e retornar apenas os campos necessários para a listagem
-    // capacidadeTotal e capacidadeOcupada são necessários para calcular a barra de progresso na tela
-    const abrigosListados = abrigo.map((abrigo) => ({
-      id: abrigo.id,
-      nome: abrigo.nome,
-      endereco: abrigo.endereco,
-      status: abrigo.status,
-      tipoAbrigo: abrigo.tipoAbrigo,
-      capacidadeTotal: abrigo.capacidadeTotal,
-      capacidadeOcupada: abrigo.capacidadeOcupada
+    // Retorna apenas os campos necessários para a listagem
+    // capacidadeTotal e capacidadeOcupada são usados para a barra de progresso na tela
+    const abrigosListados = abrigos.map((abrigo) => ({
+      id:               abrigo.id,
+      nome:             abrigo.nome,
+      cidade:           abrigo.cidade,
+      endereco:         abrigo.endereco,
+      status:           abrigo.status,
+      tipoAbrigo:       abrigo.tipoAbrigo,
+      capacidadeTotal:  abrigo.capacidadeTotal,
+      capacidadeOcupada: abrigo.capacidadeOcupada,
+      fotoAbrigo:       abrigo.fotoAbrigo
     }))
 
-    // Retorna o status 200 (OK) com a lista de abrigos
     return reply.status(200).send({
       mensagem: 'Lista:',
       abrigos: abrigosListados
     })
   })
 
-  // Rota utilizando o método GET para buscar um abrigo específico pelo ID
-  // Diferente do /listar, essa rota retorna TODOS os campos do abrigo
-  // É utilizada pela tela de Detalhes para preencher o formulário com os dados do abrigo
-  // URL http://localhost:3000/api/abrigos/listar/:id
+
+  // ─── LISTAR UM ───────────────────────────────────────────────
+  // Método GET para buscar um abrigo específico pelo ID
+  // Retorna TODOS os campos — usado pela tela de Detalhes
+  // URL: http://localhost:3000/api/abrigos/listar/:id
   app.get('/listar/:id', async (request, reply) => {
 
-    // Extrai o ID do abrigo dos parâmetros da URL
-    // Diferente do /listar que usa query params (?id=), aqui o id vem direto na URL (/listar/1)
     const { id } = request.params
 
-    // Busca um único abrigo pelo ID no banco de dados
-    // O findUnique retorna apenas um registro, ou null se não encontrar
     const abrigo = await prisma.abrigo.findUnique({
       where: { id: Number(id) }
     })
 
-    // Se não encontrar nenhum abrigo com esse ID, retorna erro 404
     if (!abrigo) {
       return reply.status(404).send({ mensagem: 'Abrigo não encontrado.' })
     }
 
-    // Retorna o status 200 (OK) com todos os dados do abrigo encontrado
     // O Prisma já retorna todos os campos automaticamente com o findUnique
     return reply.status(200).send(abrigo)
   })
 
-  // Rota utilizando o método PUT para atualizar as informações de um abrigo
-  // URL http://localhost:3000/api/abrigos/atualizar/:id
-  app.put('/atualizar/:id', async (request, reply) => {
 
-    // Extrai o ID do abrigo dos parâmetros da URL
+  // ─── ATUALIZAR ───────────────────────────────────────────────
+  // Método PUT para atualizar as informações de um abrigo
+  // URL: http://localhost:3000/api/abrigos/atualizar/:id
+  app.put('/atualizar/:id', async (request, reply) => {
+    try {
+
     const { id } = request.params
 
-    // Extrai os novos dados do body da requisição
-    // Inclui todos os campos booleanos de infraestrutura e o status
-    const { nome, endereco, telefone, responsavel, tipoAbrigo,
+    const { nome, cidade, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
-      possuiPets, possuiAcessibilidade, possuiCozinha, status } = request.body
+      possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
+      status, fotoAbrigo } = request.body
 
-    // Verifica se o abrigo existe antes de tentar atualizar
-    // O findUnique retorna o abrigo se encontrar, ou null se não encontrar
     const abrigoExistente = await prisma.abrigo.findUnique({
       where: { id: Number(id) }
     })
 
-    // Se não existir, retorna erro 404
     if (!abrigoExistente) {
       return reply.status(404).send({ mensagem: 'Abrigo não encontrado.' })
     }
 
-    // Atualiza o abrigo no banco de dados com os novos dados recebidos no body
-    // O update localiza o registro pelo ID e substitui os campos informados
-    // Os campos booleanos usam ?? para garantir o valor padrão caso não sejam enviados
+    // Define a URL da foto que vai ser salva no banco
+    // Por padrão mantém a foto atual, mas pode mudar dependendo do que veio no body
+    let fotoUrl = abrigoExistente.fotoAbrigo
+
+    if (fotoAbrigo === null) {
+      // Usuário clicou em "Remover Foto" — apaga do Storage e do banco
+      // O nome do arquivo é extraído da URL salva no banco, já que agora o nome tem timestamp
+      // Exemplo: "https://...supabase.co/.../abrigo-24-1718323200000.jpg" → "abrigo-24-1718323200000.jpg"
+      if (abrigoExistente.fotoAbrigo) {
+        const nomeArquivo = abrigoExistente.fotoAbrigo.split('/').pop().split('?')[0]
+        await supabase.storage
+          .from('fotos-abrigo')
+          .remove([nomeArquivo])
+      }
+      fotoUrl = null
+
+    } else if (fotoAbrigo && !fotoAbrigo.startsWith('http')) {
+      // Veio um novo base64 — apaga a foto anterior e sobe a nova com nome único
+      //
+      // Antes usávamos upsert com nome fixo (abrigo-{id}.jpg), mas o CDN do Supabase
+      // fazia cache da URL e continuava servindo a foto antiga mesmo após o upload.
+      // A solução foi:
+      //   1. Apagar o arquivo anterior pelo nome extraído da URL do banco
+      //   2. Subir o novo com timestamp no nome → URL nova → cache quebrado
+      if (abrigoExistente.fotoAbrigo) {
+        const nomeAntigo = abrigoExistente.fotoAbrigo.split('/').pop().split('?')[0]
+        await supabase.storage
+          .from('fotos-abrigo')
+          .remove([nomeAntigo])
+      }
+
+      const buffer = Buffer.from(fotoAbrigo, 'base64')
+      const nomeArquivo = `abrigo-${id}-${Date.now()}.jpg`
+
+      const { data, error } = await supabase.storage
+        .from('fotos-abrigo')
+        .upload(nomeArquivo, buffer, {
+          contentType: 'image/jpeg',
+          upsert: false // nome único por timestamp, não precisa sobrescrever
+        })
+
+      if (error) {
+        return reply.status(500).send({ mensagem: 'Erro ao fazer upload da foto.' })
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('fotos-abrigo')
+        .getPublicUrl(data.path)
+
+      fotoUrl = urlData.publicUrl
+
+    }
+    // Se fotoAbrigo vier como uma URL http, não faz nada — mantém a foto atual
+
     const abrigoAtualizado = await prisma.abrigo.update({
       where: { id: Number(id) },
       data: {
         nome,
+        cidade,
         endereco,
         telefone,
         responsavel,
@@ -176,58 +251,72 @@ export default async function abrigoRoutes(app) {
         capacidadeTotal,
         capacidadeOcupada,
         possuiAtendimentoMedico: possuiAtendimentoMedico ?? false,
-        possuiPets: possuiPets ?? false,
-        possuiAcessibilidade: possuiAcessibilidade ?? false,
-        possuiCozinha: possuiCozinha ?? false,
-        status: status ?? 'ativo'
+        possuiEnfermagem:        possuiEnfermagem        ?? false,
+        possuiPets:              possuiPets              ?? false,
+        possuiAcessibilidade:    possuiAcessibilidade    ?? false,
+        possuiCozinha:           possuiCozinha           ?? false,
+        status:                  status                  ?? 'ativo',
+        fotoAbrigo:              fotoUrl
       }
     })
 
-    // Retorna o status 200 (OK) com todos os dados atualizados do abrigo
     return reply.status(200).send({
       mensagem: 'Informações do abrigo atualizadas com sucesso!',
-      id: abrigoAtualizado.id,
-      nome: abrigoAtualizado.nome,
-      endereco: abrigoAtualizado.endereco,
-      telefone: abrigoAtualizado.telefone,
-      responsavel: abrigoAtualizado.responsavel,
-      tipoAbrigo: abrigoAtualizado.tipoAbrigo,
-      capacidadeTotal: abrigoAtualizado.capacidadeTotal,
-      capacidadeOcupada: abrigoAtualizado.capacidadeOcupada,
+      id:                      abrigoAtualizado.id,
+      nome:                    abrigoAtualizado.nome,
+      cidade:                  abrigoAtualizado.cidade,
+      endereco:                abrigoAtualizado.endereco,
+      telefone:                abrigoAtualizado.telefone,
+      responsavel:             abrigoAtualizado.responsavel,
+      tipoAbrigo:              abrigoAtualizado.tipoAbrigo,
+      capacidadeTotal:         abrigoAtualizado.capacidadeTotal,
+      capacidadeOcupada:       abrigoAtualizado.capacidadeOcupada,
       possuiAtendimentoMedico: abrigoAtualizado.possuiAtendimentoMedico,
-      possuiPets: abrigoAtualizado.possuiPets,
-      possuiAcessibilidade: abrigoAtualizado.possuiAcessibilidade,
-      possuiCozinha: abrigoAtualizado.possuiCozinha,
-      status: abrigoAtualizado.status
+      possuiEnfermagem:        abrigoAtualizado.possuiEnfermagem,
+      possuiPets:              abrigoAtualizado.possuiPets,
+      possuiAcessibilidade:    abrigoAtualizado.possuiAcessibilidade,
+      possuiCozinha:           abrigoAtualizado.possuiCozinha,
+      status:                  abrigoAtualizado.status,
+      fotoAbrigo:              abrigoAtualizado.fotoAbrigo
     })
+
+    } catch (erro) {
+      // Vai mostrar o erro real no terminal
+      console.error('ERRO DETALHADO:', erro)
+      return reply.status(500).send({ mensagem: erro.message })
+    }
   })
 
-  // Rota utilizando o método DELETE para excluir um abrigo
-  // URL http://localhost:3000/api/abrigos/excluir/:id
+
+  // ─── EXCLUIR ─────────────────────────────────────────────────
+  // Método DELETE para excluir um abrigo
+  // URL: http://localhost:3000/api/abrigos/excluir/:id
   app.delete('/excluir/:id', async (request, reply) => {
 
-    // Extrai o ID do abrigo dos parâmetros da URL
     const { id } = request.params
 
-    // Verifica se o abrigo existe antes de tentar excluir
     const abrigoExistente = await prisma.abrigo.findUnique({
       where: { id: Number(id) }
     })
 
-    // Se não existir, retorna erro 404
     if (!abrigoExistente) {
       return reply.status(404).send({ mensagem: 'Abrigo não encontrado.' })
     }
 
-    // Exclui o abrigo do banco de dados pelo ID
-    // O delete localiza o registro pelo ID e o remove permanentemente
+    // Se o abrigo tiver foto, remove do Storage antes de deletar o registro
+    // O nome do arquivo é extraído da URL salva no banco, já que agora o nome tem timestamp
+    // Exemplo: "https://...supabase.co/.../abrigo-24-1718323200000.jpg" → "abrigo-24-1718323200000.jpg"
+    if (abrigoExistente.fotoAbrigo) {
+      const nomeArquivo = abrigoExistente.fotoAbrigo.split('/').pop().split('?')[0]
+      await supabase.storage
+        .from('fotos-abrigo')
+        .remove([nomeArquivo])
+    }
+
     await prisma.abrigo.delete({
       where: { id: Number(id) }
     })
 
-    // Retorna o status 200 (OK) confirmando a exclusão
-    return reply.status(200).send({
-      mensagem: 'Abrigo excluído com sucesso!'
-    })
+    return reply.status(200).send({ mensagem: 'Abrigo excluído com sucesso!' })
   })
 }

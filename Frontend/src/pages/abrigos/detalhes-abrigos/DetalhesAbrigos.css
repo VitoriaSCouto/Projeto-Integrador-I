@@ -267,7 +267,7 @@
 
 .image-preview img {
     max-width: 100%;
-    max-height: 200px;
+    max-height: 100%;
     border-radius: 8px;
     margin-bottom: 15px;
 }
@@ -353,5 +353,19 @@
 }
 
 .select-tipo-abrigo option {
+    font-size: 14px;
+}
+
+/* Select Cidade */
+
+.select-cidade {
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #f8fafc;
+}
+
+.select-cidade option {
     font-size: 14px;
 }

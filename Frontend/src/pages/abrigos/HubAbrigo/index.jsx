@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaSearch, FaPlus, FaSchool,FaBasketballBall, FaChurch, FaHotel, FaBed, 
-  FaPalette, FaUsers, FaTree  } from "react-icons/fa";
+import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaSearch, FaPlus, FaSchool,FaBasketballBall, FaChurch, FaHotel, FaBed, FaMapMarkedAlt,
+  FaPalette, FaUsers, FaTree, FaCircle  } from "react-icons/fa";
 import { FaLocationDot } from "react-icons/fa6";
 import { GoAlertFill } from "react-icons/go";
 
@@ -12,6 +12,8 @@ const ListarAbrigos = () => {
   const [abrigos, setAbrigos] = useState([])
   const [busca, setBusca] = useState('')
   const navigate = useNavigate()
+
+
 
   useEffect(() => {
     const buscarAbrigos = async () => {
@@ -36,6 +38,17 @@ const ListarAbrigos = () => {
   }
 
 
+  //Fiz a mão de ultima hora, só para ter mesmo
+  //Muda com base no status
+  const cinza = '#faf0f0'
+  const tipoBolaStatus = (tipo)=> {
+    switch (tipo)
+    {
+      case 'ativo':       return <span><FaCircle style={{color:'#93fb73'}}/><FaCircle style={{color:cinza}}/><FaCircle style={{color:cinza}}/></span>;
+      case 'manutencao':  return <span><FaCircle style={{color:cinza}}/><FaCircle style={{color:'#ffff66'}}/><FaCircle style={{color:cinza}}/></span>;
+      case 'desativado':  return <span><FaCircle style={{color:cinza}}/><FaCircle style={{color:cinza}}/><FaCircle style={{color:'#ff6666'}}/></span>;
+    }
+  }
   const tipoEmoji = (tipo) => {
   switch (tipo) {
     case 'Escola':       return <FaSchool className="icon" />;
@@ -71,10 +84,24 @@ const ListarAbrigos = () => {
       </aside>
 
       <div className="main">
-        <header className="main-header">
+
+          <header className="top">
           <div>
-            <h1>Abrigos Cadastrados</h1>
-            <p className="subtitle">Gerencie os locais de acolhimento e o nível de ocupação</p>
+            {/* Breadcrumb mostrando o nome do abrigo que veio da API */}
+            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+              Abrigos &gt;
+            </p>
+
+            {/* Título muda dependendo do modo */}
+            <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
+              {/* Muda dependendo do modo */}
+              {'Hub de Abrigos'}
+            </h1>
+            <p className="subtitle"> Consulte, gerencie, atualize ou delete informações de abrigos</p>
+
+          </div>
+          <div className="top-icons">
+            <img src="/src/assets/logo.png" width="80px" alt="Logo" />
           </div>
         </header>
 
@@ -101,12 +128,17 @@ const ListarAbrigos = () => {
             return (
               <div key={abrigo.id} className="abrigo-card">
                 
-                <div className="abrigo-card-header">
-                  <h3>{abrigo.nome}</h3>
+              <div className="abrigo-card-header">
+                <h3>{abrigo.nome}</h3>
+
+                {/* Agrupa bolinhas + ícone no canto direito */}
+                <div className="card-header-right">
+                  <p>{tipoBolaStatus(abrigo.status)}</p>
                   <span className="home-badge-icon">
                     {tipoEmoji(abrigo.tipoAbrigo)}
                   </span>
                 </div>
+              </div>
 
                 <div className="abrigo-status-row">
                   <span className={`status-badge ${status.classe}`}>
@@ -123,6 +155,7 @@ const ListarAbrigos = () => {
 
                 <div className="abrigo-info">
                   <p><strong>Capacidade:</strong> {abrigo.capacidadeOcupada} / {abrigo.capacidadeTotal}</p>
+                  <p className="endereco"><FaMapMarkedAlt className="endereco-icon"/> {abrigo.cidade}</p>
                   <p className="endereco"><FaLocationDot className="endereco-icon"/> {abrigo.endereco}</p>
                 </div>
 

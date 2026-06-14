@@ -33,6 +33,7 @@
     font-size: 15px;
 }
 
+
 .search-box input {
     width: 100%;
     padding: 14px 14px 14px 46px;
@@ -211,4 +212,22 @@
     color: #2c1e1f;
     flex-shrink: 0;
     margin-top: 1px;
+}
+
+.card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Remove a margem padrão do <p> das bolinhas */
+.card-header-right p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.top p {
+    font-size: 16px;
+    color: #667085;
 }

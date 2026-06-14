@@ -6,11 +6,10 @@ import LoginAdm from './pages/login_adm';
 import Login from './pages/login';
 import PgAdm from './pages/pg_adm';
 import Cadastro from './pages/cadastro';
-import ListarAbrigos from './pages/abrigos/HomeAbrigo';
+import ListarAbrigos from './pages/abrigos/HubAbrigo';
 import CadastroVitima from './pages/vitimas/cadastro_vitima';
 import ListarVitimas from './pages/vitimas/listarvitima';
 import CadastrarAbrigo from './pages/abrigos/cadastrar-abrigos';
-import EditarAbrigo from './pages/abrigos/editar-abrigos';
 import DetalhesAbrigo from './pages/abrigos/detalhes-abrigos';
 
 function App() {
@@ -28,7 +27,6 @@ function App() {
           <Route path="/cadastro_vitima" element={<CadastroVitima />} />
           <Route path="/listar_vitimas" element={<ListarVitimas />} />
           <Route path="/cadastrar-abrigos" element={<CadastrarAbrigo />} />
-          <Route path="/editar-abrigo" element={<EditarAbrigo />} />
           <Route path="/detalhes-abrigos/:id" element={<DetalhesAbrigo />} />
         </Routes>
       </Router>

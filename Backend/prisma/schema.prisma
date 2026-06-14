@@ -25,15 +25,18 @@ model Abrigo {
   id                      Int      @id @default(autoincrement())
   nome                    String
   endereco                String
+  cidade                  String
   telefone                String?
   responsavel             String
   tipoAbrigo              String
   capacidadeTotal         Int
   capacidadeOcupada       Int      @default(0)
   possuiAtendimentoMedico Boolean  @default(false)
+  possuiEnfermagem Boolean @default(false)
   possuiPets          Boolean @default(false)
   possuiAcessibilidade Boolean @default(false)
   possuiCozinha       Boolean @default(false)
+  fotoAbrigo String?
   status                  String   @default("ativo")
   createdAt               DateTime @default(now()) @map("created_at")
 
