@@ -58,16 +58,17 @@ model Regiao {
 }
 
 model Vitima {
-  id_vitima      Int      @id @default(autoincrement())
+  id_vitima             Int      @id @default(autoincrement())
   nome           String
   cpf            String?  @default("Ainda não informado")
   telefone       String?  @unique @default("Ainda não informado")
   dataNascimento DateTime @db.Date
   genero         String
-  fotoPerfil     String?
+  fotoVitima     String?
 
   deficiencias VitimaDeficiencia[]
   createdAt         DateTime @default(now()) @map("created_at")
+
 }
 
 model Deficiencia {

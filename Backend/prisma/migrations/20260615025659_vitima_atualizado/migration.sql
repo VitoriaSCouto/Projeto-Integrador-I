@@ -1,0 +1,30 @@
+/*
+  Warnings:
+
+  - The primary key for the `Vitima` table will be changed. If it partially fails, the table could be left without primary key constraint.
+  - You are about to drop the column `fotoPerfil` on the `Vitima` table. All the data in the column will be lost.
+  - You are about to drop the column `id_vitima` on the `Vitima` table. All the data in the column will be lost.
+  - The primary key for the `VitimaDeficiencia` table will be changed. If it partially fails, the table could be left without primary key constraint.
+  - You are about to drop the column `id_vitima` on the `VitimaDeficiencia` table. All the data in the column will be lost.
+  - Added the required column `id` to the `VitimaDeficiencia` table without a default value. This is not possible if the table is not empty.
+
+*/
+-- DropForeignKey
+ALTER TABLE "VitimaDeficiencia" DROP CONSTRAINT "VitimaDeficiencia_id_vitima_fkey";
+
+-- AlterTable
+ALTER TABLE "Vitima" DROP CONSTRAINT "Vitima_pkey",
+DROP COLUMN "fotoPerfil",
+DROP COLUMN "id_vitima",
+ADD COLUMN     "fotoVitima" TEXT,
+ADD COLUMN     "id" SERIAL NOT NULL,
+ADD CONSTRAINT "Vitima_pkey" PRIMARY KEY ("id");
+
+-- AlterTable
+ALTER TABLE "VitimaDeficiencia" DROP CONSTRAINT "VitimaDeficiencia_pkey",
+DROP COLUMN "id_vitima",
+ADD COLUMN     "id" INTEGER NOT NULL,
+ADD CONSTRAINT "VitimaDeficiencia_pkey" PRIMARY KEY ("id", "id_deficiencia");
+
+-- AddForeignKey
+ALTER TABLE "VitimaDeficiencia" ADD CONSTRAINT "VitimaDeficiencia_id_fkey" FOREIGN KEY ("id") REFERENCES "Vitima"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

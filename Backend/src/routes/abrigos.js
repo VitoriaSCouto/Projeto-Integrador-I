@@ -5,9 +5,9 @@ const prisma = new PrismaClient()
 
 export default async function abrigoRoutes(app) {
 
-  // ─── CADASTRAR ───────────────────────────────────────────────
-  // Método POST para cadastrar um novo abrigo
-  // URL: http://localhost:3000/api/abrigos/cadastrar
+  //----- Cadastrar ----- 
+  //Método POST para cadastrar um novo abrigo
+  //URL: http://localhost:3000/api/abrigos/cadastrar
   app.post('/cadastrar', async (request, reply) => {
 
     const { nome, cidade, endereco, telefone, responsavel, tipoAbrigo,
@@ -100,12 +100,12 @@ export default async function abrigoRoutes(app) {
   })
 
 
-  // ─── LISTAR TODOS ────────────────────────────────────────────
-  // Método GET para listar todos os abrigos, com filtros opcionais via query params
-  // URL: http://localhost:3000/api/abrigos/listar
-  // URL: http://localhost:3000/api/abrigos/listar?nome=
-  // URL: http://localhost:3000/api/abrigos/listar?cidade=
-  // URL: http://localhost:3000/api/abrigos/listar?endereco=
+  //----- Listar -----
+  //Método GET para listar todos os abrigos, com filtros opcionais via query params
+  //URL: http://localhost:3000/api/abrigos/listar
+  //URL: http://localhost:3000/api/abrigos/listar?nome=
+  //URL: http://localhost:3000/api/abrigos/listar?cidade=
+  //URL: http://localhost:3000/api/abrigos/listar?endereco=
   app.get('/listar', async (request, reply) => {
 
     const { id, nome, endereco, cidade } = request.query
@@ -143,10 +143,10 @@ export default async function abrigoRoutes(app) {
   })
 
 
-  // ─── LISTAR UM ───────────────────────────────────────────────
-  // Método GET para buscar um abrigo específico pelo ID
-  // Retorna TODOS os campos — usado pela tela de Detalhes
-  // URL: http://localhost:3000/api/abrigos/listar/:id
+  //----- Listar um só ----- (Importante para o Detalhes-abrigo)
+  //Método GET para buscar um abrigo específico pelo ID
+  //Retorna TODOS os campos — usado pela tela de Detalhes
+  //URL: http://localhost:3000/api/abrigos/listar/:id
   app.get('/listar/:id', async (request, reply) => {
 
     const { id } = request.params
@@ -164,14 +164,13 @@ export default async function abrigoRoutes(app) {
   })
 
 
-  // ─── ATUALIZAR ───────────────────────────────────────────────
-  // Método PUT para atualizar as informações de um abrigo
-  // URL: http://localhost:3000/api/abrigos/atualizar/:id
+  //----- Atualizar -----
+  //Método PUT para atualizar as informações de um abrigo
+  //URL: http://localhost:3000/api/abrigos/atualizar/:id
   app.put('/atualizar/:id', async (request, reply) => {
     try {
 
     const { id } = request.params
-
     const { nome, cidade, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
