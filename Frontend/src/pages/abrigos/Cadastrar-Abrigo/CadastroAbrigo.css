@@ -53,3 +53,13 @@
     background-color: #fef08a;
     color: #713f12;
 }
+
+.input-erro {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.input-erro:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}

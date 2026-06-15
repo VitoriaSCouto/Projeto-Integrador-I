@@ -208,7 +208,6 @@
     font-size: 18px;
 }
 
-
 /* Quando o input estiver checado, ele muda a cor do card simulando o botão selecionado */
 
 .checkbox-card input[type="checkbox"]:checked+.checkbox-content {
@@ -222,19 +221,21 @@
 }
 
 
-/* Seção de Upload do "Fotão" */
+/* Seção de Upload da Foto */
 
 .upload-container {
     border: 2px dashed #cbd5e0;
     border-radius: 12px;
-    padding: 40px 20px;
+    padding: 20px;
     text-align: center;
     background: #f8fafc;
-    min-height: 400px;
+    min-height: 200px;       /* altura mínima reduzida */
+    max-height: 300px;       /* limita para não crescer demais */
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 30px;
+    overflow: hidden;        /* garante que a foto não vaze para fora */
 }
 
 .upload-dropzone {
@@ -267,9 +268,10 @@
 
 .image-preview img {
     max-width: 100%;
-    max-height: 100%;
+    max-height: 260px;       /* altura máxima fixa para a foto */
     border-radius: 8px;
     margin-bottom: 15px;
+    object-fit: contain;     /* mantém proporção sem distorcer */
 }
 
 .btn-remove-image {
@@ -342,6 +344,7 @@
     border-top: 1px solid #e2e8f0;
 }
 
+
 /* Select do Tipo de Abrigo */
 
 .select-tipo-abrigo {
@@ -356,6 +359,7 @@
     font-size: 14px;
 }
 
+
 /* Select Cidade */
 
 .select-cidade {
@@ -368,4 +372,32 @@
 
 .select-cidade option {
     font-size: 14px;
+}
+
+
+/* Select Gênero */
+
+.select-genero {
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #f8fafc;
+}
+
+.select-genero option {
+    font-size: 14px;
+}
+
+
+/* Validação de Capacidade */
+
+.input-erro {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.input-erro:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }

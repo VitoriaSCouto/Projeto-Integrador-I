@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaSearch, FaPlus } from "react-icons/fa";
+import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaSearch, FaPlus, FaPhoneAlt, FaIdCard } from "react-icons/fa";
 import { GoAlertFill } from "react-icons/go";
 
 // IMPORTAÇÃO DOS DOIS CSS (Global e o Específico de Vítimas)
@@ -34,10 +34,10 @@ const ListarVitimas = () => {
           <a href="/pg_adm">
             <li><FaHome className="icon" /> Home</li>
           </a>
-          <a href="/abrigo">
+          <a href="/abrigos">
             <li><FaBoxOpen className="icon" /> Abrigos</li>
           </a>
-          <a href="/listar_vitimas">
+          <a href="/vitimas">
             <li className="active"><FaUser className="icon" /> Vítimas</li>
           </a>
           <li><FaDonate className="icon" /> Doações</li>
@@ -50,10 +50,26 @@ const ListarVitimas = () => {
       {/* Conteúdo principal */}
       <div className="main">
         
-        <header className="main-header">
+        <header className="top">
           <div>
-            <h1>Vítimas Registradas</h1>
-            <p className="subtitle">Consulte, gerencie informações de contato e faça a triagem dos cidadãos afetados</p>
+
+            {/* Breadcrumb mostrando o nome do abrigo que veio da API */}
+            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+              Vítimas &gt;
+            </p>
+
+            {/* Título muda dependendo do modo */}
+            <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
+
+              
+            {/* Muda dependendo do modo */}
+            {'Hub de Vitimas'}
+            </h1>
+            <p className="subtitle"> Consulte, cadastre ou gerencie vitímas</p>
+
+          </div>
+          <div className="top-icons">
+            <img src="/src/assets/logo.png" width="80px" alt="Logo" />
           </div>
         </header>
 
@@ -68,7 +84,7 @@ const ListarVitimas = () => {
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
-          <button className="btn-add-vitima" onClick={() => navigate('/cadastro_vitima')}>
+          <button className="btn-add-vitima" onClick={() => navigate('/cadastro-vitima')}>
             <FaPlus /> Nova Vítima
           </button>
         </div>
@@ -80,19 +96,19 @@ const ListarVitimas = () => {
 
               {/* Foto/Avatar maior e Nome da vítima alinhados */}
               <div className="vitima-card-header">
-                {vitima.fotoPerfil ? (
-                  <img src={vitima.fotoPerfil} alt={vitima.nome} className="vitima-avatar" />
+                {vitima.fotoVitima ? (
+                  <img src={vitima.fotoVitima} alt={vitima.nome} className="vitima-avatar" />
                 ) : (
-                  <div className="vitima-avatar-placeholder">👤</div>
+                  <div className="vitima-avatar-placeholder"><FaUser></FaUser></div>
                 )}
                 <h3>{vitima.nome}</h3>
               </div>
 
               {/* Corpo de informações da vítima */}
               <div className="vitima-info">
-                <p><strong>📋 CPF:</strong> {vitima.cpf}</p>
-                <p><strong>📞 Telefone:</strong> {vitima.telefone}</p>
-                <p><strong>👤 Gênero:</strong> {vitima.genero}</p>
+                <p><strong><FaIdCard/> CPF:</strong> {vitima.cpf}</p>
+                <p><strong><FaPhoneAlt/> Telefone:</strong> {vitima.telefone}</p>
+                <p><strong><FaUser/> Gênero:</strong> {vitima.genero}</p>
               </div>
 
               {/* Botão de detalhes */}

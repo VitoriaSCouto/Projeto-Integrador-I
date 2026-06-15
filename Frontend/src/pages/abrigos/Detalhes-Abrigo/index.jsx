@@ -12,7 +12,7 @@ import {
 } from 'react-icons/fa';
 import { GoAlertFill } from "react-icons/go";
 import "../../pg_adm/style.css";
-import './DetalhesAbrigos.css';
+import './DetalhesAbrigo.css';
 
 //Fim dos imports
 //--------------------------
@@ -53,6 +53,21 @@ function DetalhesAbrigo() {
   const [fotoUrl, setFotoUrl] = useState(null); //Foto "atual"
   const [novaFoto, setNovaFoto] = useState(null); //Variavel para atualizações
   const fotoExibida = novaFoto ?? fotoUrl; //Foto exibida
+
+  //Consts dos erros
+  const [erroCapacidade, setErroCapacidade] = useState('')
+
+  //Const para validar a capacidade
+  const validarCapacidade = (ocupada, total) => {
+  // Só valida se os dois campos tiverem valor
+  if (ocupada === 0 && total === 0) return
+
+  if (ocupada > total) {
+    setErroCapacidade('Capacidade ocupada não pode ser maior que a total.')
+  } else {
+    setErroCapacidade('')
+  }
+}
 
   //Essa divisão foi necessaria para corrigir o fluxo de como funcionava o upload das fotos
   //
@@ -124,7 +139,7 @@ function DetalhesAbrigo() {
       } catch (erro) {
         console.error("Erro ao buscar abrigo:", erro);
       } finally {
-        // Para de mostrar o loading independente de dar certo ou errado
+        //Para de mostrar o loading independente de dar certo ou errado
         setCarregando(false);
       }
     };
@@ -212,6 +227,11 @@ function DetalhesAbrigo() {
           ...infraestrutura
         }),
       });
+
+      //Verifica se o capacidadeOcupada é maior que o capacidadeTotal, se for verdade o formulario não sobe.
+      if (capacidadeOcupada>capacidadeTotal){
+        if (erroCapacidade) return
+      }
       const dadosResultado = await resposta.json()
       console.log('status da resposta:', resposta.status);
       console.log('resultado:', dadosResultado);
@@ -255,10 +275,9 @@ function DetalhesAbrigo() {
 
       //Atualiza a foto exibida com a URL nova do banco (com timestamp anti-cache)
       setFotoUrl(dadosResultado.fotoAbrigo ? dadosResultado.fotoAbrigo + '?t=' + Date.now() : null);
-
-       alert('Abrigo atualizado com sucesso!');
-       setNovaFoto(null);  //limpa a foto nova após salvar
-       setEditando(false); //Volta pro modo de Visualização
+      alert('Abrigo atualizado com sucesso!');
+      setNovaFoto(null);  //limpa a foto nova após salvar
+      setEditando(false); //Volta pro modo de Visualização
 
     } catch (erro) {
       console.error("Erro ao salvar:", erro);
@@ -276,17 +295,29 @@ function DetalhesAbrigo() {
       //Apaga o abrigo selecionado e volta pro Hub de abrigos.
       await fetch(`http://localhost:3000/api/abrigos/excluir/${id}`, {
       method: 'DELETE' });
-      navigate('/abrigo');
+      navigate('/abrigos');
     } 
     catch (erro) {
       console.error("Erro ao excluir:", erro);
     }
   };
 
+  //Handler do botão entrar edição
+  //Entra no modo edição e sai do modo view
+  const handleEditar = async () =>{
+    setEditando(true)
+    validarCapacidade(capacidadeOcupada, capacidadeTotal)
+  }
+
   //Handler do botão cancelar edição
   //Volta pro modo view e realiza mais algumas coisas:
   const handleCancelExcluir = async () =>{
     //Esse aqui eu fiz ele mais como um teste para aprendizado
+    
+    //Se tiver errado, não permite voltar
+    if (capacidadeOcupada>capacidadeTotal){
+      if (erroCapacidade) return
+    }
 
     //Volta pro modo view
     setEditando(false);
@@ -305,7 +336,9 @@ function DetalhesAbrigo() {
      possuiPets: dadosAbrigo.possuiPets ?? false,
      possuiAcessibilidade: dadosAbrigo.possuiAcessibilidade ?? false,
      possuiCozinha: dadosAbrigo.possuiCozinha ?? false}
-    )}
+    )
+
+  }
 
   //------- Tela de loading ------
   // Enquanto a API não respondeu, mostra uma mensagem para o usuário não ver a tela vazia
@@ -317,8 +350,8 @@ function DetalhesAbrigo() {
         <aside className="sidebar">
           <ul>
             <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-            <a href="/abrigo"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
-            <a href="/listar_vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
+            <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
+            <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
             <li><FaDonate className="icon" /> Doações</li>
             <li><FaMapPin className="icon" /> Região Afetada</li>
             <li><GoAlertFill className="icon" /> Ocorrências</li>
@@ -342,8 +375,8 @@ function DetalhesAbrigo() {
 
         <ul>
           <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-          <a href="/abrigo"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
-          <a href="/listar_vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
+          <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
+          <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
 
           <li><FaDonate className="icon" /> Doações</li>
           <li><FaMapPin className="icon" /> Região Afetada</li>
@@ -368,6 +401,7 @@ function DetalhesAbrigo() {
               {/* Muda dependendo do modo */}
               {editando ? 'Editar Abrigo' : 'Detalhes do Abrigo'}
             </h1>
+            <p className="subtitle"> Gerencia as informações deste abrigo</p>
 
           </div>
           <div className="top-icons">
@@ -520,7 +554,17 @@ function DetalhesAbrigo() {
 
               {editando ? (
                 //Se ligado:
-                <input type="number" value={capacidadeTotal} onChange={(e) => setCapacidadeTotal(parseInt(e.target.value) || 0)} />
+                <input
+                type="number"
+                name="capacidadeTotal"
+                value={capacidadeTotal}
+                required
+                onChange={(e) => {
+                  const total = parseInt(e.target.value)
+                  setCapacidadeTotal(total)
+                  validarCapacidade(capacidadeOcupada, total)
+                }}
+                />
               ) : (
                 //Se desligado:
                 <p>{capacidadeTotal}</p>
@@ -533,12 +577,28 @@ function DetalhesAbrigo() {
 
               {editando ? (
                 //Se ligada:
-                <input type="number" value={capacidadeOcupada} onChange={(e) => setCapacidadeOcupada(parseInt(e.target.value) || 0)} />
+                <input 
+                type="number"
+                name="capacidadeOcupada"
+                value={capacidadeOcupada}
+                className={`input-capacidade ${erroCapacidade ? 'input-erro' : ''}`} 
+                onChange={(e) => {
+                  const ocupada = parseInt(e.target.value)
+                  setCapacidadeOcupada(ocupada)
+                  validarCapacidade(ocupada, capacidadeTotal) // valida com o novo ocupada
+                }}/>
               ) : (
                 //Se desligada:
                 <p>{capacidadeOcupada}</p>
               )}
             </div>
+
+            {/* Verifica se o Ocupada é maior que o Total */}
+            {erroCapacidade && (
+            <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px' }}>
+            {erroCapacidade}
+            </p>
+            )}
 
             {/* CheckBox da Infraestrutura*/}
             {/* Tudo é Boolean, ou seja: True ou False */}
@@ -730,8 +790,9 @@ function DetalhesAbrigo() {
               )}
                 {/* No modo visualização só aparece o botão de entrar no modo edição */}
                 {editando ? null : (
-                  <button type="button" onClick={() => setEditando(true)} className="btn-action cancelar">
-                    Editar Abrigo
+                  <button type="button" onClick={handleEditar}
+                  className="btn-action cancelar">
+                  Editar Abrigo
                   </button>
                 )}
             </div>

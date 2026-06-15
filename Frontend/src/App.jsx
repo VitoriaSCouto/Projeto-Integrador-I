@@ -6,11 +6,12 @@ import LoginAdm from './pages/login_adm';
 import Login from './pages/login';
 import PgAdm from './pages/pg_adm';
 import Cadastro from './pages/cadastro';
-import ListarAbrigos from './pages/abrigos/HubAbrigos';
-import CadastroVitima from './pages/vitimas/cadastro_vitima';
-import ListarVitimas from './pages/vitimas/HubVitimas';
-import CadastrarAbrigo from './pages/abrigos/cadastrar-abrigos';
-import DetalhesAbrigo from './pages/abrigos/detalhes-abrigos';
+import ListarAbrigos from './pages/abrigos/Hub-Abrigos';
+import CadastroVitima from './pages/vitimas/cadastro-vitima';
+import ListarVitimas from './pages/vitimas/Hub-Vitimas';
+import CadastrarAbrigo from './pages/abrigos/Cadastrar-Abrigo';
+import DetalhesAbrigo from './pages/abrigos/Detalhes-Abrigo';
+import DetalhesVitimas from './pages/vitimas/Detalhes-vitima';
 
 function App() {
   return (
@@ -23,11 +24,12 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/pg_adm" element={<PgAdm />} />
           <Route path="/cadastro" element={<Cadastro />} />
-          <Route path="/abrigo" element={<ListarAbrigos />} />
-          <Route path="/cadastro_vitima" element={<CadastroVitima />} />
-          <Route path="/listar_vitimas" element={<ListarVitimas />} />
+          <Route path="/abrigos" element={<ListarAbrigos />} />
+          <Route path="/cadastro-vitima" element={<CadastroVitima />} />
+          <Route path="/vitimas" element={<ListarVitimas />} />
           <Route path="/cadastrar-abrigos" element={<CadastrarAbrigo />} />
           <Route path="/detalhes-abrigos/:id" element={<DetalhesAbrigo />} />
+          <Route path="/detalhes-vitimas/:id" element={<DetalhesVitimas/>}/>
         </Routes>
       </Router>
     </div>

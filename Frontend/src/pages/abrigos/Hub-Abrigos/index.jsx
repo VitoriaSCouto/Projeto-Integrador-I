@@ -40,13 +40,15 @@ const ListarAbrigos = () => {
 
   //Fiz a mão de ultima hora, só para ter mesmo
   //Muda com base no status
-  const cinza = '#faf0f0'
+  const VerdCinza = '#e2fbf0'
+  const AmarCinza = '#fff3e0'
+  const VermCinza = '#ffebee'
   const tipoBolaStatus = (tipo)=> {
     switch (tipo)
     {
-      case 'ativo':       return <span><FaCircle style={{color:'#93fb73'}}/><FaCircle style={{color:cinza}}/><FaCircle style={{color:cinza}}/></span>;
-      case 'manutencao':  return <span><FaCircle style={{color:cinza}}/><FaCircle style={{color:'#ffff66'}}/><FaCircle style={{color:cinza}}/></span>;
-      case 'desativado':  return <span><FaCircle style={{color:cinza}}/><FaCircle style={{color:cinza}}/><FaCircle style={{color:'#ff6666'}}/></span>;
+      case 'ativo':       return <span><FaCircle style={{color:'#93fb73'}}/><FaCircle style={{color:VerdCinza}}/><FaCircle style={{color:VerdCinza}}/></span>;
+      case 'manutencao':  return <span><FaCircle style={{color:AmarCinza}}/><FaCircle style={{color:'#ffff66'}}/><FaCircle style={{color:AmarCinza}}/></span>;
+      case 'desativado':  return <span><FaCircle style={{color:VermCinza}}/><FaCircle style={{color:VermCinza}}/><FaCircle style={{color:'#ff6666'}}/></span>;
     }
   }
   const tipoEmoji = (tipo) => {
@@ -70,10 +72,10 @@ const ListarAbrigos = () => {
           <a href="/pg_adm">
             <li><FaHome className="icon" /> Home</li>
           </a>
-          <a href="/abrigo">
+          <a href="/abrigos">
             <li className="active"><FaBoxOpen className="icon" /> Abrigos</li>
           </a>
-          <a href="/listar_vitimas">
+          <a href="/vitimas">
             <li><FaUser className="icon" /> Vítimas</li>
           </a>
           <li><FaDonate className="icon" /> Doações</li>
@@ -85,7 +87,7 @@ const ListarAbrigos = () => {
 
       <div className="main">
 
-          <header className="top">
+        <header className="top">
           <div>
             {/* Breadcrumb mostrando o nome do abrigo que veio da API */}
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>

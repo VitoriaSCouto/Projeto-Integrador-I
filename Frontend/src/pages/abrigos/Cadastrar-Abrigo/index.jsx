@@ -11,39 +11,54 @@ import "../../pg_adm/style.css"; // ← importa o CSS global do projeto
 import "./CadastroAbrigo.css"; 
 
 const CadastrarAbrigo = () => {
-  const [mensagem, setMensagem] = useState('')
-  const [fotoAbrigo, setFotoAbrigo] = useState(null)
-  const [regioes, setRegioes] = useState([])
+  const [mensagem, setMensagem] = useState('');
+  const [fotoAbrigo, setFotoAbrigo] = useState(null);
+  const [regioes, setRegioes] = useState([]);
+  const [status, setStatus] = useState('ativo');
 
-  useEffect(() => {
-  const buscarRegioes = async () => { // função dentro
-    const resposta = await fetch('http://localhost:3000/api/regioes/listar')
-    const dados = await resposta.json()
-    setRegioes(dados.regioes)
-  }
-  buscarRegioes() // chama logo em seguida
-}, [])
+  const [capacidadeTotal, setCapacidadeTotal] = useState(0);
+  const [capacidadeOcupada, setCapacidadeOcupada] = useState(0);
 
-  const handleImagem = (e) => {
- const arquivo = e.target.files[0]
-
-  const limiteMB = 2
-  if (arquivo.size > limiteMB * 1024 * 1024) {
-    setMensagem(`A imagem deve ter no máximo ${limiteMB}MB.`)
-    return
+  const [erroCapacidade, setErroCapacidade] = useState('')
+  const validarCapacidade = (ocupada, total) => {
+  if (ocupada > total) {
+    setErroCapacidade('Capacidade ocupada não pode ser maior que a total.')
+  } else {
+    setErroCapacidade('') // limpa o erro se estiver ok
   }
-  const reader = new FileReader()
-  reader.onloadend = () => {
-    const base64 = reader.result.split(',')[1]
-    setFotoAbrigo(base64)
-  }
-  reader.readAsDataURL(arquivo)
 }
+  //Roda sempre que recarrega
+  useEffect(() => {
+    const buscarRegioes = async () => { // função dentro
+      const resposta = await fetch('http://localhost:3000/api/regioes/listar')
+      const dados = await resposta.json()
+     setRegioes(dados.regioes)
+    }
+    buscarRegioes() // chama logo em seguida
+  }, [])
 
+  //Handle Imagens
+  const handleImagem = (e) => {
+    const arquivo = e.target.files[0]
+
+    const limiteMB = 2
+    if (arquivo.size > limiteMB * 1024 * 1024) {
+     setMensagem(`A imagem deve ter no máximo ${limiteMB}MB.`)
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64 = reader.result.split(',')[1]
+      setFotoAbrigo(base64)
+    }
+    reader.readAsDataURL(arquivo)
+  }
+  //Handle submit
   const handleSubmit = async (e) => {
     e.preventDefault()
 
     const dados = {
+      status: e.target.status.value,
       nome: e.target.nome.value,
       cidade: e.target.cidade.value,
       endereco: e.target.endereco.value,
@@ -58,6 +73,10 @@ const CadastrarAbrigo = () => {
       possuiAcessibilidade: e.target.possuiAcessibilidade.checked,
       possuiCozinha: e.target.possuiCozinha.checked,
       fotoAbrigo: fotoAbrigo
+    }
+
+    if (capacidadeOcupada>capacidadeTotal){
+      if (erroCapacidade) return
     }
 
     const resposta = await fetch('http://localhost:3000/api/abrigos/cadastrar', {
@@ -76,8 +95,8 @@ const CadastrarAbrigo = () => {
     <aside className="sidebar">
       <ul>
         <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-        <a href="/abrigo"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
-        <a href="/listar_vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
+        <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
+        <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
         <li><FaDonate className="icon" /> Doações</li>
         <li><FaMapPin className="icon" /> Região Afetada</li>
         <li><GoAlertFill className="icon" /> Ocorrências</li>
@@ -89,12 +108,15 @@ const CadastrarAbrigo = () => {
 
       <header className="top">
         <div>
+
           <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
             Abrigos &gt; <span>Novo Abrigo</span>
           </p>
+          
           <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
             Cadastro de Abrigo
           </h1>
+          <p className="subtitle"> Cadastre um novo abrigo</p>
         </div>
         <div className="top-icons">
           <img src="/src/assets/logo.png" width="80px" alt="Logo" />
@@ -110,9 +132,9 @@ const CadastrarAbrigo = () => {
               <select
                 id="status"
                 value={status}
-                onChange={(e) => status(e.target.value)}
+                onChange={(e) => setStatus(e.target.value)}
                 className={`select-status ${status}`}>
-                <option value="ativo" onSelect={status(ativado)}>Ativado</option>
+                <option value="ativo">Ativado</option>
                 <option value="manutencao">Manutenção</option>
                 <option value="desativado">Desativado</option>
               </select>
@@ -171,13 +193,38 @@ const CadastrarAbrigo = () => {
 
           <div className="form-group">
             <label><FaPeopleArrows /> Capacidade Total</label>
-            <input type="number" name="capacidadeTotal" placeholder="Ex: 100" required />
+            <input
+              type="number"
+              name="capacidadeTotal"
+              placeholder="Ex: 100"
+              required
+              onChange={(e) => {
+                const total = parseInt(e.target.value) || 0
+                setCapacidadeTotal(total)
+                validarCapacidade(capacidadeOcupada, total)
+              }}
+            />
           </div>
 
           <div className="form-group">
             <label><FaPeopleArrows /> Capacidade Ocupada</label>
-            <input type="number" name="capacidadeOcupada" placeholder="Ex: 0" defaultValue={0} />
+            <input
+            type="number"
+            name="capacidadeOcupada"
+            className={`input-capacidade ${erroCapacidade ? 'input-erro' : ''}`} 
+            placeholder="Ex: 0"
+            onChange={(e) => {
+              const ocupada = parseInt(e.target.value) || 0
+              setCapacidadeOcupada(ocupada)
+              validarCapacidade(ocupada, capacidadeTotal) // valida com o novo ocupada
+            }}/>
           </div>
+
+          {erroCapacidade && (
+            <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px' }}>
+            {erroCapacidade}
+            </p>
+          )}
 
           {/* Checkboxes de infraestrutura */}
           <div className="infraestrutura-section">

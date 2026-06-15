@@ -10,7 +10,7 @@ const CadastroVitima = () => {
   // Estado para guardar a mensagem de sucesso ou erro
   const [mensagem, setMensagem] = useState('')
   // Estado para guardar a imagem em Base64
-  const [fotoPerfil, setFotoPerfil] = useState(null)
+  const [fotoVitima, setfotoVitima] = useState(null)
   
 
   //----- Handle Image -----
@@ -28,7 +28,7 @@ const CadastroVitima = () => {
     const reader = new FileReader()
     reader.onloadend = () => {
       const base64 = reader.result.split(',')[1]
-      setFotoPerfil(base64)
+      setfotoVitima(base64)
     }
     reader.readAsDataURL(arquivo)
   }
@@ -46,7 +46,7 @@ const CadastroVitima = () => {
       telefone: e.target.telefone.value,
       dataNascimento: e.target.dataNascimento.value,
       genero: e.target.genero.value,
-      fotoPerfil: fotoPerfil // Base64 da imagem
+      fotoVitima: fotoVitima // Base64 da imagem
     }
 
     // Envia os dados para a API
@@ -68,8 +68,8 @@ const CadastroVitima = () => {
     <aside className="sidebar">
       <ul>
         <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-        <a href="/abrigo"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
-        <a href="/listar_vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
+        <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
+        <a href="/vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
         <li><FaDonate className="icon" /> Doações</li>
         <li><FaMapPin className="icon" /> Região Afetada</li>
         <li><GoAlertFill className="icon" /> Ocorrências</li>
@@ -80,19 +80,29 @@ const CadastroVitima = () => {
     <main className="main">
 
       {/* Header padrão do projeto */}
-      <header className="top">
-        <div>
-          <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-            Vítimas &gt; <span>Nova Vítima</span>
-          </p>
-          <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
-            Cadastro de Vítima
-          </h1>
-        </div>
-        <div className="top-icons">
-          <img src="/src/assets/logo.png" width="80px" alt="Logo" />
-        </div>
-      </header>
+      
+        <header className="top">
+          <div>
+
+            {/* Breadcrumb mostrando o nome do abrigo que veio da API */}
+            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+              Vítimas &gt;
+            </p>
+
+            {/* Título muda dependendo do modo */}
+            <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
+
+
+            {/* Muda dependendo do modo */}
+            {'Hub de Vitimas'}
+            </h1>
+            <p className="subtitle"> Cadastre uma nova vitíma</p>
+
+          </div>
+          <div className="top-icons">
+            <img src="/src/assets/logo.png" width="80px" alt="Logo" />
+          </div>
+        </header>
 
       {/* Formulário com duas colunas */}
       <form onSubmit={handleSubmit} className="cadastro-form-container">
@@ -127,9 +137,9 @@ const CadastroVitima = () => {
              id="genero"
              name="genero">
               <option value="">Selecione o gênero</option>
-              <option value="masculino">Masculino</option>
-              <option value="feminino">Feminino</option>
-              <option value="outro">Outro</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Feminino">Feminino</option>
+              <option value="Outro">Outro</option>
             </select>
           </div>
 
@@ -144,14 +154,14 @@ const CadastroVitima = () => {
 
           {/* Preview da foto */}
           <div className="upload-container">
-            {fotoPerfil ? (
+            {fotoVitima ? (
               <div className="image-preview">
                 {/*
-                  fotoPerfil aqui é base64 puro (sem o prefixo data:image)
+                  fotoVitima aqui é base64 puro (sem o prefixo data:image)
                   então precisamos montar a src completa na mão
                 */}
-                <img src={`data:image/jpeg;base64,${fotoPerfil}`} alt="Preview" />
-                <button type="button" onClick={() => setFotoPerfil(null)} className="btn-remove-image">
+                <img src={`data:image/jpeg;base64,${fotoVitima}`} alt="Preview" />
+                <button type="button" onClick={() => setfotoVitima(null)} className="btn-remove-image">
                   Remover Foto
                 </button>
               </div>

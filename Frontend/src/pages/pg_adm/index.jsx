@@ -12,10 +12,10 @@ const PgAdm = () => {
           {/* AQUI: Corrigido de classNme para className */}
           <li className="active"><FaHome className="icon" /> Home</li>
           
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigo">
+          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigos">
             <li><FaBoxOpen className="icon" /> Abrigos</li>
           </a>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/listar_vitimas">
+          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/vitimas">
             <li><FaUser className="icon" /> Vítimas</li>
           </a>
           <li><FaDonate className="icon" /> Doações</li>
