@@ -52,7 +52,7 @@ export default async function abrigoRoutes(app) {
     // Agora cada upload gera um nome único (abrigo-{id}-{timestamp}.jpg), forçando uma URL nova.
     if (fotoAbrigo) {
       const buffer = Buffer.from(fotoAbrigo, 'base64')
-      const nomeArquivo = `abrigo-${abrigo.id}-${Date.now()}.jpg`
+      const nomeArquivo = `abrigo-${abrigo.id_abrigo}-${Date.now()}.jpg`
 
       const { data, error } = await supabase.storage
         .from('fotos-abrigo')
@@ -71,7 +71,7 @@ export default async function abrigoRoutes(app) {
 
       // Atualiza o abrigo com a URL pública da foto
       await prisma.abrigo.update({
-        where: { id: abrigo.id },
+        where: { id_abrigo: abrigo.id_abrigo },
         data: { fotoAbrigo: urlData.publicUrl }
       })
 
@@ -80,7 +80,7 @@ export default async function abrigoRoutes(app) {
 
     return reply.status(201).send({
       mensagem: 'Abrigo cadastrado com sucesso!',
-      id: abrigo.id,
+      id: abrigo.id_abrigo,
       nome: abrigo.nome,
       cidade: abrigo.cidade,
       endereco: abrigo.endereco,
@@ -118,14 +118,14 @@ export default async function abrigoRoutes(app) {
         nome:     nome     ? { contains: nome,     mode: 'insensitive' } : undefined,
         endereco: endereco ? { contains: endereco, mode: 'insensitive' } : undefined,
         cidade:   cidade   ? { contains: cidade,   mode: 'insensitive' } : undefined,
-        id:       id       ? { equals: Number(id) }                      : undefined,
+        id_abrigo:       id       ? { equals: Number(id) }               : undefined,
       }
     })
 
     // Retorna apenas os campos necessários para a listagem
     // capacidadeTotal e capacidadeOcupada são usados para a barra de progresso na tela
     const abrigosListados = abrigos.map((abrigo) => ({
-      id:               abrigo.id,
+      id:               abrigo.id_abrigo,
       nome:             abrigo.nome,
       cidade:           abrigo.cidade,
       endereco:         abrigo.endereco,
@@ -152,7 +152,7 @@ export default async function abrigoRoutes(app) {
     const { id } = request.params
 
     const abrigo = await prisma.abrigo.findUnique({
-      where: { id: Number(id) }
+      where: { id_abrigo: Number(id) }
     })
 
     if (!abrigo) {
@@ -177,7 +177,7 @@ export default async function abrigoRoutes(app) {
       status, fotoAbrigo } = request.body
 
     const abrigoExistente = await prisma.abrigo.findUnique({
-      where: { id: Number(id) }
+      where: { id_abrigo: Number(id) }
     })
 
     if (!abrigoExistente) {
@@ -239,7 +239,7 @@ export default async function abrigoRoutes(app) {
     // Se fotoAbrigo vier como uma URL http, não faz nada — mantém a foto atual
 
     const abrigoAtualizado = await prisma.abrigo.update({
-      where: { id: Number(id) },
+      where: { id_abrigo: Number(id) },
       data: {
         nome,
         cidade,
@@ -261,7 +261,7 @@ export default async function abrigoRoutes(app) {
 
     return reply.status(200).send({
       mensagem: 'Informações do abrigo atualizadas com sucesso!',
-      id:                      abrigoAtualizado.id,
+      id_abrigo:                      abrigoAtualizado.id_abrigo,
       nome:                    abrigoAtualizado.nome,
       cidade:                  abrigoAtualizado.cidade,
       endereco:                abrigoAtualizado.endereco,
@@ -295,7 +295,7 @@ export default async function abrigoRoutes(app) {
     const { id } = request.params
 
     const abrigoExistente = await prisma.abrigo.findUnique({
-      where: { id: Number(id) }
+      where: { id_abrigo: Number(id) }
     })
 
     if (!abrigoExistente) {
@@ -313,7 +313,7 @@ export default async function abrigoRoutes(app) {
     }
 
     await prisma.abrigo.delete({
-      where: { id: Number(id) }
+      where: { id_abrigo: Number(id) }
     })
 
     return reply.status(200).send({ mensagem: 'Abrigo excluído com sucesso!' })

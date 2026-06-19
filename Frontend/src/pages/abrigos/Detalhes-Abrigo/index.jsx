@@ -195,6 +195,12 @@ function DetalhesAbrigo() {
   const handleSalvar = async (e) => {
     e.preventDefault();
 
+    
+      //Verifica se o capacidadeOcupada é maior que o capacidadeTotal, se for verdade o formulario não sobe.
+      if (capacidadeOcupada>capacidadeTotal){
+        if (erroCapacidade) return
+      }
+
 
     try {
       //Armazena o resultado do fetch na resposta
@@ -228,10 +234,6 @@ function DetalhesAbrigo() {
         }),
       });
 
-      //Verifica se o capacidadeOcupada é maior que o capacidadeTotal, se for verdade o formulario não sobe.
-      if (capacidadeOcupada>capacidadeTotal){
-        if (erroCapacidade) return
-      }
       const dadosResultado = await resposta.json()
       console.log('status da resposta:', resposta.status);
       console.log('resultado:', dadosResultado);

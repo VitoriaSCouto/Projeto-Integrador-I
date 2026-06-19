@@ -22,7 +22,7 @@ model Admin {
 }
 
 model Abrigo {
-  id                      Int      @id @default(autoincrement())
+  id_abrigo                      Int      @id @default(autoincrement())
   nome                    String
   endereco                String
   cidade                  String
@@ -44,7 +44,7 @@ model Abrigo {
 }
 
 model Regiao {
-  id                Int      @id @default(autoincrement())
+  id_regiao                Int      @id @default(autoincrement())
   bairro            String   // era nome
   cidade            String
   estado            String

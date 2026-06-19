@@ -426,11 +426,11 @@ function DetalhesVitimas() {
 
             {/*  -----  Parte da foto  ----- */}
             <>
-                {/*
+              {/*
                 Modo visualização: mostra a foto dentro do retângulo
                 Se não tiver foto, mostra "Sem foto cadastrada"
                 O upload-container mantém o mesmo tamanho e borda do modo edição
-                */}
+              */}
 
               {editando ? (
                 //Se ligado:
@@ -468,15 +468,17 @@ function DetalhesVitimas() {
                   </label>
                 )}
                </div>
-              ) : (
+               ) : (
                //Se edição desligada:
                 //Modo view       
                 <div className="upload-container">
+                  <div className="image-preview">
                 {fotoExibida ? (
-                  <img src={fotoExibida} alt={nomeVitima} style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '8px' }} />
+                  <img src={fotoExibida} alt={nomeVitima}/>
                 ) : (
                   <p style={{ color: '#94a3b8', fontSize: '14px' }}>Sem foto cadastrada</p>
                 )}
+                </div>
                 </div>
              )}
             </>
