@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "abrigo" ADD COLUMN     "latitude" DOUBLE PRECISION,
+ADD COLUMN     "longitude" DOUBLE PRECISION,
+ALTER COLUMN "bairro" DROP NOT NULL;

@@ -10,7 +10,7 @@ export default async function abrigoRoutes(app) {
   //URL: http://localhost:3000/api/abrigos/cadastrar
   app.post('/cadastrar', async (request, reply) => {
 
-    const { nome, cep, estado,cidade, bairro, endereco, telefone, responsavel, tipoAbrigo,
+    const { nome, cep, estado, cidade, bairro, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
       status, fotoAbrigo } = request.body

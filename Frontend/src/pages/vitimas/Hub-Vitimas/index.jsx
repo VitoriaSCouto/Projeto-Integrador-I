@@ -31,6 +31,10 @@ const ListarVitimas = () => {
       
       {/* Sidebar - Puxando o estilo estrutural do style.css global */}
       <aside className="sidebar">
+        <div className="top-icons">
+          <img src="src/assets/logo.png" width="70px" />
+          <p>S.O.S. Vale</p>
+        </div>
         <ul>
           <a href="/pg_adm">
             <li><FaHome className="icon" /> Home</li>
@@ -65,10 +69,6 @@ const ListarVitimas = () => {
             {'Hub de Vitimas'}
             </h1>
             <p className="subtitle"> Consulte, cadastre ou gerencie vitímas</p>
-
-          </div>
-          <div className="top-icons">
-            <img src="/src/assets/logo.png" width="80px" alt="Logo" />
           </div>
         </header>
 

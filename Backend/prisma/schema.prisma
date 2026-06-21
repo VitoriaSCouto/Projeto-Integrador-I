@@ -29,7 +29,9 @@ model Abrigo {
   endereco                String
   cidade                  String
   estado                  String
-  bairro                  String
+  bairro                  String?
+  latitude                Float?
+  longitude               Float?
   telefone                String?
   responsavel             String?
   tipoAbrigo              String

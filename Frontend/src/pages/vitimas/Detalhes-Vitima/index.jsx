@@ -270,6 +270,10 @@ function DetalhesVitimas() {
     return (
       <div className="dashboard">
         <aside className="sidebar">
+          <div className="top-icons">
+            <img src="src/assets/logo.png" width="70px" />
+            <p>S.O.S. Vale</p>
+          </div>
           <ul>
             <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
             <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
@@ -294,6 +298,10 @@ function DetalhesVitimas() {
 
       {/* Código do Sidebar */}
       <aside className="sidebar">
+        <div className="top-icons">
+          <img src="src/assets/logo.png" width="70px" />
+          <p>S.O.S. Vale</p>
+        </div>
         <ul>
           <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
           <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
@@ -321,12 +329,6 @@ function DetalhesVitimas() {
               {editando ? 'Editar vitima' : 'Detalhes do vitima'}
             </h1>
             <p className="subtitle"> Gerencia as informações desta vítima</p>
-
-          </div>
-          <div className="top-icons">
-
-            <img src="/src/assets/logo.png" width="80px" alt="Logo" />
-
           </div>
         </header>
 
