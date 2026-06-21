@@ -271,8 +271,8 @@ function DetalhesVitimas() {
         <aside className="sidebar">
           <ul>
             <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-            <a href="/vitimas"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
-            <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
+            <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
+            <a href="/vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
             <li><FaDonate className="icon" /> Doações</li>
             <li><FaMapPin className="icon" /> Região Afetada</li>
             <li><GoAlertFill className="icon" /> Ocorrências</li>

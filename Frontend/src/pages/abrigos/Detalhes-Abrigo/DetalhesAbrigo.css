@@ -8,7 +8,7 @@
 }
 
 
-/* Sidebar Estilo Base */
+/* Sidebar */
 
 .sidebar {
     width: 260px;
@@ -208,6 +208,7 @@
     font-size: 18px;
 }
 
+
 /* Quando o input estiver checado, ele muda a cor do card simulando o botão selecionado */
 
 .checkbox-card input[type="checkbox"]:checked+.checkbox-content {
@@ -229,13 +230,16 @@
     padding: 20px;
     text-align: center;
     background: #f8fafc;
-    min-height: 200px;       /* altura mínima reduzida */
-    max-height: 300px;       /* limita para não crescer demais */
+    min-height: 200px;
+    /* altura mínima reduzida */
+    max-height: 300px;
+    /* limita para não crescer demais */
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 30px;
-    overflow: hidden;        /* garante que a foto não vaze para fora */
+    overflow: hidden;
+    /* garante que a foto não vaze para fora */
 }
 
 .upload-dropzone {
@@ -268,10 +272,12 @@
 
 .image-preview img {
     max-width: 100%;
-    max-height: 260px;       /* altura máxima fixa para a foto */
+    max-height: 260px;
+    /* altura máxima fixa para a foto */
     border-radius: 8px;
     margin-bottom: 15px;
-    object-fit: contain;     /* mantém proporção sem distorcer */
+    object-fit: contain;
+    /* mantém proporção sem distorcer */
 }
 
 .btn-remove-image {
