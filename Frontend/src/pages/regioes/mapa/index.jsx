@@ -633,14 +633,6 @@ function Mapa() {
                 >
                   Cancelar
                 </button>
-                <button
-                  type="button"
-                  onClick={handleCadastrarRegiao}
-                  className="btn-action salvar"
-                  disabled={salvando}
-                >
-                  {salvando ? 'Salvando...' : 'Cadastrar região'}
-                </button>
               </div>
 
             </div>
