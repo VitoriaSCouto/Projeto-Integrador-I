@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaSearch, FaPlus, FaPhoneAlt, FaIdCard } from "react-icons/fa";
+import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMap, FaSearch, FaPlus, FaPhoneAlt, FaIdCard } from "react-icons/fa";
 import { GoAlertFill } from "react-icons/go";
+import { FaGear } from "react-icons/fa6";
 
 // IMPORTAÇÃO DOS DOIS CSS (Global e o Específico de Vítimas)
 import "../../pg_adm/style.css";      
@@ -37,13 +38,11 @@ const ListarVitimas = () => {
           <a href="/abrigos">
             <li><FaBoxOpen className="icon" /> Abrigos</li>
           </a>
-          <a href="/vitimas">
-            <li className="active"><FaUser className="icon" /> Vítimas</li>
-          </a>
+          <a href="/vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
           <li><FaDonate className="icon" /> Doações</li>
-          <li><FaMapPin className="icon" /> Região Afetada</li>
+          <a href="/mapa"><li><FaMap className="icon" />Mapa</li></a>
           <li><GoAlertFill className="icon" /> Ocorrências</li>
-          <li><FaUser className="icon" /> Perfil</li>
+          <a href="/configuracoes"><li><FaGear className="icon" /> Configurações</li></a>
         </ul>
       </aside>
 

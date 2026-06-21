@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin,
-         FaIdCard, FaPhoneAlt, FaCalendar, FaVenusMars, FaUpload } from 'react-icons/fa';
+         FaIdCard, FaPhoneAlt, FaCalendar, FaVenusMars, FaUpload, FaMap } from 'react-icons/fa';
 import { GoAlertFill } from "react-icons/go";
+import { FaGear } from "react-icons/fa6";
 import "../../pg_adm/style.css"; // ← importa o CSS global do projeto
 import "./vitima.css"; 
 
@@ -63,17 +64,15 @@ const CadastroVitima = () => {
 
   return (
   <div className="dashboard">
-
-    {/* Sidebar — igual ao resto do projeto */}
     <aside className="sidebar">
       <ul>
         <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
         <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
         <a href="/vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
         <li><FaDonate className="icon" /> Doações</li>
-        <li><FaMapPin className="icon" /> Região Afetada</li>
+        <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
         <li><GoAlertFill className="icon" /> Ocorrências</li>
-        <li><FaUser className="icon" /> Perfil</li>
+        <li><FaGear className="icon" /> Configurações</li>
       </ul>
     </aside>
 

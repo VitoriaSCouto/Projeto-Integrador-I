@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, FaSearch, FaPlus, FaSchool,FaBasketballBall, FaChurch, FaHotel, FaBed, FaMapMarkedAlt,
-  FaPalette, FaUsers, FaTree, FaCircle  } from "react-icons/fa";
+  FaPalette, FaUsers, FaTree, FaCircle, FaMap } from "react-icons/fa";
 import { FaLocationDot } from "react-icons/fa6";
 import { GoAlertFill } from "react-icons/go";
+import { FaGear } from "react-icons/fa6";
 
 import "../../pg_adm/style.css";  
 import "./abrigo.css";  
@@ -79,9 +80,11 @@ const ListarAbrigos = () => {
             <li><FaUser className="icon" /> Vítimas</li>
           </a>
           <li><FaDonate className="icon" /> Doações</li>
-          <li><FaMapPin className="icon" /> Região Afetada</li>
+          <a href="/mapa">
+            <li><FaMap className="icon" /> Mapa</li>
+          </a>
           <li><GoAlertFill className="icon" /> Ocorrências</li>
-          <li><FaUser className="icon" /> Perfil</li>
+          <li><FaGear className="icon" /> Configurações</li>
         </ul>
       </aside>
 

@@ -59,9 +59,12 @@ const PgAdm = () => {
   return (
     <div className="dashboard">
       <aside className="sidebar">
+        <div className="top-icons">
+           <img src="src/assets/logo.png" width="70px" />
+           <p>S.O.S. Vale</p>
+          </div>
         <ul>
           <li className="active"><FaHome className="icon" /> Home</li>
-
           <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigos">
             <li><FaBoxOpen className="icon" /> Abrigos</li>
           </a>
@@ -69,15 +72,15 @@ const PgAdm = () => {
             <li><FaUser className="icon" /> Vítimas</li>
           </a>
           <li><FaDonate className="icon" /> Doações</li>
-          <li><FaMapPin className="icon" />Região Afetada</li>
+          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/mapa">
+            <li><FaMap className="icon" /> Mapa</li>
+          </a>
           <li><GoAlertFill className="icon" /> Ocorrências</li>
-          <li><FaUser className="icon" /> Perfil</li>
+          <li><FaGear className="icon" /> Configurações</li>
         </ul>
       </aside>
 
       <main className="main">
-
-
         <header className="top">
           <div>
             {/* Breadcrumb mostrando o nome do abrigo que veio da API */}

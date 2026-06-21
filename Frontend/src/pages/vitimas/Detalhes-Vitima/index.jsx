@@ -9,8 +9,9 @@ import {
   FaWheelchair, FaUtensils, FaBuilding, FaPeopleArrows, FaIdCard,
   FaMedkit,FaMapMarkedAlt,
   FaLocationArrow,
-  FaCalendar
+  FaCalendar, FaMap
 } from 'react-icons/fa';
+import { FaGear } from "react-icons/fa6";
 import { FaPersonHalfDress } from "react-icons/fa6";
 import { GoAlertFill } from "react-icons/go";
 
@@ -274,9 +275,9 @@ function DetalhesVitimas() {
             <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
             <a href="/vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
             <li><FaDonate className="icon" /> Doações</li>
-            <li><FaMapPin className="icon" /> Região Afetada</li>
+            <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
             <li><GoAlertFill className="icon" /> Ocorrências</li>
-            <li><FaUser className="icon" /> Perfil</li>
+            <a href="/configuracoes"><li><FaGear className="icon" /> Configurações</li></a>
           </ul>
         </aside>
         <main className="main">
@@ -293,18 +294,15 @@ function DetalhesVitimas() {
 
       {/* Código do Sidebar */}
       <aside className="sidebar">
-
         <ul>
           <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
           <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
           <a href="/vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
-
           <li><FaDonate className="icon" /> Doações</li>
-          <li><FaMapPin className="icon" /> Região Afetada</li>
+          <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
           <li><GoAlertFill className="icon" /> Ocorrências</li>
-          <li><FaUser className="icon" /> Perfil</li>
+          <a href="/configuracoes"><li><FaGear className="icon" /> Configurações</li></a>
         </ul>
-
       </aside>
 
       {/* Código do Main */}

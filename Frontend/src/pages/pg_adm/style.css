@@ -74,6 +74,14 @@ body {
     flex-shrink: 0;
 }
 
+.top-icons {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
 
 /* ---------- Main ---------- */
 

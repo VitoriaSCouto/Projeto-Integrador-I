@@ -4,9 +4,10 @@ import {
   FaUpload, FaMapMarkerAlt, FaPhoneAlt, FaDog, FaUserNurse,
   FaWheelchair, FaUtensils, FaBuilding, FaPeopleArrows,
   FaMedkit,FaMapMarkedAlt,
-  FaLocationArrow
+  FaLocationArrow, FaMap
 } from 'react-icons/fa';
 import { GoAlertFill } from "react-icons/go";
+import { FaGear } from "react-icons/fa6";
 import "../../pg_adm/style.css"; // ← importa o CSS global do projeto
 import "./CadastroAbrigo.css"; 
 
@@ -98,9 +99,9 @@ const CadastrarAbrigo = () => {
         <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
         <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
         <li><FaDonate className="icon" /> Doações</li>
-        <li><FaMapPin className="icon" /> Região Afetada</li>
+        <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
         <li><GoAlertFill className="icon" /> Ocorrências</li>
-        <li><FaUser className="icon" /> Perfil</li>
+        <li><FaGear className="icon" />Configurações</li>
       </ul>
     </aside>
 
