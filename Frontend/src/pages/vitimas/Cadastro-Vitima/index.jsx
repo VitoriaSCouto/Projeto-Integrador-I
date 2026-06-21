@@ -65,6 +65,10 @@ const CadastroVitima = () => {
   return (
   <div className="dashboard">
     <aside className="sidebar">
+      <div className="top-icons">
+        <img src="src/assets/logo.png" width="70px" />
+        <p>S.O.S. Vale</p>
+      </div>
       <ul>
         <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
         <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
@@ -75,7 +79,6 @@ const CadastroVitima = () => {
         <li><FaGear className="icon" /> Configurações</li>
       </ul>
     </aside>
-
     <main className="main">
 
       {/* Header padrão do projeto */}
@@ -96,10 +99,6 @@ const CadastroVitima = () => {
             {'Hub de Vitimas'}
             </h1>
             <p className="subtitle"> Cadastre uma nova vitíma</p>
-
-          </div>
-          <div className="top-icons">
-            <img src="/src/assets/logo.png" width="80px" alt="Logo" />
           </div>
         </header>
 

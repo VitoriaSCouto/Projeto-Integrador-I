@@ -5,8 +5,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import {
   FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin,
-  FaMapMarkerAlt, FaSearch, FaPlus
+  FaMapMarkerAlt, FaSearch, FaPlus, FaMap
 } from 'react-icons/fa';
+import { FaGear } from "react-icons/fa6";
 import { GoAlertFill } from "react-icons/go";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -269,14 +270,18 @@ function Mapa() {
     return (
       <div className="dashboard">
         <aside className="sidebar">
+          <div className="top-icons">
+            <img src="src/assets/logo.png" width="70px" />
+            <p>S.O.S. Vale</p>
+          </div>
           <ul>
             <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
             <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
             <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
             <li><FaDonate className="icon" /> Doações</li>
-            <a href="/mapa"><li className="active"><FaMapPin className="icon" /> Mapa</li></a>
+            <a href="/mapa"><li className="active"><FaMap className="icon" /> Mapa</li></a>
             <li><GoAlertFill className="icon" /> Ocorrências</li>
-            <li><FaUser className="icon" /> Perfil</li>
+            <li><FaGear className="icon" /> Configurações</li>
           </ul>
         </aside>
         <main className="main">
@@ -296,7 +301,10 @@ function Mapa() {
 
       {/* Código do Sidebar */}
       <aside className="sidebar">
-
+        <div className="top-icons">
+          <img src="src/assets/logo.png" width="70px" />
+          <p>S.O.S. Vale</p>
+        </div>
         <ul>
           <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
           <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>

@@ -60,9 +60,9 @@ const PgAdm = () => {
     <div className="dashboard">
       <aside className="sidebar">
         <div className="top-icons">
-           <img src="src/assets/logo.png" width="70px" />
-           <p>S.O.S. Vale</p>
-          </div>
+          <img src="src/assets/logo.png" width="70px" />
+          <p>S.O.S. Vale</p>
+        </div>
         <ul>
           <li className="active"><FaHome className="icon" /> Home</li>
           <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigos">
@@ -96,10 +96,6 @@ const PgAdm = () => {
             <p className="subtitle"> Gerencie informações recentes</p>
 
           </div>
-          <div className="top-icons">
-            <img src="/src/assets/logo.png" width="80px" alt="Logo" />
-          </div>
-
           <div className="top-controls">
             <button className="notif-btn">
               <FaRegBell />

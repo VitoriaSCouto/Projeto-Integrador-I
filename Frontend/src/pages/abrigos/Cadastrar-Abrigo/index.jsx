@@ -119,6 +119,10 @@ const CadastrarAbrigo = () => {
   <div className="dashboard">
 
     <aside className="sidebar">
+      <div className="top-icons">
+            <img src="src/assets/logo.png" width="70px" />
+            <p>S.O.S. Vale</p>
+          </div>
       <ul>
         <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
         <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
@@ -143,9 +147,6 @@ const CadastrarAbrigo = () => {
             Cadastro de Abrigo
           </h1>
           <p className="subtitle"> Cadastre um novo abrigo</p>
-        </div>
-        <div className="top-icons">
-          <img src="/src/assets/logo.png" width="80px" alt="Logo" />
         </div>
       </header>
 

@@ -69,6 +69,10 @@ const ListarAbrigos = () => {
   return (
     <div className="dashboard">
       <aside className="sidebar">
+        <div className="top-icons">
+          <img src="src/assets/logo.png" width="70px" />
+          <p>S.O.S. Vale</p>
+        </div>
         <ul>
           <a href="/pg_adm">
             <li><FaHome className="icon" /> Home</li>
@@ -96,17 +100,12 @@ const ListarAbrigos = () => {
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
               Abrigos &gt;
             </p>
-
             {/* Título muda dependendo do modo */}
             <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
               {/* Muda dependendo do modo */}
               {'Hub de Abrigos'}
             </h1>
             <p className="subtitle"> Consulte, gerencie, atualize ou delete informações de abrigos</p>
-
-          </div>
-          <div className="top-icons">
-            <img src="/src/assets/logo.png" width="80px" alt="Logo" />
           </div>
         </header>
 
