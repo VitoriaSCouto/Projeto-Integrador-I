@@ -24,11 +24,13 @@ model Admin {
 model Abrigo {
   id_abrigo                      Int      @id @default(autoincrement())
   nome                    String
-  cep                     Int
+  cep                     String
   endereco                String
   cidade                  String
+  estado                  String
+  bairro                  String
   telefone                String?
-  responsavel             String
+  responsavel             String?
   tipoAbrigo              String
   capacidadeTotal         Int
   capacidadeOcupada       Int      @default(0)

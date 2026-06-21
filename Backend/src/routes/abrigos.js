@@ -10,7 +10,7 @@ export default async function abrigoRoutes(app) {
   //URL: http://localhost:3000/api/abrigos/cadastrar
   app.post('/cadastrar', async (request, reply) => {
 
-    const { nome, cidade, cep, endereco, telefone, responsavel, tipoAbrigo,
+    const { nome, cep, estado,cidade, bairro, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
       status, fotoAbrigo } = request.body
@@ -30,7 +30,9 @@ export default async function abrigoRoutes(app) {
       data: {
         nome,
         cep,
+        estado,
         cidade,
+        bairro,
         endereco,
         telefone,
         responsavel,
@@ -83,9 +85,10 @@ export default async function abrigoRoutes(app) {
       mensagem: 'Abrigo cadastrado com sucesso!',
       id: abrigo.id_abrigo,
       cep: abrigo.cep,
-      nome: abrigo.nome,
-      nome: abrigo.cep,
       cidade: abrigo.cidade,
+      estado: abrigo.cidade,
+      bairro: abrigo.cidade,
+      nome: abrigo.nome,
       endereco: abrigo.endereco,
       telefone: abrigo.telefone,
       responsavel: abrigo.responsavel,
@@ -111,7 +114,7 @@ export default async function abrigoRoutes(app) {
   //URL: http://localhost:3000/api/abrigos/listar?endereco=
   app.get('/listar', async (request, reply) => {
 
-    const { id, nome, cep, endereco, cidade } = request.query
+    const { id, nome, cep, endereco, cidade, estado, bairro } = request.query
 
     const abrigos = await prisma.abrigo.findMany({
       where: {
@@ -121,6 +124,8 @@ export default async function abrigoRoutes(app) {
         nome:     nome     ? { contains: nome,     mode: 'insensitive' } : undefined,
         endereco: endereco ? { contains: endereco, mode: 'insensitive' } : undefined,
         cidade:   cidade   ? { contains: cidade,   mode: 'insensitive' } : undefined,
+        estado:   estado   ? { contains: estado,   mode: 'insensitive' } : undefined,
+        bairro:   bairro   ? { contains: bairro,   mode: 'insensitive' } : undefined,
         cep:      cep      ? { equals: Number(cep) }               : undefined,
         id_abrigo:       id       ? { equals: Number(id) }               : undefined,
       }
@@ -132,7 +137,9 @@ export default async function abrigoRoutes(app) {
       id:               abrigo.id_abrigo,
       nome:             abrigo.nome,
       cep:              abrigo.cep,
+      estado:           abrigo.estado,
       cidade:           abrigo.cidade,
+      bairro:           abrigo.bairro,
       endereco:         abrigo.endereco,
       status:           abrigo.status,
       tipoAbrigo:       abrigo.tipoAbrigo,
@@ -176,7 +183,7 @@ export default async function abrigoRoutes(app) {
     try {
 
     const { id } = request.params
-    const { nome, cep, cidade, endereco, telefone, responsavel, tipoAbrigo,
+    const { nome, cep,estado, cidade,bairro, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
       status, fotoAbrigo } = request.body
@@ -248,7 +255,9 @@ export default async function abrigoRoutes(app) {
       data: {
         nome,
         cep,
+        estado,
         cidade,
+        bairro,
         endereco,
         telefone,
         responsavel,
@@ -270,7 +279,9 @@ export default async function abrigoRoutes(app) {
       id_abrigo:                      abrigoAtualizado.id_abrigo,
       nome:                    abrigoAtualizado.nome,
       cep:                     abrigoAtualizado.cep,
+      estado:                  abrigoAtualiado.estado,
       cidade:                  abrigoAtualizado.cidade,
+      bairro:                  abrigoAtualizado.bairro,
       endereco:                abrigoAtualizado.endereco,
       telefone:                abrigoAtualizado.telefone,
       responsavel:             abrigoAtualizado.responsavel,
