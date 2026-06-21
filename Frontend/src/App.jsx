@@ -12,6 +12,7 @@ import ListarVitimas from './pages/vitimas/Hub-Vitimas';
 import CadastrarAbrigo from './pages/abrigos/Cadastrar-Abrigo';
 import DetalhesAbrigo from './pages/abrigos/Detalhes-Abrigo';
 import DetalhesVitimas from './pages/vitimas/Detalhes-vitima';
+import Mapa from './pages/regioes/mapa';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/cadastrar-abrigos" element={<CadastrarAbrigo />} />
           <Route path="/detalhes-abrigos/:id" element={<DetalhesAbrigo />} />
           <Route path="/detalhes-vitimas/:id" element={<DetalhesVitimas/>}/>
+          <Route path="/mapa" element={<Mapa/>}/>
         </Routes>
       </Router>
     </div>

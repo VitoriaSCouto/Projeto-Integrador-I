@@ -10,7 +10,7 @@ export default async function abrigoRoutes(app) {
   //URL: http://localhost:3000/api/abrigos/cadastrar
   app.post('/cadastrar', async (request, reply) => {
 
-    const { nome, cidade, endereco, telefone, responsavel, tipoAbrigo,
+    const { nome, cidade, cep, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
       status, fotoAbrigo } = request.body
@@ -29,6 +29,7 @@ export default async function abrigoRoutes(app) {
     const abrigo = await prisma.abrigo.create({
       data: {
         nome,
+        cep,
         cidade,
         endereco,
         telefone,
@@ -81,7 +82,9 @@ export default async function abrigoRoutes(app) {
     return reply.status(201).send({
       mensagem: 'Abrigo cadastrado com sucesso!',
       id: abrigo.id_abrigo,
+      cep: abrigo.cep,
       nome: abrigo.nome,
+      nome: abrigo.cep,
       cidade: abrigo.cidade,
       endereco: abrigo.endereco,
       telefone: abrigo.telefone,
@@ -108,7 +111,7 @@ export default async function abrigoRoutes(app) {
   //URL: http://localhost:3000/api/abrigos/listar?endereco=
   app.get('/listar', async (request, reply) => {
 
-    const { id, nome, endereco, cidade } = request.query
+    const { id, nome, cep, endereco, cidade } = request.query
 
     const abrigos = await prisma.abrigo.findMany({
       where: {
@@ -118,6 +121,7 @@ export default async function abrigoRoutes(app) {
         nome:     nome     ? { contains: nome,     mode: 'insensitive' } : undefined,
         endereco: endereco ? { contains: endereco, mode: 'insensitive' } : undefined,
         cidade:   cidade   ? { contains: cidade,   mode: 'insensitive' } : undefined,
+        cep:      cep      ? { equals: Number(cep) }               : undefined,
         id_abrigo:       id       ? { equals: Number(id) }               : undefined,
       }
     })
@@ -127,6 +131,7 @@ export default async function abrigoRoutes(app) {
     const abrigosListados = abrigos.map((abrigo) => ({
       id:               abrigo.id_abrigo,
       nome:             abrigo.nome,
+      cep:              abrigo.cep,
       cidade:           abrigo.cidade,
       endereco:         abrigo.endereco,
       status:           abrigo.status,
@@ -171,7 +176,7 @@ export default async function abrigoRoutes(app) {
     try {
 
     const { id } = request.params
-    const { nome, cidade, endereco, telefone, responsavel, tipoAbrigo,
+    const { nome, cep, cidade, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
       status, fotoAbrigo } = request.body
@@ -242,6 +247,7 @@ export default async function abrigoRoutes(app) {
       where: { id_abrigo: Number(id) },
       data: {
         nome,
+        cep,
         cidade,
         endereco,
         telefone,
@@ -263,6 +269,7 @@ export default async function abrigoRoutes(app) {
       mensagem: 'Informações do abrigo atualizadas com sucesso!',
       id_abrigo:                      abrigoAtualizado.id_abrigo,
       nome:                    abrigoAtualizado.nome,
+      cep:                     abrigoAtualizado.cep,
       cidade:                  abrigoAtualizado.cidade,
       endereco:                abrigoAtualizado.endereco,
       telefone:                abrigoAtualizado.telefone,
