@@ -4,6 +4,7 @@ import { userState } from "../state/state.js";
 import { apoioFlow } from "./apoio-flow.js";
 import { problemaFlow } from "./problema-flow.js";
 import { psicologicoFlow } from "./psicologico-flow.js";
+import { solicitacaoFlow } from "./solicitacao-flow.js";
 
 const prisma = new PrismaClient();
 
@@ -23,6 +24,7 @@ export const handleMessage = async (msg, client) => {
         if (await apoioFlow(msg, from, text, state)) return;
         if (await psicologicoFlow(msg, from, text, state)) return;
         if (await problemaFlow(msg, from, text, state)) return;
+        if (await solicitacaoFlow(msg, from, text, state)) return;
     }
 
     // ============================================
@@ -282,6 +284,16 @@ Digite *oi* para reabrir o menu.`
             userState.delete(from);
 
             break;
+            case "8": // ou o número que quiser
+    await msg.reply(
+`📋 SOLICITAR NOVO ABRIGO
+
+Você vai informar os dados de um local que pode servir como abrigo em emergências.
+
+Qual o *nome* do abrigo?`
+    );
+    userState.set(from, { step: 'sol_nome', tempData: {} });
+    break;
 
         default:
 
