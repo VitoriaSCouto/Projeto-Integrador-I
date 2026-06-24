@@ -1,8 +1,11 @@
+import { PrismaClient } from "@prisma/client";
 import { userState } from "../state/state.js";
 
 import { apoioFlow } from "./apoio-flow.js";
 import { problemaFlow } from "./problema-flow.js";
 import { psicologicoFlow } from "./psicologico-flow.js";
+
+const prisma = new PrismaClient();
 
 export const handleMessage = async (msg, client) => {
 
@@ -167,19 +170,53 @@ Ex: Rua das Flores, 123 - Centro`
 
             break;
 
-        case "3":
+        case "3": {
 
-            await msg.reply(
-`🏠 ABRIGOS DISPONÍVEIS
+            try {
+                const abrigos = await prisma.abrigo.findMany({
+                    where: { status: "ativo" },
+                    orderBy: { createdAt: "desc" },
+                    take: 5,
+                });
 
-📍 Escola Municipal Central
-📍 Ginásio Municipal de Esportes
-📍 Centro Comunitário
+                if (abrigos.length === 0) {
+                    await msg.reply(
+`😔 Nenhum abrigo disponível no momento.
+
+Entre em contato com a Defesa Civil: 199
 
 Digite *oi* para voltar ao menu.`
-            );
+                    );
+                    break;
+                }
+
+                const lista = abrigos.map(a => {
+                    const vagas = a.capacidadeTotal - a.capacidadeOcupada;
+                    const vagasTexto = vagas > 0 ? `✅ ${vagas} vagas` : `❌ Sem vagas`;
+                    return `📍 *${a.nome}*\n📌 ${a.endereco}, ${a.cidade}\n🛏 ${vagasTexto}${a.telefone ? `\n📞 ${a.telefone}` : ""}`;
+                }).join("\n\n");
+
+                await msg.reply(
+`🏠 *ABRIGOS DISPONÍVEIS*
+
+${lista}
+
+Digite *oi* para voltar ao menu.`
+                );
+
+            } catch (err) {
+                console.error("[DB] Erro ao buscar abrigos:", err);
+                await msg.reply(
+`⚠️ Não foi possível carregar os abrigos agora.
+
+Ligue para a Defesa Civil: 199
+
+Digite *oi* para voltar ao menu.`
+                );
+            }
 
             break;
+        }
 
         case "4":
 

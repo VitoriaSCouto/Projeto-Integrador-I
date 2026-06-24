@@ -1,3 +1,4 @@
+import "dotenv/config";
 import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
 import { handleMessage } from "./controllers/message-controller.js";
