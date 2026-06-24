@@ -1,27 +1,9 @@
 import './style.css'
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // ← useEffect adicionado: serve para executar código quando o componente carrega
 import { IoMdHome } from "react-icons/io";
 import { FaBoxOpen, FaMapPin, FaRegBell, FaUser, FaHome, FaDonate, FaChevronDown, FaChevronRight, FaPills } from "react-icons/fa";
 import { GoAlertFill } from "react-icons/go";
 import { FaHeart, FaGear, FaClipboardList, FaTriangleExclamation, FaClock, FaLocationDot, FaMap, FaPeopleGroup, FaCommentDots } from "react-icons/fa6";
-
-// --- Dados mockados (trocar por dados reais da API depois) ---
-const statCards = [
-  { id: 'abrigo', label: 'Novas solicitações de abrigo', value: 12, unread: 3, icon: <FaClipboardList />, accent: 'blue' },
-  { id: 'doacao', label: 'Novas solicitações de doação', value: 18, unread: 5, icon: <FaHeart />, accent: 'cyan' },
-  { id: 'remedio', label: 'Novas solicitações (remédio)', value: 9, unread: 2, icon: <FaPills />, accent: 'teal' },
-  { id: 'alertas', label: 'Alertas', value: 7, unread: 2, icon: <FaRegBell />, accent: 'red' },
-  { id: 'ajuda', label: 'Pedidos de ajuda', value: 6, unread: 3, icon: <FaTriangleExclamation />, accent: 'orange' },
-];
-
-const activitiesData = [
-  { id: 1, title: 'Abrigo solicitado', place: 'Rua tal tal', time: 'Há 15 min', type: 'abrigo' },
-  { id: 2, title: 'Doação registrada', place: 'Rua tal tal', time: 'Há 22 min', type: 'doacao' },
-  { id: 3, title: 'Alerta de enchente', place: 'Canal de drenagem', time: 'Há 30 min', type: 'alerta' },
-  { id: 4, title: 'Abrigo solicitado', place: 'Rua tal tal', time: 'Há 40 min', type: 'abrigo' },
-  { id: 5, title: 'Pedido de remédio', place: 'Rua tal tal', time: 'Há 1 hora', type: 'abrigo' },
-  { id: 6, title: 'Abrigo solicitado', place: 'Rua tal tal', time: 'Há 1h 30min', type: 'abrigo' },
-];
 
 const itensRequisitados = [
   { label: 'roupas', value: 92 },
@@ -47,8 +29,80 @@ const filters = [
 const PgAdm = () => {
   const [activeFilter, setActiveFilter] = useState('todas');
   const [municipio, setMunicipio] = useState('Todos os Municípios');
-  const [regiao, setRegiao] = useState('Todas as Regiões');
   const [periodo, setPeriodo] = useState('Últimos 30 dias');
+
+  // ─── ESTADOS NOVOS ───────────────────────────────────────────
+  // solicitacoes: vai guardar a lista que vier da API
+  // carregando: controla se ainda estamos esperando a resposta da API
+  // erro: guarda a mensagem de erro se a requisição falhar
+  const [solicitacoes, setSolicitacoes] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState(null);
+
+  // ─── BUSCA DA API ────────────────────────────────────────────
+  // useEffect com [] roda UMA VEZ quando o componente aparece na tela
+  // É o lugar certo para buscar dados externos
+  useEffect(() => {
+    async function buscarSolicitacoes() {
+      try {
+        const resposta = await fetch('http://localhost:3000/api/solicitacoes/listar')
+
+        // Se o servidor retornou erro (ex: 500), lança uma exceção manualmente
+        if (!resposta.ok) throw new Error('Erro ao buscar solicitações')
+
+        const dados = await resposta.json()
+
+        // A API retorna { solicitacoes: [...] }, então pegamos só o array
+        setSolicitacoes(dados.solicitacoes)
+      } catch (err) {
+        setErro(err.message)
+      } finally {
+        // Seja sucesso ou erro, o carregando sempre vira false no fim
+        setCarregando(false)
+      }
+    }
+
+    buscarSolicitacoes()
+  }, []) // ← o [] garante que roda só uma vez (se fosse [periodo], rodaria toda vez que periodo mudasse)
+
+  // ─── DERIVAÇÕES DOS DADOS ────────────────────────────────────
+  // Contamos direto do array que veio da API, sem guardar em estado separado
+  // Isso é chamado de "estado derivado" — calculamos na hora do render
+
+  // Quantas solicitações de abrigo existem no total
+  const totalSolicitacoesAbrigo = solicitacoes.length
+
+  // Quantas ainda estão pendentes (= "não lidas" para o card)
+  const pendentesSolicitacoesAbrigo = solicitacoes.filter(s => s.status === 'pendente').length
+
+  // ─── MONTAGEM DINÂMICA DOS CARDS ────────────────────────────
+  // Antes era um array fixo fora do componente
+  // Agora está dentro para poder usar os valores calculados acima
+  const statCards = [
+    {
+      id: 'abrigo',
+      label: 'Novas solicitações de abrigo',
+      value: totalSolicitacoesAbrigo,       // ← vem da API
+      unread: pendentesSolicitacoesAbrigo,  // ← vem da API
+      icon: <FaClipboardList />,
+      accent: 'blue'
+    },
+    { id: 'doacao',   label: 'Novas solicitações de doação',   value: 18, unread: 5, icon: <FaHeart />,            accent: 'cyan'   },
+    { id: 'remedio',  label: 'Novas solicitações (remédio)',   value: 9,  unread: 2, icon: <FaPills />,            accent: 'teal'   },
+    { id: 'alertas',  label: 'Alertas',                        value: 7,  unread: 2, icon: <FaRegBell />,          accent: 'red'    },
+    { id: 'ajuda',    label: 'Pedidos de ajuda',               value: 6,  unread: 3, icon: <FaTriangleExclamation />, accent: 'orange' },
+  ]
+
+  // ─── ATIVIDADES DINÂMICAS ────────────────────────────────────
+  // Transformamos as solicitações da API no formato que a lista espera
+  // .slice(0, 6) pega só as 6 mais recentes (a API já retorna ordenado por createdAt desc)
+  const activitiesData = solicitacoes.slice(0, 6).map(s => ({
+    id:    s.id_solicitacao,
+    title: 'Abrigo solicitado',
+    place: `${s.bairro}, ${s.cidade}`,  // ← endereço real da solicitação
+    time:  formatarTempo(s.createdAt),  // ← função que vamos criar abaixo
+    type:  'abrigo'
+  }))
 
   const filteredActivities = activeFilter === 'todas'
     ? activitiesData
@@ -56,7 +110,12 @@ const PgAdm = () => {
 
   const maxValue = Math.max(...itensRequisitados.map(i => i.value));
 
+  // ─── TELA DE CARREGANDO / ERRO ───────────────────────────────
+  if (carregando) return <div className="dashboard">Carregando...</div>
+  if (erro)       return <div className="dashboard">Erro: {erro}</div>
+
   return (
+    // ... JSX igual ao seu, sem mudanças visuais
     <div className="dashboard">
       <aside className="sidebar">
         <div className="top-icons">
@@ -83,25 +142,18 @@ const PgAdm = () => {
       <main className="main">
         <header className="top">
           <div>
-            {/* Breadcrumb mostrando o nome do abrigo que veio da API */}
-            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-              Home &gt;
-            </p>
-
-            {/* Título muda dependendo do modo */}
+            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Home &gt;</p>
             <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
-              {/* Muda dependendo do modo */}
-              {'Home S.O.S. Vale'}
+              Home S.O.S. Vale
             </h1>
-            <p className="subtitle"> Gerencie informações recentes</p>
-
+            <p className="subtitle">Gerencie informações recentes</p>
           </div>
           <div className="top-controls">
             <button className="notif-btn">
               <FaRegBell />
-              <span className="notif-badge">3</span>
+              {/* Badge dinâmico: total de pendentes em todas as categorias */}
+              <span className="notif-badge">{pendentesSolicitacoesAbrigo}</span>
             </button>
-
             <div className="filter-select">
               <FaLocationDot className="filter-select-icon" />
               <select value={municipio} onChange={(e) => setMunicipio(e.target.value)}>
@@ -111,7 +163,6 @@ const PgAdm = () => {
                 <option>Pindamonhangaba</option>
               </select>
             </div>
-
             <div className="filter-select">
               <FaClock className="filter-select-icon" />
               <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
@@ -141,6 +192,7 @@ const PgAdm = () => {
             <div className="panel-header">
               <h3>Atividades</h3>
               <div className="filter-tabs">
+
                 {filters.map(f => (
                   <button
                     key={f.id}
@@ -164,7 +216,7 @@ const PgAdm = () => {
                       <span><FaClock /> {item.time}</span>
                     </div>
                   </div>
-                  <button className="activity-btn">Ver solicitação</button>
+                  <a href={`/visualizar-solicitação-abrigo/${item.id}`}><button className="activity-btn" on>Ver solicitação</button></a>
                 </div>
               ))}
             </div>
@@ -178,15 +230,11 @@ const PgAdm = () => {
             <div className="panel chart-panel">
               <h3>Gráfico</h3>
               <p className="chart-subtitle">ITENS MAIS REQUISITADOS</p>
-
               <div className="bar-chart">
                 {itensRequisitados.map(item => (
                   <div className="bar-row" key={item.label}>
                     <div className="bar-track">
-                      <div
-                        className="bar-fill"
-                        style={{ width: `${(item.value / maxValue) * 100}%` }}
-                      />
+                      <div className="bar-fill" style={{ width: `${(item.value / maxValue) * 100}%` }} />
                     </div>
                     <span className="bar-label">{item.label}</span>
                   </div>
@@ -210,6 +258,24 @@ const PgAdm = () => {
       </main>
     </div>
   );
+}
+
+// ─── FUNÇÃO AUXILIAR ─────────────────────────────────────────────
+// Fica fora do componente pois não depende de nenhum estado
+// Converte "2026-06-24T03:55:54.000Z" em "Há 15 min", "Há 2 horas", etc.
+function formatarTempo(dataISO) {
+  const agora = new Date()
+  const data = new Date(dataISO)
+  const diffMin = Math.floor((agora - data) / 1000 / 60)
+
+  if (diffMin < 1)   return 'Agora mesmo'
+  if (diffMin < 60)  return `Há ${diffMin} min`
+
+  const diffHoras = Math.floor(diffMin / 60)
+  if (diffHoras < 24) return `Há ${diffHoras}h`
+
+  const diffDias = Math.floor(diffHoras / 24)
+  return `Há ${diffDias} dias`
 }
 
 export default PgAdm;

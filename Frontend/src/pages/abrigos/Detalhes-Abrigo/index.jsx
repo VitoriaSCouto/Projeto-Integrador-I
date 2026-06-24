@@ -379,7 +379,7 @@ function DetalhesAbrigo() {
       {/* Código do Sidebar */}
       <aside className="sidebar">
         <div className="top-icons">
-          <img src="src/assets/logo.png" width="70px" />
+          <img src="../src/assets/logo.png" width="70px" />
           <p>S.O.S. Vale</p>
         </div>
             <ul>

@@ -119,6 +119,9 @@ const ListarAbrigos = () => {
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
+          <button className="btn-add-vitima" onClick={() => navigate('../listar-solicitação-abrigo')}>
+            <FaPlus /> Ver solicitações de abrigo
+          </button>
           <button className="btn-add-vitima" onClick={() => navigate('../cadastrar-abrigos')}>
             <FaPlus /> Novo Abrigo
           </button>

@@ -13,7 +13,7 @@ export default async function abrigoRoutes(app) {
     const { nome, cep, estado, cidade, bairro, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
-      status, fotoAbrigo } = request.body
+      status, fotoAbrigo, latitude, longitude } = request.body
 
     // Verifica se já existe um abrigo com o mesmo nome e endereço
     const abrigoExistente = await prisma.abrigo.findFirst({
@@ -45,7 +45,11 @@ export default async function abrigoRoutes(app) {
         possuiAcessibilidade: possuiAcessibilidade ?? false,
         possuiCozinha: possuiCozinha ?? false,
         status: status ?? 'ativo',
-        fotoAbrigo: null
+        fotoAbrigo: null,
+        // Coordenadas vindas do geocoding feito na página de cadastro
+        // Podem ser null se o geocoding falhou ou o usuário não preencheu o endereço
+        latitude: latitude ?? null,
+        longitude: longitude ?? null,
       }
     })
 
@@ -84,11 +88,11 @@ export default async function abrigoRoutes(app) {
     return reply.status(201).send({
       mensagem: 'Abrigo cadastrado com sucesso!',
       id: abrigo.id_abrigo,
-      cep: abrigo.cep,
-      cidade: abrigo.cidade,
-      estado: abrigo.cidade,
-      bairro: abrigo.cidade,
       nome: abrigo.nome,
+      cep: abrigo.cep,
+      estado: abrigo.estado,   // ← corrigido: estava abrigo.cidade
+      cidade: abrigo.cidade,
+      bairro: abrigo.bairro,   // ← corrigido: estava abrigo.cidade
       endereco: abrigo.endereco,
       telefone: abrigo.telefone,
       responsavel: abrigo.responsavel,
@@ -101,7 +105,9 @@ export default async function abrigoRoutes(app) {
       possuiAcessibilidade: abrigo.possuiAcessibilidade,
       possuiCozinha: abrigo.possuiCozinha,
       status: abrigo.status,
-      fotoAbrigo: abrigo.fotoAbrigo
+      fotoAbrigo: abrigo.fotoAbrigo,
+      latitude: abrigo.latitude,
+      longitude: abrigo.longitude,
     })
   })
 
@@ -126,26 +132,30 @@ export default async function abrigoRoutes(app) {
         cidade:   cidade   ? { contains: cidade,   mode: 'insensitive' } : undefined,
         estado:   estado   ? { contains: estado,   mode: 'insensitive' } : undefined,
         bairro:   bairro   ? { contains: bairro,   mode: 'insensitive' } : undefined,
-        cep:      cep      ? { equals: Number(cep) }               : undefined,
-        id_abrigo:       id       ? { equals: Number(id) }               : undefined,
+        cep:      cep      ? { equals: Number(cep) }                     : undefined,
+        id_abrigo: id      ? { equals: Number(id) }                      : undefined,
       }
     })
 
     // Retorna apenas os campos necessários para a listagem
     // capacidadeTotal e capacidadeOcupada são usados para a barra de progresso na tela
+    // latitude e longitude são usados pelo Mapa para plotar os marcadores
     const abrigosListados = abrigos.map((abrigo) => ({
-      id:               abrigo.id_abrigo,
-      nome:             abrigo.nome,
-      cep:              abrigo.cep,
-      estado:           abrigo.estado,
-      cidade:           abrigo.cidade,
-      bairro:           abrigo.bairro,
-      endereco:         abrigo.endereco,
-      status:           abrigo.status,
-      tipoAbrigo:       abrigo.tipoAbrigo,
-      capacidadeTotal:  abrigo.capacidadeTotal,
+      id:                abrigo.id_abrigo,
+      nome:              abrigo.nome,
+      cep:               abrigo.cep,
+      estado:            abrigo.estado,
+      cidade:            abrigo.cidade,
+      bairro:            abrigo.bairro,
+      endereco:          abrigo.endereco,
+      status:            abrigo.status,
+      tipoAbrigo:        abrigo.tipoAbrigo,
+      capacidadeTotal:   abrigo.capacidadeTotal,
       capacidadeOcupada: abrigo.capacidadeOcupada,
-      fotoAbrigo:       abrigo.fotoAbrigo
+      fotoAbrigo:        abrigo.fotoAbrigo,
+      // Incluídos agora para o Mapa plotar os marcadores sem precisar de geocoding
+      latitude:          abrigo.latitude,
+      longitude:         abrigo.longitude,
     }))
 
     return reply.status(200).send({
@@ -183,10 +193,10 @@ export default async function abrigoRoutes(app) {
     try {
 
     const { id } = request.params
-    const { nome, cep,estado, cidade,bairro, endereco, telefone, responsavel, tipoAbrigo,
+    const { nome, cep, estado, cidade, bairro, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
-      status, fotoAbrigo } = request.body
+      status, fotoAbrigo, latitude, longitude } = request.body
 
     const abrigoExistente = await prisma.abrigo.findUnique({
       where: { id_abrigo: Number(id) }
@@ -270,16 +280,20 @@ export default async function abrigoRoutes(app) {
         possuiAcessibilidade:    possuiAcessibilidade    ?? false,
         possuiCozinha:           possuiCozinha           ?? false,
         status:                  status                  ?? 'ativo',
-        fotoAbrigo:              fotoUrl
+        fotoAbrigo:              fotoUrl,
+        // Atualiza as coordenadas se vieram no body
+        // Se não vieram (undefined), mantém os valores anteriores do banco
+        latitude:  latitude  ?? abrigoExistente.latitude,
+        longitude: longitude ?? abrigoExistente.longitude,
       }
     })
 
     return reply.status(200).send({
       mensagem: 'Informações do abrigo atualizadas com sucesso!',
-      id_abrigo:                      abrigoAtualizado.id_abrigo,
+      id_abrigo:               abrigoAtualizado.id_abrigo,
       nome:                    abrigoAtualizado.nome,
       cep:                     abrigoAtualizado.cep,
-      estado:                  abrigoAtualiado.estado,
+      estado:                  abrigoAtualizado.estado,  // ← corrigido: estava abrigoAtualiado (typo)
       cidade:                  abrigoAtualizado.cidade,
       bairro:                  abrigoAtualizado.bairro,
       endereco:                abrigoAtualizado.endereco,
@@ -294,7 +308,9 @@ export default async function abrigoRoutes(app) {
       possuiAcessibilidade:    abrigoAtualizado.possuiAcessibilidade,
       possuiCozinha:           abrigoAtualizado.possuiCozinha,
       status:                  abrigoAtualizado.status,
-      fotoAbrigo:              abrigoAtualizado.fotoAbrigo
+      fotoAbrigo:              abrigoAtualizado.fotoAbrigo,
+      latitude:                abrigoAtualizado.latitude,
+      longitude:               abrigoAtualizado.longitude,
     })
 
     } catch (erro) {

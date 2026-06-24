@@ -5,10 +5,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import {
   FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin,
-  FaMapMarkerAlt, FaSearch, FaPlus, FaMap
+  FaSearch, FaPlus, FaMap
 } from 'react-icons/fa';
-import { FaGear } from "react-icons/fa6";
 import { GoAlertFill } from "react-icons/go";
+import { FaGear } from "react-icons/fa6";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -16,10 +16,6 @@ import "../../pg_adm/style.css";
 
 //Fim dos imports
 //--------------------------
-
-
-//-- Navigate
-
 
 // ─── Correção de ícone padrão do Leaflet no Vite ───────────────────────────
 // O Vite não resolve os assets do Leaflet automaticamente, então precisamos
@@ -79,49 +75,22 @@ function ControladorCidade({ cidade }) {
 function VoarParaAbrigo({ alvo }) {
   const map = useMap()
   useEffect(() => {
-    if (alvo?.lat && alvo?.lng) {
-      map.flyTo([alvo.lat, alvo.lng], 16, { duration: 1.2 })
+    if (alvo?.latitude && alvo?.longitude) {
+      map.flyTo([alvo.latitude, alvo.longitude], 16, { duration: 1.2 })
     }
   }, [alvo, map])
   return null
 }
 
-// ─── Função: geocodifica endereço via Nominatim (OpenStreetMap) ─────────────
-// Recebe o endereço e cidade do abrigo e retorna { lat, lng } ou null
-// Nominatim é gratuito e não precisa de API Key
-async function geocodificar(endereco, cidade) {
-  try {
-    const query = encodeURIComponent(`${endereco}, ${cidade}, São Paulo, Brasil`)
-    const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`
-    const res = await fetch(url, {
-      headers: { 'Accept-Language': 'pt-BR' }
-    })
-    const data = await res.json()
-    if (data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
 //------- Começo Função Principal -----
 function Mapa() {
 
-
   // ─── ESTADOS ────────────────────────────────────────────────
-  // Navigate
+  const navigate = useNavigate()
 
-  const navigate = useNavigate();
-
-  // Cada estado corresponde a uma parte da tela
-
-  // Lista de abrigos vindos da API, com lat/lng adicionados após geocoding
+  // Lista de abrigos vindos da API — já trazem latitude e longitude do banco
+  // Não precisamos mais de geocoding aqui, as coordenadas vêm prontas
   const [abrigos, setAbrigos] = useState([])
-
-  // Lista de regiões vindas da API (usado no select do modal de cadastro)
-  const [regioes, setRegioes] = useState([])
 
   // Cidade selecionada no select (objeto de CIDADES)
   const [cidadeSelecionada, setCidadeSelecionada] = useState(CIDADES[0])
@@ -135,53 +104,23 @@ function Mapa() {
   // Abrigo alvo para voar no mapa após selecionar uma sugestão
   const [abrigoAlvo, setAbrigoAlvo] = useState(null)
 
-  // Controla o loading enquanto os abrigos são geocodificados
+  // Controla o loading enquanto os abrigos são buscados na API
   const [carregando, setCarregando] = useState(true)
-
-  // Controla se o modal de cadastro de região está aberto
-  const [modalAberto, setModalAberto] = useState(false)
-
-  // Controla o loading do botão de salvar no modal
-  const [salvando, setSalvando] = useState(false)
-
-  // Feedback de sucesso ou erro no modal
-  const [feedbackModal, setFeedbackModal] = useState(null)
-
-  // Dados do formulário do modal de cadastro de região
-  const [formRegiao, setFormRegiao] = useState({
-    bairro: '',
-    cidade: '',
-    estado: 'SP',
-    populacaoEstimada: '',
-    areaKm2: '',
-    nivelRisco: 'baixo',
-    statusAlerta: false,
-  })
 
 
   //-------- Busca dos dados ao carregar a página ----------------
 
   useEffect(() => {
 
-    // Primeiro: Busca os abrigos e geocodifica os endereços
-    // O geocoding converte "Rua X, Taubaté" em { lat, lng } para plotar no mapa
-    // Nominatim tem limite de 1 req/segundo, então aguarda 1s entre cada abrigo
+    // Busca todos os abrigos da API
+    // Diferente da versão anterior, não precisamos mais geocodificar aqui
+    // As coordenadas já vêm prontas do banco (latitude e longitude)
     const buscarAbrigos = async () => {
       setCarregando(true)
       try {
         const resposta = await fetch('http://localhost:3000/api/abrigos/listar')
         const dados = await resposta.json()
-
-        // Geocodifica cada abrigo com delay de 1s para respeitar o limite do Nominatim
-        const abrigosComCoordenadas = []
-        for (const abrigo of dados.abrigos) {
-          const coords = await geocodificar(abrigo.endereco, abrigo.cidade)
-          abrigosComCoordenadas.push({ ...abrigo, lat: coords?.lat, lng: coords?.lng })
-          // Aguarda 1 segundo antes de geocodificar o próximo
-          await new Promise(r => setTimeout(r, 1000))
-        }
-
-        setAbrigos(abrigosComCoordenadas)
+        setAbrigos(dados.abrigos)
       } catch (erro) {
         console.error('Erro ao buscar abrigos:', erro)
       } finally {
@@ -189,21 +128,8 @@ function Mapa() {
       }
     }
 
-    // Segundo: Busca as regiões para o select do modal de cadastro
-    // Mesma lógica do DetalhesAbrigo — puxa tudo sem filtro
-    const buscarRegioes = async () => {
-      try {
-        const resposta = await fetch('http://localhost:3000/api/regioes/listar')
-        const dados = await resposta.json()
-        setRegioes(dados.regioes)
-      } catch (erro) {
-        console.error('Erro ao buscar regiões:', erro)
-      }
-    }
-
-    // Terceiro: Roda as duas buscas ao carregar a página
+    // Roda ao montar o componente
     buscarAbrigos()
-    buscarRegioes()
 
   }, []) // Sem dependências: roda só uma vez ao montar o componente
 
@@ -238,12 +164,6 @@ function Mapa() {
     setAbrigoAlvo(abrigo)
   }
 
-  // Handler para fechar o modal e limpar o feedback
-  const handleFecharModal = () => {
-    setModalAberto(false)
-    setFeedbackModal(null)
-  }
-
 
   //-------- Helpers --------
   // Funções auxiliares pequenas usadas no JSX
@@ -264,16 +184,11 @@ function Mapa() {
 
 
   //------- Tela de loading ------
-  // Enquanto os abrigos estão sendo geocodificados, mostra mensagem para o usuário
-  // O geocoding pode demorar dependendo da quantidade de abrigos cadastrados
+  // Enquanto a API responde, mostra mensagem para o usuário não ver a tela vazia
   if (carregando) {
     return (
       <div className="dashboard">
         <aside className="sidebar">
-          <div className="top-icons">
-            <img src="src/assets/logo.png" width="70px" />
-            <p>S.O.S. Vale</p>
-          </div>
           <ul>
             <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
             <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
@@ -285,9 +200,7 @@ function Mapa() {
           </ul>
         </aside>
         <main className="main">
-          <p style={{ padding: '40px', color: '#64748b' }}>
-            Localizando abrigos no mapa... (pode levar alguns segundos)
-          </p>
+          <p style={{ padding: '40px', color: '#64748b' }}>Carregando mapa...</p>
         </main>
       </div>
     )
@@ -301,20 +214,15 @@ function Mapa() {
 
       {/* Código do Sidebar */}
       <aside className="sidebar">
-        <div className="top-icons">
-          <img src="src/assets/logo.png" width="70px" />
-          <p>S.O.S. Vale</p>
-        </div>
         <ul>
           <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
           <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
           <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
           <li><FaDonate className="icon" /> Doações</li>
-          <a href="/mapa"><li className="active"><FaMapPin className="icon" /> Mapa</li></a>
+          <a href="/mapa"><li className="active"><FaMap className="icon" /> Mapa</li></a>
           <li><GoAlertFill className="icon" /> Ocorrências</li>
-          <li><FaUser className="icon" /> Perfil</li>
+          <li><FaGear className="icon" /> Configurações</li>
         </ul>
-
       </aside>
 
       {/* Código do Main */}
@@ -326,11 +234,9 @@ function Mapa() {
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
               Mapa
             </p>
-
             <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
               Mapa de Abrigos
             </h1>
-
             <p className="subtitle">Visualize os abrigos cadastrados nas cidades do Vale do Paraíba</p>
           </div>
           <div className="top-icons">
@@ -383,10 +289,10 @@ function Mapa() {
             )}
           </div>
 
-          {/* Botão de cadastrar nova região — abre o modal */}
+          {/* Botão de cadastrar nova região — navega para a página de cadastro */}
           <button
             type="button"
-            onClick={() => { navigate('/Cadastrar-Regiao') }}
+            onClick={() => navigate('/Cadastrar-Regiao')}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
             <FaPlus /> Cadastrar nova região
@@ -404,6 +310,12 @@ function Mapa() {
             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
             Sem vagas / Inativo
           </span>
+          {/* Aviso para abrigos sem coordenadas cadastradas */}
+          {abrigos.some(a => !a.latitude || !a.longitude) && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#f59e0b' }}>
+              ⚠️ {abrigos.filter(a => !a.latitude || !a.longitude).length} abrigo(s) sem localização cadastrada
+            </span>
+          )}
         </div>
 
         {/* ─── Mapa Leaflet ─── */}
@@ -428,13 +340,15 @@ function Mapa() {
             {/* Voa para o abrigo selecionado na busca */}
             {abrigoAlvo && <VoarParaAbrigo alvo={abrigoAlvo} />}
 
-            {/* Marcadores dos abrigos — só plota os que foram geocodificados com sucesso */}
+            {/* Marcadores dos abrigos */}
+            {/* Filtra apenas os que têm latitude e longitude cadastrados no banco */}
+            {/* Abrigos cadastrados antes desta atualização podem não ter coordenadas ainda */}
             {abrigos
-              .filter(a => a.lat && a.lng)
+              .filter(a => a.latitude && a.longitude)
               .map(abrigo => (
                 <Marker
                   key={abrigo.id}
-                  position={[abrigo.lat, abrigo.lng]}
+                  position={[abrigo.latitude, abrigo.longitude]}
                   icon={iconeDoAbrigo(abrigo)}
                 >
                   {/* Popup ao clicar no marcador — mostra os dados do abrigo */}
@@ -487,167 +401,6 @@ function Mapa() {
         </footer>
 
       </main>
-
-      {/* ─── Modal: Cadastrar Nova Região ─── */}
-      {/* Abre ao clicar em "Cadastrar nova região" */}
-      {/* Clicando fora do modal (no overlay escuro) ele fecha */}
-      {modalAberto && (
-        <div
-          onClick={handleFecharModal}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          {/* stopPropagation evita que o clique dentro do modal feche ele */}
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '560px', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}
-          >
-
-            {/* Cabeçalho do modal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                Cadastrar Nova Região
-              </h2>
-              <button
-                type="button"
-                onClick={handleFecharModal}
-                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b', padding: '4px 8px' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Feedback de sucesso ou erro — aparece após tentar salvar */}
-            {feedbackModal && (
-              <div style={{
-                borderRadius: '8px',
-                padding: '10px 14px',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '16px',
-                background: feedbackModal.tipo === 'sucesso' ? '#dcfce7' : '#fee2e2',
-                color:      feedbackModal.tipo === 'sucesso' ? '#16a34a' : '#dc2626',
-              }}>
-                {feedbackModal.mensagem}
-              </div>
-            )}
-
-            {/* Formulário de cadastro de região */}
-            {/* Não usa <form> com onSubmit aqui pois está dentro de um modal — usa onClick no botão */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-
-                {/* Bairro */}
-                <div className="form-group">
-                  <label>Bairro *</label>
-                  <input
-                    value={formRegiao.bairro}
-                    onChange={e => setFormRegiao(f => ({ ...f, bairro: e.target.value }))}
-                    placeholder="Ex: Centro"
-                  />
-                </div>
-
-                {/* Cidade — puxa do banco igual ao DetalhesAbrigo */}
-                <div className="form-group">
-                  <label>Cidade *</label>
-                  <select
-                    value={formRegiao.cidade}
-                    onChange={e => setFormRegiao(f => ({ ...f, cidade: e.target.value }))}
-                    className="select-cidade"
-                  >
-                    <option value="">Selecione a cidade</option>
-                    {regioes.map(regiao => (
-                      <option key={regiao.id} value={regiao.cidade}>
-                        {regiao.cidade} - {regiao.estado}
-                      </option>
-                    ))}
-                    {/* Se não houver regiões cadastradas ainda, mostra as cidades padrão */}
-                    {regioes.length === 0 && CIDADES.filter(c => c.nome !== 'Todas').map(c => (
-                      <option key={c.nome} value={c.nome}>{c.nome}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Estado */}
-                <div className="form-group">
-                  <label>Estado</label>
-                  <input
-                    value={formRegiao.estado}
-                    onChange={e => setFormRegiao(f => ({ ...f, estado: e.target.value }))}
-                    placeholder="SP"
-                    maxLength={2}
-                  />
-                </div>
-
-                {/* População estimada */}
-                <div className="form-group">
-                  <label>População estimada</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formRegiao.populacaoEstimada}
-                    onChange={e => setFormRegiao(f => ({ ...f, populacaoEstimada: e.target.value }))}
-                    placeholder="Ex: 15000"
-                  />
-                </div>
-
-                {/* Área em km² */}
-                <div className="form-group">
-                  <label>Área (km²)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    value={formRegiao.areaKm2}
-                    onChange={e => setFormRegiao(f => ({ ...f, areaKm2: e.target.value }))}
-                    placeholder="Ex: 4.5"
-                  />
-                </div>
-
-                {/* Nível de risco */}
-                <div className="form-group">
-                  <label>Nível de risco</label>
-                  <select
-                    value={formRegiao.nivelRisco}
-                    onChange={e => setFormRegiao(f => ({ ...f, nivelRisco: e.target.value }))}
-                  >
-                    <option value="baixo">Baixo</option>
-                    <option value="medio">Médio</option>
-                    <option value="alto">Alto</option>
-                    <option value="critico">Crítico</option>
-                  </select>
-                </div>
-
-              </div>
-
-              {/* Checkbox de status de alerta — mesma estrutura das checkboxes do DetalhesAbrigo */}
-              <label className="checkbox-card">
-                <input
-                  type="checkbox"
-                  checked={formRegiao.statusAlerta}
-                  onChange={e => setFormRegiao(f => ({ ...f, statusAlerta: e.target.checked }))}
-                />
-                <div className="checkbox-content">
-                  <GoAlertFill className="icon" /><span>Região em alerta ativo</span>
-                </div>
-              </label>
-
-              {/* Botões do modal — mesmas classes do DetalhesAbrigo */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={handleFecharModal}
-                  className="btn-action cancelar"
-                >
-                  Cancelar
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   )
 }

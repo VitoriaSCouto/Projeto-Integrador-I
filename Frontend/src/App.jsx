@@ -12,6 +12,8 @@ import ListarVitimas from './pages/vitimas/Hub-Vitimas';
 import CadastrarAbrigo from './pages/abrigos/Cadastrar-Abrigo';
 import DetalhesAbrigo from './pages/abrigos/Detalhes-Abrigo';
 import DetalhesVitimas from './pages/vitimas/Detalhes-vitima';
+import DetalhesSolicitacaoAbrigo from './pages/Solicitacoes-Abrigo/Detalhes-solicitacao'
+import ListaSolicitacoesAbrigo from './pages/Solicitacoes-Abrigo/Listar-Solicitacoes'
 import Mapa from './pages/regioes/mapa';
 
 function App() {
@@ -32,6 +34,8 @@ function App() {
           <Route path="/detalhes-abrigos/:id" element={<DetalhesAbrigo />} />
           <Route path="/detalhes-vitimas/:id" element={<DetalhesVitimas/>}/>
           <Route path="/mapa" element={<Mapa/>}/>
+          <Route path="/visualizar-solicitação-abrigo/:id" element={<DetalhesSolicitacaoAbrigo/>}/>
+          <Route path="/listar-solicitação-abrigo" element={<ListaSolicitacoesAbrigo/>}/>
         </Routes>
       </Router>
     </div>

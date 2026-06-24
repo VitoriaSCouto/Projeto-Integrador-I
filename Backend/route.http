@@ -154,3 +154,29 @@ Content-Type: application/json
 GET http://localhost:3000/api/vitimas/listar
 ###
 DELETE http://localhost:3000/api/vitimas/excluir/29
+
+###
+
+POST http://localhost:3000/api/solicitacoes/criar
+Content-Type: application/json
+
+{
+  "nome": "Abrigo Teste",
+  "cep": "01310-100",
+  "endereco": "Av. Paulista, 1000",
+  "cidade": "São Paulo",
+  "estado": "SP",
+  "bairro": "Bela Vista",
+  "telefone": "(11) 99999-9999",
+  "responsavel": "João Silva",
+  "tipoAbrigo": "público",
+  "capacidadeTotal": 50,
+  "possuiAtendimentoMedico": true,
+  "possuiEnfermagem": false,
+  "possuiPets": true,
+  "possuiAcessibilidade": true,
+  "possuiCozinha": true,
+  "solicitanteNome": "Maria Souza",
+  "solicitanteEmail": "maria@email.com",
+  "solicitanteTelefone": "(11) 98888-8888"
+}
