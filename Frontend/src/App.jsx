@@ -14,6 +14,7 @@ import DetalhesAbrigo from './pages/abrigos/Detalhes-Abrigo';
 import DetalhesVitimas from './pages/vitimas/Detalhes-vitima';
 import DetalhesSolicitacaoAbrigo from './pages/Solicitacoes-Abrigo/Detalhes-solicitacao'
 import ListaSolicitacoesAbrigo from './pages/Solicitacoes-Abrigo/Listar-Solicitacoes'
+import CadastrarRegiao from './pages/regioes/CadastrarRegiao'
 import Mapa from './pages/regioes/mapa';
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
           <Route path="/mapa" element={<Mapa/>}/>
           <Route path="/visualizar-solicitação-abrigo/:id" element={<DetalhesSolicitacaoAbrigo/>}/>
           <Route path="/listar-solicitação-abrigo" element={<ListaSolicitacoesAbrigo/>}/>
+          <Route path="/cadastrar-regiao" element={<CadastrarRegiao/>}/>
         </Routes>
       </Router>
     </div>

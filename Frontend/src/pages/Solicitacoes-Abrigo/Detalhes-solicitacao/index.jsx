@@ -5,7 +5,7 @@ import {
   FaHome, FaBoxOpen, FaUser, FaDonate, FaMap,
   FaMapMarkerAlt, FaPhoneAlt, FaDog, FaUserNurse,
   FaWheelchair, FaUtensils, FaBuilding, FaPeopleArrows,
-  FaMedkit, FaMapMarkedAlt, FaEnvelope, FaIdCard
+  FaMedkit, FaMapMarkedAlt, FaEnvelope, FaIdCard, FaLocationArrow
 } from 'react-icons/fa';
 import { FaGear, FaClipboardList } from "react-icons/fa6";
 import { GoAlertFill } from "react-icons/go";
@@ -37,6 +37,11 @@ function DetalhesSolicitacao() {
   const [capacidadeTotal, setCapacidadeTotal] = useState(0);
   const [status, setStatus] = useState('pendente');
   const [motivoRecusa, setMotivoRecusa] = useState('');
+
+  // Coordenadas — vindas do geocoding feito no cadastro
+  // Só leitura aqui, exibidas como informação para o admin
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
 
   // Dados do solicitante (quem pediu)
   const [solicitanteNome, setSolicitanteNome] = useState('');
@@ -88,6 +93,11 @@ function DetalhesSolicitacao() {
         setSolicitanteEmail(dados.solicitanteEmail ?? '')
         setSolicitanteTelefone(dados.solicitanteTelefone ?? '')
         setFotoUrl(dados.fotoAbrigo ? dados.fotoAbrigo + '?t=' + Date.now() : null)
+
+        // Carrega as coordenadas se existirem
+        setLatitude(dados.latitude ?? null)
+        setLongitude(dados.longitude ?? null)
+
         setInfraestrutura({
           possuiAtendimentoMedico: dados.possuiAtendimentoMedico ?? false,
           possuiEnfermagem:        dados.possuiEnfermagem        ?? false,
@@ -185,7 +195,7 @@ function DetalhesSolicitacao() {
 
     try {
       await fetch(`http://localhost:3000/api/solicitacoes/excluir/${id}`, { method: 'DELETE' })
-      navigate('/solicitacoes')
+      navigate('../listar-solicitação-abrigo')
     } catch (erro) {
       console.error('Erro ao excluir:', erro)
     }
@@ -289,14 +299,57 @@ function DetalhesSolicitacao() {
               <p>{nomeSolicitacao}</p>
             </div>
 
+            {/* CEP separado — igual ao padrão do DetalhesAbrigo */}
             <div className="form-group">
-              <label><FaMapMarkedAlt /> Cidade / Estado</label>
-              <p>{cidade} - {estado}</p>
+              <label><FaMapMarkedAlt /> CEP</label>
+              <p>{cep || '—'}</p>
             </div>
 
+            {/* Estado separado */}
+            <div className="form-group">
+              <label><FaMapMarkedAlt /> Estado</label>
+              <p>{estado || '—'}</p>
+            </div>
+
+            {/* Cidade separada */}
+            <div className="form-group">
+              <label><FaMapMarkedAlt /> Cidade</label>
+              <p>{cidade || '—'}</p>
+            </div>
+
+            {/* Bairro separado */}
+            <div className="form-group">
+              <label><FaMapMarkedAlt /> Bairro</label>
+              <p>{bairro || '—'}</p>
+            </div>
+
+            {/* Endereço + coordenadas juntos na mesma seção */}
             <div className="form-group">
               <label><FaMapMarkerAlt /> Endereço</label>
-              <p>{endereco}, {bairro} — CEP {cep}</p>
+              <p>{endereco || '—'}</p>
+
+              {/*
+                Exibe as coordenadas se o solicitante as gerou durante o cadastro.
+                Aqui é só informativo para o admin — ajuda a validar se o local é real.
+                A mesma cor azul (#0ea5e9) usada no DetalhesAbrigo para "existente".
+              */}
+              {latitude && longitude ? (
+                <p style={{
+                  fontSize: '12px',
+                  marginTop: '4px',
+                  color: '#0ea5e9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <FaLocationArrow />
+                  Localização mapeada: ({Number(latitude).toFixed(5)}, {Number(longitude).toFixed(5)})
+                </p>
+              ) : (
+                <p style={{ fontSize: '12px', marginTop: '4px', color: '#94a3b8' }}>
+                  Sem localização mapeada
+                </p>
+              )}
             </div>
 
             <div className="form-group">
@@ -326,11 +379,11 @@ function DetalhesSolicitacao() {
               </h3>
 
               {[
-                { name: 'possuiAtendimentoMedico', label: 'Atendimento Médico', icon: <FaMedkit /> },
-                { name: 'possuiEnfermagem',        label: 'Enfermagem',         icon: <FaUserNurse /> },
-                { name: 'possuiPets',              label: 'Pets Bem-Vindos',    icon: <FaDog /> },
-                { name: 'possuiAcessibilidade',    label: 'Acessibilidade',     icon: <FaWheelchair /> },
-                { name: 'possuiCozinha',           label: 'Cozinha Comunitária',icon: <FaUtensils /> },
+                { name: 'possuiAtendimentoMedico', label: 'Atendimento Médico',  icon: <FaMedkit />    },
+                { name: 'possuiEnfermagem',        label: 'Enfermagem',          icon: <FaUserNurse /> },
+                { name: 'possuiPets',              label: 'Pets Bem-Vindos',     icon: <FaDog />       },
+                { name: 'possuiAcessibilidade',    label: 'Acessibilidade',      icon: <FaWheelchair />},
+                { name: 'possuiCozinha',           label: 'Cozinha Comunitária', icon: <FaUtensils />  },
               ].map(item => (
                 <label key={item.name} className="checkbox-card" style={{ pointerEvents: 'none' }}>
                   <input type="checkbox" checked={infraestrutura[item.name]} readOnly />
@@ -419,6 +472,12 @@ function DetalhesSolicitacao() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <p style={{ fontSize: '14px', color: '#1e293b' }}>
                       Ao aprovar, um abrigo será criado automaticamente com estes dados.
+                      {latitude && longitude && (
+                        <span style={{ display: 'block', marginTop: '6px', color: '#0ea5e9', fontSize: '12px' }}>
+                          <FaLocationArrow style={{ marginRight: '4px' }} />
+                          O abrigo já terá localização no mapa.
+                        </span>
+                      )}
                     </p>
                     <button type="button" className="btn-action salvar" onClick={handleAprovar}>
                       Confirmar Aprovação

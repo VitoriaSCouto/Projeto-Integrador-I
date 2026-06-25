@@ -119,12 +119,18 @@ const ListarAbrigos = () => {
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
-          <button className="btn-add-vitima" onClick={() => navigate('../listar-solicitação-abrigo')}>
-            <FaPlus /> Ver solicitações de abrigo
-          </button>
-          <button className="btn-add-vitima" onClick={() => navigate('../cadastrar-abrigos')}>
-            <FaPlus /> Novo Abrigo
-          </button>
+      <div style={{ display: 'flex', gap: '16px', marginLeft: 'auto' }}>
+  <button
+    className="btn-add-vitima"
+    onClick={() => navigate('../listar-solicitação-abrigo')}
+    style={{ background: '#fff', color: '#0f172a', border: '1.5px solid #cbd5e1' }}
+  >
+    <FaHome /> Ver solicitações de abrigo
+  </button>
+  <button className="btn-add-vitima" onClick={() => navigate('../cadastrar-abrigos')}>
+    <FaPlus /> Novo Abrigo
+  </button>
+</div>
         </div>
 
         <div className="abrigos-grid">

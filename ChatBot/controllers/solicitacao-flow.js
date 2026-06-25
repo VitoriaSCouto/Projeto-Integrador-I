@@ -46,7 +46,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     userState.set(from, { ...state, step: 'sol_cep' });
 
     await msg.reply(
-`📮 Qual o CEP do abrigo?
+` Qual o CEP do abrigo?
 
 Ex: 12030-000`
     );
@@ -59,7 +59,7 @@ Ex: 12030-000`
     userState.set(from, { ...state, step: 'sol_endereco' });
 
     await msg.reply(
-`🏠 Qual o endereço completo?
+` Qual o endereço completo?
 
 Ex: Rua das Flores, 123`
     );
@@ -74,7 +74,7 @@ Ex: Rua das Flores, 123`
     const cidades = await buscarCidades();
 
     if (cidades.length === 0) {
-      await msg.reply('⚠️ Não consegui carregar as cidades. Tente novamente mais tarde.\n\nDigite *oi* para voltar ao menu.');
+      await msg.reply(' Não consegui carregar as cidades. Tente novamente mais tarde.\n\nDigite *oi* para voltar ao menu.');
       userState.delete(from);
       return true;
     }
@@ -86,7 +86,7 @@ Ex: Rua das Flores, 123`
 
     // Monta a lista numerada dinamicamente
     const lista = cidades.map((c, i) => `${i + 1} - ${c}`).join('\n');
-    await msg.reply(`🌆 Qual a cidade?\n\n${lista}`);
+    await msg.reply(` Qual a cidade?\n\n${lista}`);
     return true;
   }
 
@@ -96,7 +96,7 @@ Ex: Rua das Flores, 123`
     const indice = parseInt(text) - 1;       // converte "1" → índice 0
 
     if (isNaN(indice) || !cidades[indice]) {
-      await msg.reply(`❌ Digite um número de 1 a ${cidades.length}.`);
+      await msg.reply(` Digite um número de 1 a ${cidades.length}.`);
       return true;
     }
 
@@ -108,7 +108,7 @@ Ex: Rua das Flores, 123`
 
     // Monta a lista de tipos dinamicamente
     const lista = TIPOS_ABRIGO.map((t, i) => `${i + 1} - ${t}`).join('\n');
-    await msg.reply(`🏗️ Qual o tipo do abrigo?\n\n${lista}`);
+    await msg.reply(` Qual o tipo do abrigo?\n\n${lista}`);
     return true;
   }
 
@@ -117,14 +117,14 @@ Ex: Rua das Flores, 123`
     const indice = parseInt(text) - 1;
 
     if (isNaN(indice) || !TIPOS_ABRIGO[indice]) {
-      await msg.reply(`❌ Digite um número de 1 a ${TIPOS_ABRIGO.length}.`);
+      await msg.reply(` Digite um número de 1 a ${TIPOS_ABRIGO.length}.`);
       return true;
     }
 
     state.tempData.tipoAbrigo = TIPOS_ABRIGO[indice];
     userState.set(from, { ...state, step: 'sol_capacidade' });
 
-    await msg.reply('👥 Qual a capacidade total de pessoas?');
+    await msg.reply(' Qual a capacidade total de pessoas?');
     return true;
   }
 
@@ -133,14 +133,14 @@ Ex: Rua das Flores, 123`
     const capacidade = parseInt(msg.body.trim());
 
     if (isNaN(capacidade) || capacidade <= 0) {
-      await msg.reply('❌ Digite um número válido. Ex: 100');
+      await msg.reply(' Digite um número válido. Ex: 100');
       return true;
     }
 
     state.tempData.capacidadeTotal = capacidade;
     userState.set(from, { ...state, step: 'sol_responsavel' });
 
-    await msg.reply('👤 Qual o nome do responsável pelo abrigo?');
+    await msg.reply(' Qual o nome do responsável pelo abrigo?');
     return true;
   }
 
@@ -149,7 +149,7 @@ Ex: Rua das Flores, 123`
     state.tempData.responsavel = msg.body.trim();
     userState.set(from, { ...state, step: 'sol_telefone' });
 
-    await msg.reply('📞 Qual o telefone do abrigo? (ou digite - para pular)');
+    await msg.reply(' Qual o telefone do abrigo? (ou digite - para pular)');
     return true;
   }
 
@@ -159,7 +159,7 @@ Ex: Rua das Flores, 123`
     state.tempData.telefone = tel === '-' ? null : tel;
     userState.set(from, { ...state, step: 'sol_sol_nome' });
 
-    await msg.reply('📋 Agora seus dados como *solicitante*.\n\nQual seu nome completo?');
+    await msg.reply(' Agora seus dados como *solicitante*.\n\nQual seu nome completo?');
     return true;
   }
 
@@ -168,7 +168,7 @@ Ex: Rua das Flores, 123`
     state.tempData.solicitanteNome = msg.body.trim();
     userState.set(from, { ...state, step: 'sol_sol_email' });
 
-    await msg.reply('📧 Qual seu e-mail?');
+    await msg.reply(' Qual seu e-mail?');
     return true;
   }
 
@@ -188,7 +188,7 @@ Ex: Rua das Flores, 123`
     userState.set(from, { ...state, step: 'sol_foto' });
 
     await msg.reply(
-`📸 Deseja enviar uma foto do abrigo?
+`   Deseja enviar uma foto do abrigo?
 
 Envie a imagem agora, ou digite *pular* para continuar sem foto.`
     );
@@ -212,15 +212,15 @@ Envie a imagem agora, ou digite *pular* para continuar sem foto.`
     // Monta um resumo para o usuário confirmar
     const d = state.tempData;
     await msg.reply(
-`✅ *Resumo da solicitação:*
+` *Resumo da solicitação:*
 
-🏠 Nome: ${d.nome}
-📍 Cidade: ${d.cidade} - ${d.estado}
-🏗️ Tipo: ${d.tipoAbrigo}
-👥 Capacidade: ${d.capacidadeTotal}
-👤 Responsável: ${d.responsavel}
-👤 Solicitante: ${d.solicitanteNome}
-📸 Foto: ${fotoBase64 ? 'Sim' : 'Não'}
+ Nome: ${d.nome}
+ Cidade: ${d.cidade} - ${d.estado}
+ Tipo: ${d.tipoAbrigo}
+ Capacidade: ${d.capacidadeTotal}
+ Responsável: ${d.responsavel}
+ Solicitante: ${d.solicitanteNome}
+Foto: ${fotoBase64 ? 'Sim' : 'Não'}
 
 Digite *confirmar* para enviar ou *cancelar* para desistir.`
     );
@@ -232,7 +232,7 @@ Digite *confirmar* para enviar ou *cancelar* para desistir.`
 
     if (text === 'cancelar') {
       userState.delete(from);
-      await msg.reply('❌ Solicitação cancelada.\n\nDigite *oi* para voltar ao menu.');
+      await msg.reply(' Solicitação cancelada.\n\nDigite *oi* para voltar ao menu.');
       return true;
     }
 
@@ -253,19 +253,19 @@ Digite *confirmar* para enviar ou *cancelar* para desistir.`
 
       if (resposta.ok) {
         await msg.reply(
-`🎉 Solicitação enviada com sucesso!
+` Solicitação enviada com sucesso!
 
 Seu pedido foi registrado e será analisado pela equipe. Aguarde o contato.
 
 Digite *oi* para voltar ao menu.`
         );
       } else {
-        await msg.reply(`⚠️ Erro ao enviar: ${resultado.mensagem}\n\nDigite *oi* para recomeçar.`);
+        await msg.reply(` Erro ao enviar: ${resultado.mensagem}\n\nDigite *oi* para recomeçar.`);
       }
 
     } catch (erro) {
       console.error('[SOL] Erro ao enviar solicitação:', erro);
-      await msg.reply('❌ Falha na conexão com o servidor. Tente novamente mais tarde.\n\nDigite *oi* para voltar ao menu.');
+      await msg.reply(' Falha na conexão com o servidor. Tente novamente mais tarde.\n\nDigite *oi* para voltar ao menu.');
     }
 
     userState.delete(from);

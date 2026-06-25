@@ -161,22 +161,22 @@ POST http://localhost:3000/api/solicitacoes/criar
 Content-Type: application/json
 
 {
-  "nome": "Abrigo Teste",
-  "cep": "01310-100",
-  "endereco": "Av. Paulista, 1000",
-  "cidade": "São Paulo",
+  "nome": "Fatec",
+  "cep": "12070-610",
+  "endereco": "Av. Tomé Portes Del Rei, 525",
+  "cidade": "Taubaté",
   "estado": "SP",
-  "bairro": "Bela Vista",
+  "bairro": "Vila São José",
   "telefone": "(11) 99999-9999",
-  "responsavel": "João Silva",
-  "tipoAbrigo": "público",
+  "responsavel": "Governo",
+  "tipoAbrigo": "Escola",
   "capacidadeTotal": 50,
   "possuiAtendimentoMedico": true,
   "possuiEnfermagem": false,
   "possuiPets": true,
   "possuiAcessibilidade": true,
   "possuiCozinha": true,
-  "solicitanteNome": "Maria Souza",
-  "solicitanteEmail": "maria@email.com",
+  "solicitanteNome": "Prefeitura",
+  "solicitanteEmail": "prefeitura@email.com",
   "solicitanteTelefone": "(11) 98888-8888"
 }

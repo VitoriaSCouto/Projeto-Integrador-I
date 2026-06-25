@@ -6,11 +6,11 @@ import { GoAlertFill } from "react-icons/go";
 import { FaHeart, FaGear, FaClipboardList, FaTriangleExclamation, FaClock, FaLocationDot, FaMap, FaPeopleGroup, FaCommentDots } from "react-icons/fa6";
 
 const itensRequisitados = [
-  { label: 'roupas', value: 92 },
-  { label: 'alimentos não perecíveis', value: 78 },
-  { label: 'água potável', value: 60 },
-  { label: 'cobertores', value: 34 },
-  { label: 'produtos de higiene', value: 85 },
+  { label: 'Roupas', value: 92 },
+  { label: 'Alimentos não perecíveis', value: 78 },
+  { label: 'Água potável', value: 60 },
+  { label: 'Cobertores', value: 34 },
+  { label: 'Produtos de higiene', value: 85 },
 ];
 
 const quickActions = [
@@ -87,10 +87,10 @@ const PgAdm = () => {
       icon: <FaClipboardList />,
       accent: 'blue'
     },
-    { id: 'doacao',   label: 'Novas solicitações de doação',   value: 18, unread: 5, icon: <FaHeart />,            accent: 'cyan'   },
-    { id: 'remedio',  label: 'Novas solicitações (remédio)',   value: 9,  unread: 2, icon: <FaPills />,            accent: 'teal'   },
-    { id: 'alertas',  label: 'Alertas',                        value: 7,  unread: 2, icon: <FaRegBell />,          accent: 'red'    },
-    { id: 'ajuda',    label: 'Pedidos de ajuda',               value: 6,  unread: 3, icon: <FaTriangleExclamation />, accent: 'orange' },
+    { id: 'Doações',   label: 'Novas solicitações de doações',   value: 18, unread: 5, icon: <FaHeart />,            accent: 'cyan'   },
+    { id: 'Remédios',  label: 'Novas solicitações de medicamentos',   value: 9,  unread: 2, icon: <FaPills />,            accent: 'teal'   },
+    { id: 'Alertas',  label: 'Alertas',                        value: 7,  unread: 2, icon: <FaRegBell />,          accent: 'red'    },
+    { id: 'Ajuda',    label: 'Pedidos de ajuda',               value: 6,  unread: 3, icon: <FaTriangleExclamation />, accent: 'orange' },
   ]
 
   // ─── ATIVIDADES DINÂMICAS ────────────────────────────────────

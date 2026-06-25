@@ -103,7 +103,7 @@ const CadastrarAbrigo = () => {
         const lng = parseFloat(data[0].lon)
         setLatitude(lat)
         setLongitude(lng)
-        setFeedbackGeo({ tipo: 'sucesso', mensagem: `📍 Localização encontrada! (${lat.toFixed(5)}, ${lng.toFixed(5)})` })
+        setFeedbackGeo({ tipo: 'sucesso', mensagem: `Localização encontrada! (${lat.toFixed(5)}, ${lng.toFixed(5)})` })
       } else {
         // Não encontrou — limpa as coordenadas e avisa o usuário
         // Isso pode acontecer se o endereço estiver muito abreviado ou incorreto

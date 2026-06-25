@@ -52,10 +52,7 @@ const CIDADES = [
   { nome: 'Todas',               lat: -23.0,    lng: -45.55,   zoom: 9  },
   { nome: 'Taubaté',             lat: -23.0268, lng: -45.5557, zoom: 13 },
   { nome: 'Caçapava',            lat: -23.1008, lng: -45.7069, zoom: 13 },
-  { nome: 'Pindamonhangaba',     lat: -22.9238, lng: -45.4603, zoom: 13 },
-  { nome: 'Jacareí',             lat: -23.2988, lng: -45.9658, zoom: 13 },
-  { nome: 'São José dos Campos', lat: -23.1794, lng: -45.8869, zoom: 12 },
-  { nome: 'Guaratinguetá',       lat: -22.8161, lng: -45.1939, zoom: 13 },
+  { nome: 'Pindamonhangaba',     lat: -22.9238, lng: -45.4603, zoom: 13 }
 ]
 
 // ─── Componente auxiliar: voa para a cidade selecionada no select ───────────
@@ -188,13 +185,17 @@ function Mapa() {
   if (carregando) {
     return (
       <div className="dashboard">
-        <aside className="sidebar">
+          <aside className="sidebar">
+          <div className="top-icons">
+            <img src="../src/assets/logo.png" width="70px" />
+            <p>S.O.S. Vale</p>
+          </div>
           <ul>
             <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-            <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
+            <a href="/abrigos"><li><FaBoxOpen className="icon" />Abrigos</li></a>
             <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
             <li><FaDonate className="icon" /> Doações</li>
-            <a href="/mapa"><li className="active"><FaMap className="icon" /> Mapa</li></a>
+            <a href="/mapa"><li  className="active"><FaMap className="icon" />Mapa</li></a>
             <li><GoAlertFill className="icon" /> Ocorrências</li>
             <li><FaGear className="icon" /> Configurações</li>
           </ul>
@@ -213,17 +214,21 @@ function Mapa() {
     <div className="dashboard">
 
       {/* Código do Sidebar */}
-      <aside className="sidebar">
-        <ul>
-          <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-          <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
-          <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-          <li><FaDonate className="icon" /> Doações</li>
-          <a href="/mapa"><li className="active"><FaMap className="icon" /> Mapa</li></a>
-          <li><GoAlertFill className="icon" /> Ocorrências</li>
-          <li><FaGear className="icon" /> Configurações</li>
-        </ul>
-      </aside>
+              <aside className="sidebar">
+          <div className="top-icons">
+            <img src="../src/assets/logo.png" width="70px" />
+            <p>S.O.S. Vale</p>
+          </div>
+          <ul>
+            <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
+            <a href="/abrigos"><li><FaBoxOpen className="icon" />Abrigos</li></a>
+            <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
+            <li><FaDonate className="icon" /> Doações</li>
+            <a href="/mapa"><li  className="active"><FaMap className="icon" />Mapa</li></a>
+            <li><GoAlertFill className="icon" /> Ocorrências</li>
+            <li><FaGear className="icon" /> Configurações</li>
+          </ul>
+        </aside>
 
       {/* Código do Main */}
       <main className="main">
@@ -232,15 +237,12 @@ function Mapa() {
           <div>
             {/* Breadcrumb */}
             <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-              Mapa
+              Mapa &gt;
             </p>
             <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
               Mapa de Abrigos
             </h1>
             <p className="subtitle">Visualize os abrigos cadastrados nas cidades do Vale do Paraíba</p>
-          </div>
-          <div className="top-icons">
-            <img src="/src/assets/logo.png" width="80px" alt="Logo" />
           </div>
         </header>
 

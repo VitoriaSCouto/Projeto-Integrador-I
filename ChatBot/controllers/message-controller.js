@@ -11,7 +11,13 @@ const prisma = new PrismaClient();
 export const handleMessage = async (msg, client) => {
 
     const from = msg.from;
-    const text = msg.body.toLowerCase().trim();
+
+    // minusculo + sem acento (resolve "olá", "OLA", "ólá" etc)
+    const text = msg.body
+        .toLowerCase()
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
 
     let state = userState.get(from);
 
@@ -20,7 +26,6 @@ export const handleMessage = async (msg, client) => {
     // ============================================
 
     if (state) {
-
         if (await apoioFlow(msg, from, text, state)) return;
         if (await psicologicoFlow(msg, from, text, state)) return;
         if (await problemaFlow(msg, from, text, state)) return;
@@ -28,75 +33,75 @@ export const handleMessage = async (msg, client) => {
     }
 
     // ============================================
-    // FLUXO ALERTAS (NOVO)
+    // FLUXO ALERTAS
     // ============================================
 
     if (state?.step === 'alert_subscribe') {
 
         if (['sim', 'quero', 'confirmo'].includes(text)) {
 
-            userState.set(from, {
-                step: 'alert_city'
-            });
+            userState.set(from, { step: 'alert_city' });
 
             await msg.reply(
-`📍 Escolha sua cidade para receber alertas:
+`Escolha sua cidade para receber alertas:
 
 1 - Pindamonhangaba
-2 - Caçapava
-3 - Taubaté`
+2 - Cacapava
+3 - Taubate`
             );
 
         } else {
 
-            await msg.reply(
-`❌ Cadastro cancelado.
+            userState.delete(from);
 
-Você não receberá alertas automáticos.
+            await msg.reply(
+`Cadastro cancelado.
+
+Voce nao recebera alertas automaticos.
 
 Digite *oi* para voltar ao menu.`
             );
-
-            userState.delete(from);
         }
 
         return;
     }
 
-    // escolha de cidade
     if (state?.step === 'alert_city') {
 
-        let city = '';
-        let link = '';
+        const cidades = {
+            '1': { nome: 'Pindamonhangaba', link: 'https://seu-link-pinda-aqui' },
+            '2': { nome: 'Cacapava',         link: 'https://seu-link-cacapava-aqui' },
+            '3': { nome: 'Taubate',          link: 'https://seu-link-taubate-aqui' },
+        };
 
-        if (text === '1' || text.includes('pinda')) {
-            city = 'Pindamonhangaba';
-            link = 'https://seu-link-pinda-aqui';
+        let escolha = cidades[text];
+
+        if (!escolha) {
+            if (text.includes('pinda'))    escolha = cidades['1'];
+            if (text.includes('cacapava')) escolha = cidades['2'];
+            if (text.includes('taubate'))  escolha = cidades['3'];
         }
 
-        if (text === '2' || text.includes('caçapava')) {
-            city = 'Caçapava';
-            link = 'https://seu-link-cacapava-aqui';
-        }
-
-        if (text === '3' || text.includes('taubaté')) {
-            city = 'Taubaté';
-            link = 'https://seu-link-taubate-aqui';
-        }
-
-        if (city) {
-
+        if (!escolha) {
             await msg.reply(
-`✅ Entre no link abaixo para receber alertas da cidade de ${city}!
+`Opcao invalida. Digite 1, 2 ou 3 para escolher a cidade.
 
-🔗 Grupo/Canal:
-${link}
-
-⚠️ Você receberá notificações de risco através do Canal.`
+1 - Pindamonhangaba
+2 - Cacapava
+3 - Taubate`
             );
-
-            userState.delete(from);
+            return;
         }
+
+        userState.delete(from);
+
+        await msg.reply(
+`Entre no link abaixo para receber alertas de ${escolha.nome}:
+
+${escolha.link}
+
+Voce recebera notificacoes de risco pelo canal.`
+        );
 
         return;
     }
@@ -105,75 +110,59 @@ ${link}
     // MENU PRINCIPAL
     // ============================================
 
-    if (
-        text === "oi" ||
-        text === "menu" ||
-        text === "olá" ||
-        text === "ola"
-    ) {
+    if (['oi', 'menu', 'ola', 'inicio'].includes(text)) {
 
         if (state) userState.delete(from);
 
         await msg.reply(
-`🌧️ SISTEMA DE APOIO EM DESASTRES NATURAIS
+`SISTEMA DE APOIO EM DESASTRES NATURAIS
 
-Olá! Sou o assistente da Defesa Civil.
+Ola! Sou o assistente da S.O.S Vale!.
 
-Escolha uma opção digitando o número:
+Escolha uma opcao digitando o numero:
 
-1️⃣ Receber alertas de desastres
-2️⃣ Solicitar apoio
-3️⃣ Abrigos disponíveis
-4️⃣ Apoio psicológico
-5️⃣ Relatar problema
-6️⃣ Telefones de emergência
-7️⃣ Encerrar atendimento`
+1 - Receber alertas de desastres
+2 - Solicitar apoio
+3 - Abrigos disponiveis
+4 - Apoio psicologico
+5 - Relatar problema
+6 - Telefones de emergencia
+7 - Solicitar cadastro de abrigo
+8 - Encerrar atendimento`
         );
 
         return;
     }
 
     // ============================================
-    // OPÇÕES DO MENU
+    // OPCOES DO MENU
     // ============================================
 
     switch (text) {
 
         case "1":
-
             await msg.reply(
-`⚠️ ALERTAS DE DESASTRES
+`ALERTAS DE DESASTRES
 
-Deseja receber notificações de risco na sua região?
+Deseja receber notificacoes de risco na sua regiao?
 
-Digite SIM para continuar ou NÃO para cancelar.`
+Digite SIM para continuar ou NAO para cancelar.`
             );
-
-            userState.set(from, {
-                step: 'alert_subscribe'
-            });
-
+            userState.set(from, { step: 'alert_subscribe' });
             break;
 
         case "2":
-
             await msg.reply(
-`🤝 SOLICITAR APOIO
+`SOLICITAR APOIO
 
-Informe seu ENDEREÇO completo:
+Informe seu endereco completo:
 
 Ex: Rua das Flores, 123 - Centro`
             );
-
-            userState.set(from, {
-                step: 'help_address',
-                tempData: {}
-            });
-
+            userState.set(from, { step: 'help_address', tempData: {} });
             break;
 
         case "3": {
-
             try {
                 const abrigos = await prisma.abrigo.findMany({
                     where: { status: "ativo" },
@@ -183,7 +172,7 @@ Ex: Rua das Flores, 123 - Centro`
 
                 if (abrigos.length === 0) {
                     await msg.reply(
-`😔 Nenhum abrigo disponível no momento.
+`Nenhum abrigo disponivel no momento.
 
 Entre em contato com a Defesa Civil: 199
 
@@ -194,12 +183,12 @@ Digite *oi* para voltar ao menu.`
 
                 const lista = abrigos.map(a => {
                     const vagas = a.capacidadeTotal - a.capacidadeOcupada;
-                    const vagasTexto = vagas > 0 ? `✅ ${vagas} vagas` : `❌ Sem vagas`;
-                    return `📍 *${a.nome}*\n📌 ${a.endereco}, ${a.cidade}\n🛏 ${vagasTexto}${a.telefone ? `\n📞 ${a.telefone}` : ""}`;
+                    const vagasTexto = vagas > 0 ? `${vagas} vagas disponiveis` : `Sem vagas`;
+                    return `*${a.nome}*\n${a.endereco}, ${a.cidade}\n${vagasTexto}${a.telefone ? `\nTel: ${a.telefone}` : ""}`;
                 }).join("\n\n");
 
                 await msg.reply(
-`🏠 *ABRIGOS DISPONÍVEIS*
+`ABRIGOS DISPONIVEIS
 
 ${lista}
 
@@ -209,98 +198,80 @@ Digite *oi* para voltar ao menu.`
             } catch (err) {
                 console.error("[DB] Erro ao buscar abrigos:", err);
                 await msg.reply(
-`⚠️ Não foi possível carregar os abrigos agora.
+`Nao foi possivel carregar os abrigos agora.
 
 Ligue para a Defesa Civil: 199
 
 Digite *oi* para voltar ao menu.`
                 );
             }
-
             break;
         }
 
         case "4":
-
             await msg.reply(
-`💙 APOIO PSICOLÓGICO
+`APOIO PSICOLOGICO
 
-1 - Quero conversar com alguém
+1 - Quero conversar com alguem
 2 - Ansiedade
 3 - Apoio familiar
 4 - Crise emocional
 5 - Desabafar
 6 - Outro motivo`
             );
-
-            userState.set(from, {
-                step: 'psycho_need',
-                tempData: {}
-            });
-
+            userState.set(from, { step: 'psycho_need', tempData: {} });
             break;
 
         case "5":
-
             await msg.reply(
-`📢 RELATAR PROBLEMA
+`RELATAR PROBLEMA
 
-1 - Árvore caída
+1 - Arvore caida
 2 - Alagamento
 3 - Falta de energia
 4 - Deslizamento
 5 - Bueiro entupido
 6 - Via interditada`
             );
-
-            userState.set(from, {
-                step: 'problem_type',
-                tempData: {}
-            });
-
+            userState.set(from, { step: 'problem_type', tempData: {} });
             break;
 
         case "6":
-
             await msg.reply(
-`📞 EMERGÊNCIA
+`EMERGENCIA
 
-🚒 193 Bombeiros
-🚑 192 SAMU
-👮 190 Polícia
-🛟 199 Defesa Civil`
+193 - Bombeiros
+192 - SAMU
+190 - Policia
+199 - Defesa Civil`
             );
-
             break;
 
         case "7":
-
             await msg.reply(
-`👋 Atendimento encerrado.
+`SOLICITAR CADASTRO DE ABRIGO
+
+Vou coletar os dados de um local que pode servir como abrigo em emergencias.
+
+Qual o nome do abrigo?`
+            );
+            userState.set(from, { step: 'sol_nome', tempData: {} });
+            break;
+
+        case "8":
+            await msg.reply(
+`Atendimento encerrado.
 
 Digite *oi* para reabrir o menu.`
             );
-
             userState.delete(from);
-
             break;
-            case "8": // ou o número que quiser
-    await msg.reply(
-`📋 SOLICITAR NOVO ABRIGO
-
-Você vai informar os dados de um local que pode servir como abrigo em emergências.
-
-Qual o *nome* do abrigo?`
-    );
-    userState.set(from, { step: 'sol_nome', tempData: {} });
-    break;
 
         default:
-
             await msg.reply(
-`❌ Não entendi.
+`Nao entendi.
 
-Digite *oi* para ver o menu ou escolha uma opção válida.`
+Digite *oi* para ver o menu ou escolha uma opcao valida.`
             );
     }
 };

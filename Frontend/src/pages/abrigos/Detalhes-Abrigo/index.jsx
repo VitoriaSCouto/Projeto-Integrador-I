@@ -42,13 +42,29 @@ function DetalhesAbrigo() {
   //Consts dos dados da tabela Abrigo
   const [nomeAbrigo, setNomeAbrigo] = useState('');
   const [status, setStatus] = useState('ativo');
+  const [cep, setCep] = useState('');
+  const [estado, setEstado] = useState('');
   const [cidade, setCidade] = useState('');
+  const [bairro, setBairro] = useState('');
   const [endereco, setEndereco] = useState('');
   const [telefone, setTelefone] = useState('');
   const [responsavel, setResponsavel] = useState('');
   const [tipoAbrigo, setTipoAbrigo] = useState('');
   const [capacidadeTotal, setCapacidadeTotal] = useState(0);
   const [capacidadeOcupada, setCapacidadeOcupada] = useState(0);
+
+  // ── Filtro em cascata: Estado → Cidade → Bairro ──────────────────────────
+  // Cada seleção reseta os níveis abaixo dela
+  const estados = [...new Set(regioes.map(r => r.estado))]
+  const cidades = [...new Set(
+    regioes
+      .filter(r => r.estado === estado)
+      .map(r => r.cidade)
+  )]
+  const bairros = regioes
+    .filter(r => r.cidade === cidade)
+    .map(r => r.bairro)
+  // ─────────────────────────────────────────────────────────────────────────
 
   //Consts das fotos
   const [fotoUrl, setFotoUrl] = useState(null); //Foto "atual"
@@ -69,6 +85,16 @@ function DetalhesAbrigo() {
     setErroCapacidade('')
   }
 }
+
+  // ── Estados do geocoding ─────────────────────────────────────────────────
+  // latitude e longitude guardam as coordenadas do abrigo
+  const [latitude, setLatitude] = useState(null)
+  const [longitude, setLongitude] = useState(null)
+
+  // feedbackGeo mostra o resultado do geocoding para o usuário
+  // tipo: 'sucesso' | 'erro' | 'buscando' | 'existente'
+  const [feedbackGeo, setFeedbackGeo] = useState(null)
+  // ─────────────────────────────────────────────────────────────────────────
 
   //Essa divisão foi necessaria para corrigir o fluxo de como funcionava o upload das fotos
   //
@@ -111,13 +137,28 @@ function DetalhesAbrigo() {
         // O ?? é o operador nullish: se o valor vier null ou undefined, usa o valor padrão da direita
         setNomeAbrigo(dados.nome);
         setStatus(dados.status ?? 'ativo');
+        setCep(dados.cep ?? '');
+        setEstado(dados.estado ?? '');
         setCidade(dados.cidade ?? '');
+        setBairro(dados.bairro ?? '');
         setEndereco(dados.endereco ?? '');
         setTelefone(dados.telefone ?? '');
         setResponsavel(dados.responsavel ?? '');
         setTipoAbrigo(dados.tipoAbrigo ?? '');
         setCapacidadeTotal(dados.capacidadeTotal ?? 0);
         setCapacidadeOcupada(dados.capacidadeOcupada ?? 0);
+
+        // Carrega as coordenadas existentes do banco
+        setLatitude(dados.latitude ?? null)
+        setLongitude(dados.longitude ?? null)
+
+        // Se já tem coordenadas, mostra feedback "existente" logo ao abrir
+        if (dados.latitude && dados.longitude) {
+          setFeedbackGeo({
+            tipo: 'existente',
+            mensagem: `Localização cadastrada: (${Number(dados.latitude).toFixed(5)}, ${Number(dados.longitude).toFixed(5)})`
+          })
+        }
 
         //FotoURL a "foto atual".
         // Atualiza a foto exibida com a URL vinda do banco
@@ -191,6 +232,64 @@ function DetalhesAbrigo() {
    reader.readAsDataURL(arquivo)
   }
 
+  // ── Handler do botão de geocoding ────────────────────────────────────────
+  //
+  // Lógica do botão inteligente:
+  //   → Se já tem latitude e longitude: mostra as coordenadas existentes e pergunta se quer atualizar
+  //   → Se NÃO tem: tenta geocodificar com base no endereço + bairro + cidade + estado
+  //
+  // Diferente do CadastrarAbrigo (que roda no onBlur do campo endereço),
+  // aqui é um botão explícito para não confundir com o modo de visualização.
+  const handleGeocodificar = async () => {
+    // Se já tem coordenadas cadastradas, pergunta antes de sobrescrever
+    if (latitude && longitude) {
+      const confirmar = confirm(
+        `Este abrigo já possui localização cadastrada:\nLat: ${Number(latitude).toFixed(5)} | Lng: ${Number(longitude).toFixed(5)}\n\nDeseja atualizar as coordenadas com base no endereço atual?`
+      )
+      if (!confirmar) return
+    }
+
+    // Valida se tem o mínimo para geocodificar
+    if (!endereco.trim() || !cidade) {
+      setFeedbackGeo({ tipo: 'erro', mensagem: 'Preencha pelo menos o endereço e a cidade antes de buscar.' })
+      return
+    }
+
+    setFeedbackGeo({ tipo: 'buscando', mensagem: 'Buscando localização...' })
+
+    try {
+      // Monta a query com o máximo de informação possível
+      // Ex: "Rua das Flores 123, Centro, Taubaté, SP, Brasil"
+      const query = encodeURIComponent(`${endereco.trim()}, ${bairro}, ${cidade}, ${estado}, Brasil`)
+      const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`
+
+      const res = await fetch(url, {
+        headers: { 'Accept-Language': 'pt-BR' }
+      })
+      const data = await res.json()
+
+      if (data.length > 0) {
+        // Encontrou — salva as coordenadas nos estados e mostra sucesso
+        const lat = parseFloat(data[0].lat)
+        const lng = parseFloat(data[0].lon)
+        setLatitude(lat)
+        setLongitude(lng)
+        setFeedbackGeo({ tipo: 'sucesso', mensagem: `Localização encontrada! (${lat.toFixed(5)}, ${lng.toFixed(5)})` })
+      } else {
+        // Não encontrou — limpa as coordenadas e avisa o usuário
+        setLatitude(null)
+        setLongitude(null)
+        setFeedbackGeo({ tipo: 'erro', mensagem: 'Localização não encontrada. Verifique o endereço.' })
+      }
+    } catch (erro) {
+      console.error('Erro no geocoding:', erro)
+      setLatitude(null)
+      setLongitude(null)
+      setFeedbackGeo({ tipo: 'erro', mensagem: 'Erro ao buscar localização. Tente novamente.' })
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   //Handler do botão salvar.
   //Envia os dados atualizados para a API via URL PUT do Abrigo
   const handleSalvar = async (e) => {
@@ -214,13 +313,21 @@ function DetalhesAbrigo() {
         body: JSON.stringify({ 
           nome: nomeAbrigo,
           status,
+          cep,
+          estado,
           cidade,
+          bairro,
           endereco, 
           telefone,
           responsavel,
           tipoAbrigo,
           capacidadeTotal,
           capacidadeOcupada,
+
+          // Inclui latitude e longitude (podem ter sido atualizados pelo geocoding)
+          // Se não tiver coordenadas, envia null — o banco aceita null nos dois campos
+          latitude: latitude,
+          longitude: longitude,
 
           //Se novaFoto tiver algo (usuário selecionou uma foto nova) → manda só o base64 puro, sem o prefixo id:image/jpeg;base64,
           //Se novaFoto for null (não selecionou foto nova, ou clicou em remover) → manda null
@@ -239,36 +346,24 @@ function DetalhesAbrigo() {
       console.log('status da resposta:', resposta.status);
       console.log('resultado:', dadosResultado);
 
-      //Qualquer coisa parecia que estourava o sistema inteiro, tive que mudar muita coisa.
-      //Mas porque mudar?:
-      //Queria deixar o sistema bonito e principalmente intuitivo, então quando voce atualiza a foto no Banco ela ja vai aparecer no preview na hora.
-      //Antes era necessario recarregar a página, e ai tinha um problema:
-        //Mesmo se você atualizasse a foto, a antiga voltava quando recarregasse ou saisse da pagina e voltasse.
-        //Mas porque dava erro?:
-        //A porcaria do Cache do navegador.
-        //O navegador ele é otimiza o código e o fluxo, só que ai tem um pequeno problema que surgiu de outro problema.
-        //Ele buscava a URL da foto do Supabase, só que a URL da foto nunca muda, apenas o conteudo!
-        //Por conta disso o navegador preferia usar o URL da foto que ja estava salva no cache!!
-          //Mas porque a mesma URL?:
-          //Para não fazer funcionar o sistema de fotos no Supabase eu escolhi salvar o nome das fotos como como abrigo-IDdoAbrigo.
-          //Isso foi feio especificamente para não mudar o URL, já que se mudasse o URL, não ia ser possivel apagar a foto do Supabase!
-          //Deve ter um jeito mais facil para arrumar isso, mas acredito que esse foi o mais simples e facil.
-      //Resumindo: é preciso ter cuidado na hora de mexer nos arquivos que ligam o SupaStorage com o sistema.
-
-
       //Aqui trabalha em conjunto com o HandleCancelEditar
       //Basicamente, o HandleCancel serve para que quando você Cancele a edição o código retorne a como estava antes
       //Mas e se o usuario retornar DEPOIS de ja ter salvo? ele voltaria para o código que estava antes do Update.
       setDadosAbrigo({
        ...dadosAbrigo,
        nome: nomeAbrigo,
+       cep,
+       estado,
        cidade,
+       bairro,
        endereco,
        telefone,
        responsavel,
        tipoAbrigo,
        capacidadeTotal,
        capacidadeOcupada,
+       latitude,
+       longitude,
        possuiAtendimentoMedico: infraestrutura.possuiAtendimentoMedico,
        possuiEnfermagem: infraestrutura.possuiEnfermagem,
        possuiPets: infraestrutura.possuiPets,
@@ -278,6 +373,15 @@ function DetalhesAbrigo() {
 
       //Atualiza a foto exibida com a URL nova do banco (com timestamp anti-cache)
       setFotoUrl(dadosResultado.fotoAbrigo ? dadosResultado.fotoAbrigo + '?t=' + Date.now() : null);
+
+      // Atualiza o feedback de geo para refletir o que foi salvo
+      if (latitude && longitude) {
+        setFeedbackGeo({
+          tipo: 'existente',
+          mensagem: `Localização cadastrada: (${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)})`
+        })
+      }
+
       alert('Abrigo atualizado com sucesso!');
       setNovaFoto(null);  //limpa a foto nova após salvar
       setEditando(false); //Volta pro modo de Visualização
@@ -326,13 +430,31 @@ function DetalhesAbrigo() {
     setEditando(false);
     //Volta tudo pro original
     setNomeAbrigo(dadosAbrigo.nome);
-    setCidade(dadosAbrigo.cidade);
+    setCep(dadosAbrigo.cep ?? '');
+    setEstado(dadosAbrigo.estado ?? '');
+    setCidade(dadosAbrigo.cidade ?? '');
+    setBairro(dadosAbrigo.bairro ?? '');
     setEndereco(dadosAbrigo.endereco)
     setTelefone(dadosAbrigo.telefone);
     setResponsavel(dadosAbrigo.responsavel);
     setTipoAbrigo(dadosAbrigo.tipoAbrigo);
     setCapacidadeTotal(dadosAbrigo.capacidadeTotal);
     setCapacidadeOcupada(dadosAbrigo.capacidadeOcupada);
+
+    // Restaura as coordenadas do backup também
+    setLatitude(dadosAbrigo.latitude ?? null)
+    setLongitude(dadosAbrigo.longitude ?? null)
+
+    // Restaura o feedback de geo para o estado salvo
+    if (dadosAbrigo.latitude && dadosAbrigo.longitude) {
+      setFeedbackGeo({
+        tipo: 'existente',
+        mensagem: `Localização cadastrada: (${Number(dadosAbrigo.latitude).toFixed(5)}, ${Number(dadosAbrigo.longitude).toFixed(5)})`
+      })
+    } else {
+      setFeedbackGeo(null)
+    }
+
     setInfraestrutura({  
      possuiAtendimentoMedico: dadosAbrigo.possuiAtendimentoMedico ?? false,
      possuiEnfermagem: dadosAbrigo.possuiEnfermagem ?? false,
@@ -377,20 +499,20 @@ function DetalhesAbrigo() {
 
     <div className="dashboard">
       {/* Código do Sidebar */}
-      <aside className="sidebar">
-        <div className="top-icons">
-          <img src="../src/assets/logo.png" width="70px" />
-          <p>S.O.S. Vale</p>
-        </div>
-            <ul>
-              <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-              <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
-              <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-              <li><FaDonate className="icon" /> Doações</li>
-              <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-              <li><GoAlertFill className="icon" /> Ocorrências</li>
-              <li><FaGear className="icon" />Configurações</li>
-            </ul>
+             <aside className="sidebar">
+          <div className="top-icons">
+            <img src="../src/assets/logo.png" width="70px" />
+            <p>S.O.S. Vale</p>
+          </div>
+          <ul>
+            <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
+            <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" />Abrigos</li></a>
+            <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
+            <li><FaDonate className="icon" /> Doações</li>
+            <a href="/mapa"><li><FaMap className="icon" />Mapa</li></a>
+            <li><GoAlertFill className="icon" /> Ocorrências</li>
+            <li><FaGear className="icon" /> Configurações</li>
+          </ul>
         </aside>
 
       {/* Código do Main */}
@@ -466,21 +588,76 @@ function DetalhesAbrigo() {
               )}
             </div>
 
-            {/* Select da Cidade */}
+            {/* Texto do CEP */}
+            <div className="form-group">
+              <label><FaPhoneAlt /> CEP</label>
+
+              {editando ? (
+                //Se ligado:
+                <input
+                  value={cep}
+                  onChange={(e) => setCep(e.target.value)}
+                  placeholder="12345-12"
+                />
+              ) : (
+                //Se desligado:
+                <p>{cep || '—'}</p>
+              )}
+            </div>
+
+            {/* SELECT ESTADO — cascata nível 1, só aparece em modo edição */}
+            <div className="form-group">
+              <label><FaMapMarkedAlt /> Estado</label>
+
+              {editando ? (
+                //Se ligado:
+                <select
+                  className="select-cidade"
+                  value={estado}
+                  onChange={(e) => {
+                    setEstado(e.target.value)
+                    setCidade('')  // reseta cidade ao trocar estado
+                    setBairro('')  // reseta bairro ao trocar estado
+                    // Limpa coordenadas ao trocar localização
+                    setLatitude(null)
+                    setLongitude(null)
+                    setFeedbackGeo(null)
+                  }}
+                >
+                  <option value="" disabled>Selecione o estado</option>
+                  {estados.map((est) => (
+                    <option key={est} value={est}>{est}</option>
+                  ))}
+                </select>
+              ) : (
+                //Se desligado:
+                <p>{estado || '—'}</p>
+              )}
+            </div>
+
+            {/* SELECT CIDADE — cascata nível 2, só habilita após escolher estado */}
             <div className="form-group">
               <label><FaMapMarkedAlt /> Cidade</label>
 
               {editando ? (
                 //Se ligado:
-                <select value={cidade} onChange={(e) => setCidade(e.target.value)} className="select-cidade">
-                <option value="">Selecione a cidade</option>
-                {/* O Select puxa as cidades + estados cadastrados no banco*/}
-                {regioes.map((regiao) => (
-                  <option key={regiao.id} value={regiao.cidade}>
-                   {regiao.cidade} - {regiao.estado}
-                  </option>
-                  )) 
-                }
+                <select
+                  className="select-cidade"
+                  value={cidade}
+                  disabled={!estado}
+                  onChange={(e) => {
+                    setCidade(e.target.value)
+                    setBairro('')  // reseta bairro ao trocar cidade
+                    // Limpa coordenadas ao trocar cidade
+                    setLatitude(null)
+                    setLongitude(null)
+                    setFeedbackGeo(null)
+                  }}
+                >
+                  <option value="" disabled>Selecione a cidade</option>
+                  {cidades.map((cid) => (
+                    <option key={cid} value={cid}>{cid}</option>
+                  ))}
                 </select>
               ) : (
                 //Se desligado:
@@ -488,16 +665,92 @@ function DetalhesAbrigo() {
               )}
             </div>
 
-            {/* Texto do Endereço */}
+            {/* SELECT BAIRRO — cascata nível 3, só habilita após escolher cidade */}
+            <div className="form-group">
+              <label><FaMapMarkedAlt /> Bairro</label>
+
+              {editando ? (
+                //Se ligado:
+                <select
+                  className="select-cidade"
+                  value={bairro}
+                  disabled={!cidade}
+                  onChange={(e) => setBairro(e.target.value)}
+                >
+                  <option value="" disabled>Selecione o bairro</option>
+                  {bairros.map((bai) => (
+                    <option key={bai} value={bai}>{bai}</option>
+                  ))}
+                </select>
+              ) : (
+                //Se desligado:
+                <p>{bairro || '—'}</p>
+              )}
+            </div>
+
+            {/* Texto do Endereço + Botão de Geocoding */}
             <div className="form-group">
               <label><FaMapMarkerAlt /> Endereço</label>
 
               {editando ? (
                 //Se ligado:
-                <input value={endereco} onChange={(e) => setEndereco(e.target.value)} />
+                <>
+                  <input value={endereco} onChange={(e) => setEndereco(e.target.value)} />
+
+                  {/*
+                    ── Botão inteligente de geocoding ──────────────────────────────────
+                    Comportamento:
+                      → Se NÃO tem coordenadas: texto "Buscar localização", ícone neutro
+                      → Se JÁ tem coordenadas:  texto "Atualizar localização", avisa antes de sobrescrever
+
+                    A cor também muda para dar feedback visual do estado atual.
+                  */}
+                  <button
+                    type="button"
+                    onClick={handleGeocodificar}
+                    style={{
+                      marginTop: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 12px',
+                      fontSize: '13px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: latitude && longitude ? '#1b8a3c' : '#257c35',
+                      color: '#fff',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {latitude && longitude ? 'Atualizar localização' : 'Buscar localização'}
+                  </button>
+
+                  {/* Feedback do geocoding — aparece embaixo do botão */}
+                  {feedbackGeo && (
+                    <p style={{
+                      fontSize: '12px',
+                      marginTop: '4px',
+                      color: feedbackGeo.tipo === 'sucesso'  ? '#16a34a'
+                           : feedbackGeo.tipo === 'erro'     ? '#ef4444'
+                           : feedbackGeo.tipo === 'existente'? '#0ea5e9'
+                           :                                   '#64748b'  // buscando
+                    }}>
+                      {feedbackGeo.mensagem}
+                    </p>
+                  )}
+                </>
               ) : (
                 //Se desligado:
-                <p>{endereco}</p>
+                <>
+                  <p>{endereco}</p>
+                  {/* No modo visualização, mostra as coordenadas salvas como informação */}
+                  {feedbackGeo && (
+                    <p style={{ fontSize: '12px', marginTop: '2px', color: '#0ea5e9' }}>
+                      {feedbackGeo.mensagem}
+                    </p>
+                  )}
+                </>
               )}
             </div>
 

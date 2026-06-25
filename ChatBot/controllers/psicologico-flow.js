@@ -98,13 +98,13 @@ Exemplo: 11999999999`
             );
 
             await msg.reply(
-`✅ RELATO REGISTRADO COM SUCESSO
+` RELATO REGISTRADO COM SUCESSO
 
 Protocolo: ${registro.id}
 
 Seu relato foi salvo e será encaminhado para a equipe de apoio psicológico.
 
-🧠 Lembre-se: Você não está sozinho.
+ Lembre-se: Você não está sozinho.
 
 Digite *oi* para voltar ao menu principal.`
             );
@@ -135,15 +135,15 @@ Digite *oi* para voltar ao menu principal.`
         );
 
         await msg.reply(
-`✅ PEDIDO DE APOIO PSICOLÓGICO REGISTRADO
+` PEDIDO DE APOIO PSICOLÓGICO REGISTRADO
 
-📋 Protocolo: ${registro.id}
-📞 Preferência: ${state.tempData.contato_preferencia}
-📱 Telefone: ${state.tempData.telefone}
+ Protocolo: ${registro.id}
+ Preferência: ${state.tempData.contato_preferencia}
+ Telefone: ${state.tempData.telefone}
 
-🧠 Em breve um psicólogo voluntário entrará em contato com você.
+ Em breve um psicólogo voluntário entrará em contato com você.
 
-📞 CVV - 188 (24h, gratuito)
+ CVV - 188 (24h, gratuito)
 
 Digite *oi* para voltar ao menu principal.`
         );
