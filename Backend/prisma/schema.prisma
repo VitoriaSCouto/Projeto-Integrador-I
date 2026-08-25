@@ -19,13 +19,30 @@ model Admin {
   createdAt   DateTime @default(now()) @map("created_at")
 
   solicitacoesAnalisadas SolicitacaoAbrigo[]
+
   @@map("admin")
 }
 
+model Regiao {
+  id_regiao         Int      @id @default(autoincrement())
+  bairro            String
+  cidade            String
+  estado            String
+  populacaoEstimada Int?
+  areaKm2           Float?
+  nivelRisco        String   @default("baixo")
+  statusAlerta      Boolean  @default(false)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  abrigos Abrigo[]
+
+  @@map("regiao")
+}
+
 model Abrigo {
-  id_abrigo                      Int      @id @default(autoincrement())
+  id_abrigo               Int      @id @default(autoincrement())
   nome                    String
-  cep                     String @db.VarChar(9) 
+  cep                     String   @db.VarChar(9)
   endereco                String
   cidade                  String
   estado                  String
@@ -38,43 +55,39 @@ model Abrigo {
   capacidadeTotal         Int
   capacidadeOcupada       Int      @default(0)
   possuiAtendimentoMedico Boolean  @default(false)
-  possuiEnfermagem Boolean @default(false)
-  possuiPets          Boolean @default(false)
-  possuiAcessibilidade Boolean @default(false)
-  possuiCozinha       Boolean @default(false)
-  fotoAbrigo String?
+  possuiEnfermagem        Boolean  @default(false)
+  possuiPets              Boolean  @default(false)
+  possuiAcessibilidade    Boolean  @default(false)
+  possuiCozinha           Boolean  @default(false)
+  fotoAbrigo              String?
   status                  String   @default("ativo")
   createdAt               DateTime @default(now()) @map("created_at")
 
+  regiaoId    Int?
+  regiao      Regiao?      @relation(fields: [regiaoId], references: [id_regiao])
+
   solicitacao SolicitacaoAbrigo?
+  vitimas     Vitima[]
+  voluntarios Voluntario[]
+  doacoes     Doacao[]
+
   @@map("abrigo")
 }
 
-model Regiao {
-  id_regiao                Int      @id @default(autoincrement())
-  bairro            String   // era nome
-  cidade            String
-  estado            String
-  populacaoEstimada Int?
-  areaKm2           Float?
-  nivelRisco        String   @default("baixo")
-  statusAlerta      Boolean  @default(false)
-  createdAt         DateTime @default(now()) @map("created_at")
-
-  @@map("regiao")
-}
-
 model Vitima {
-  id_vitima             Int      @id @default(autoincrement())
+  id_vitima      Int      @id @default(autoincrement())
   nome           String
-  cpf            String? @db.VarChar(14) 
-  telefone       String? @unique @db.VarChar(15)
+  cpf            String?  @db.VarChar(14)
+  telefone       String?  @unique @db.VarChar(15)
   dataNascimento DateTime @db.Date
   genero         String
   fotoVitima     String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  abrigoId Int?
+  abrigo   Abrigo? @relation(fields: [abrigoId], references: [id_abrigo])
 
   deficiencias VitimaDeficiencia[]
-  createdAt         DateTime @default(now()) @map("created_at")
 
 }
 
@@ -83,6 +96,8 @@ model Deficiencia {
   nome           String @unique
 
   vitimas VitimaDeficiencia[]
+
+  @@map("deficiencia")
 }
 
 model VitimaDeficiencia {
@@ -93,6 +108,45 @@ model VitimaDeficiencia {
   deficiencia Deficiencia @relation(fields: [id_deficiencia], references: [id_deficiencia])
 
   @@id([id_vitima, id_deficiencia])
+}
+
+model Voluntario {
+  id_voluntario  Int      @id @default(autoincrement())
+  nome           String
+  cpf            String?  @db.VarChar(14)
+  telefone       String?  @db.VarChar(15)
+  email          String   @unique
+  senha          String
+  dataNascimento DateTime @db.Date
+  genero         String
+  status         String   @default("ativo")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  abrigoId Int?
+  abrigo   Abrigo? @relation(fields: [abrigoId], references: [id_abrigo])
+
+  doacoes  Doacao[]
+
+  @@map("voluntario")
+}
+
+model Doacao {
+  id_doacao      Int      @id @default(autoincrement())
+  doadorNome     String
+  doadorTelefone String?  @db.VarChar(15)
+  tipo           String
+  quantidade     String
+  descricao      String?
+  status         String   @default("pendente")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  abrigoId Int?
+  abrigo   Abrigo? @relation(fields: [abrigoId], references: [id_abrigo])
+
+  voluntarioId Int?
+  voluntario   Voluntario? @relation(fields: [voluntarioId], references: [id_voluntario])
+
+  @@map("doacao")
 }
 
 enum StatusSolicitacao {
@@ -108,7 +162,7 @@ model SolicitacaoAbrigo {
   cep                     String  @db.VarChar(9)
   endereco                String
   cidade                  String
-  estado                  String 
+  estado                  String
   bairro                  String
   telefone                String? @db.VarChar(15)
   responsavel             String
