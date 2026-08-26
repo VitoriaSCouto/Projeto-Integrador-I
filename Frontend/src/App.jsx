@@ -16,6 +16,9 @@ import DetalhesSolicitacaoAbrigo from './pages/Solicitacoes-Abrigo/Detalhes-soli
 import ListaSolicitacoesAbrigo from './pages/Solicitacoes-Abrigo/Listar-Solicitacoes'
 import CadastrarRegiao from './pages/regioes/CadastrarRegiao'
 import Mapa from './pages/regioes/mapa';
+import CadastroVoluntario from './pages/cadastro-voluntario';
+import LoginVoluntario from './pages/login-voluntario';
+import PainelVoluntario from './pages/pg-voluntario';
 
 function App() {
   return (
@@ -38,6 +41,9 @@ function App() {
           <Route path="/visualizar-solicitação-abrigo/:id" element={<DetalhesSolicitacaoAbrigo/>}/>
           <Route path="/listar-solicitação-abrigo" element={<ListaSolicitacoesAbrigo/>}/>
           <Route path="/cadastrar-regiao" element={<CadastrarRegiao/>}/>
+          <Route path="/cadastro-voluntario" element={<CadastroVoluntario/>}/>
+          <Route path="/login-voluntario" element={<LoginVoluntario/>}/>
+          <Route path="/painel-voluntario" element={<PainelVoluntario/>}/>
         </Routes>
       </Router>
     </div>

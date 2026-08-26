@@ -8,6 +8,8 @@ import abrigoRoutes from './routes/abrigos.js'
 import regiaoRoutes from './routes/regiao.js'
 import vitimaRoutes from './routes/vitima.js'
 import solicitacaoAbrigoRoutes from './routes/solicitacao_abrigo.js'
+import voluntarioRoutes from './routes/voluntario.js'
+import doacaoRoutes from './routes/doacao.js'
  
 import 'dotenv/config' // Garante que o process.env funcione
 
@@ -24,12 +26,22 @@ app.register(fastifyJwt, {
   secret: process.env.JWT_SECRET
 })
 
+app.decorate('authenticate', async (request, reply) => {
+  try {
+    await request.jwtVerify()
+  } catch (err) {
+    return reply.status(401).send({ mensagem: 'Token inválido ou expirado.' })
+  }
+})
+
 // Registra as suas rotas
 app.register(authRoutes, { prefix: '/api/auth' })
 app.register(abrigoRoutes, { prefix: '/api/abrigos' })
 app.register(regiaoRoutes, { prefix: '/api/regioes' })
 app.register(vitimaRoutes, { prefix: '/api/vitimas' })
 app.register(solicitacaoAbrigoRoutes, { prefix: '/api/solicitacoes'})
+app.register(voluntarioRoutes, { prefix: '/api/voluntarios' })
+app.register(doacaoRoutes, { prefix: '/api/doacoes' })
 
 // Inicia o servidor
 const start = async () => {

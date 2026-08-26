@@ -25,7 +25,7 @@ return (
             <h2>Sou Voluntário</h2> 
             <p>Quero oferecer ajuda.</p> 
         </div> 
-        <button className="btnEntrar_M" onClick={() => { navigate('/login')} }>Entrar</button> 
+        <button className="btnEntrar_M" onClick={() => { navigate('/login-voluntario')} }>Entrar</button> 
         </div> 
         <div className="card_M"> 
             <div className="icone_M"><BsFillPeopleFill /></div> 

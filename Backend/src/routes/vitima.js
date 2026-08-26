@@ -14,7 +14,7 @@ export default async function vitimaRoutes(app) {
   app.post('/cadastrar', async (request, reply) => {
 
     // Extrai os dados do corpo da requisição
-    const { nome, cpf, telefone, dataNascimento, genero, fotoVitima } = request.body
+    const { nome, cpf, telefone, dataNascimento, genero, fotoVitima, abrigoId } = request.body
     const dataFormatada = new Date(dataNascimento)
 
     // Verifica se já existe uma vítima com o mesmo CPF
@@ -36,7 +36,9 @@ export default async function vitimaRoutes(app) {
         telefone,
         dataNascimento: dataFormatada,
         genero,
-        fotoVitima: null
+        fotoVitima: null,
+        // Abrigo onde a vítima está alocada — opcional, pode ser null se ainda não foi alocada
+        abrigoId: abrigoId ?? null,
       }
     })
 
@@ -81,7 +83,8 @@ export default async function vitimaRoutes(app) {
       // Formata a data para exibição no padrão brasileiro
       dataNascimento: vitima.dataNascimento?.toLocaleDateString('pt-BR'),
       genero: vitima.genero,
-      fotoVitima: vitima.fotoVitima
+      fotoVitima: vitima.fotoVitima,
+      abrigoId: vitima.abrigoId,
     })
   })
 
@@ -92,23 +95,31 @@ export default async function vitimaRoutes(app) {
   app.get('/listar', async (request, reply) => {
 
     // Filtro opcional por nome
-    const { nome } = request.query
+    const { nome, abrigoId } = request.query
 
     // Busca as vítimas com filtro se fornecido
     const vitimas = await prisma.vitima.findMany({
       where: {
-        nome: nome ? { contains: nome, mode: 'insensitive' } : undefined
+        nome:     nome     ? { contains: nome, mode: 'insensitive' } : undefined,
+        // Permite filtrar vítimas por abrigo — útil para listar quem está em um abrigo específico
+        abrigoId: abrigoId ? Number(abrigoId)                       : undefined,
+      },
+      include: {
+        abrigo: { select: { nome: true, cidade: true } }
       }
     })
 
     // Retorna apenas os campos necessários
     const vitimasListadas = vitimas.map((vitima) => ({
-      id: vitima.id_vitima,
-      nome: vitima.nome,
-      cpf: vitima.cpf,
-      telefone: vitima.telefone,
-      genero: vitima.genero,
-      fotoVitima: vitima.fotoVitima
+      id:        vitima.id_vitima,
+      nome:      vitima.nome,
+      cpf:       vitima.cpf,
+      telefone:  vitima.telefone,
+      genero:    vitima.genero,
+      fotoVitima: vitima.fotoVitima,
+      // Inclui o abrigo vinculado para exibir na listagem
+      abrigoId:  vitima.abrigoId,
+      abrigo:    vitima.abrigo ?? null,
     }))
 
     return reply.status(200).send({
@@ -116,7 +127,7 @@ export default async function vitimaRoutes(app) {
       vitimas: vitimasListadas
     })
   })
-  
+
   //----- Listar um só ----- (Importante para o Detalhes-vitima)
   //Método GET para buscar uma vitima específico pelo ID
   //Retorna TODOS os campos — usado pela tela de Detalhes
@@ -126,7 +137,11 @@ export default async function vitimaRoutes(app) {
     const { id } = request.params
 
     const vitima = await prisma.vitima.findUnique({
-      where: { id_vitima: Number(id) }
+      where: { id_vitima: Number(id) },
+      // Inclui os dados do abrigo vinculado para exibir na tela de detalhes
+      include: {
+        abrigo: { select: { nome: true, cidade: true, endereco: true, telefone: true } }
+      }
     })
 
     if (!vitima) {
@@ -150,7 +165,7 @@ export default async function vitimaRoutes(app) {
 
     // Extrai o ID da URL e os dados do corpo
     const { id } = request.params
-    const { nome, cpf, telefone, dataNascimento, genero, fotoVitima } = request.body
+    const { nome, cpf, telefone, dataNascimento, genero, fotoVitima, abrigoId } = request.body
 
     // Verifica se a vítima existe
     const vitimaExistente = await prisma.vitima.findUnique({
@@ -233,7 +248,9 @@ export default async function vitimaRoutes(app) {
         telefone,
         dataNascimento: dataConvertida,
         genero,
-        fotoVitima: fotoUrl
+        fotoVitima: fotoUrl,
+        // Atualiza o abrigo vinculado — se não vier, mantém o anterior
+        abrigoId: abrigoId ?? vitimaExistente.abrigoId,
       }
     })
 
@@ -247,7 +264,8 @@ export default async function vitimaRoutes(app) {
       // Corrigido: era "vitima" (variável inexistente nesse escopo), deve ser "vitimaAtualizado"
       dataNascimento:          vitimaAtualizado.dataNascimento?.toLocaleDateString('pt-BR'),
       genero:                  vitimaAtualizado.genero,
-      fotoVitima:              vitimaAtualizado.fotoVitima
+      fotoVitima:              vitimaAtualizado.fotoVitima,
+      abrigoId:                vitimaAtualizado.abrigoId,
     })
 
     } catch (erro) {

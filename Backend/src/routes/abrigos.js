@@ -13,7 +13,7 @@ export default async function abrigoRoutes(app) {
     const { nome, cep, estado, cidade, bairro, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
-      status, fotoAbrigo, latitude, longitude } = request.body
+      status, fotoAbrigo, latitude, longitude, regiaoId } = request.body
 
     // Verifica se já existe um abrigo com o mesmo nome e endereço
     const abrigoExistente = await prisma.abrigo.findFirst({
@@ -50,6 +50,8 @@ export default async function abrigoRoutes(app) {
         // Podem ser null se o geocoding falhou ou o usuário não preencheu o endereço
         latitude: latitude ?? null,
         longitude: longitude ?? null,
+        // Região vinculada ao abrigo — opcional, usado para exibir nivelRisco no mapa
+        regiaoId: regiaoId ?? null,
       }
     })
 
@@ -108,6 +110,7 @@ export default async function abrigoRoutes(app) {
       fotoAbrigo: abrigo.fotoAbrigo,
       latitude: abrigo.latitude,
       longitude: abrigo.longitude,
+      regiaoId: abrigo.regiaoId,
     })
   })
 
@@ -134,6 +137,12 @@ export default async function abrigoRoutes(app) {
         bairro:   bairro   ? { contains: bairro,   mode: 'insensitive' } : undefined,
         cep:      cep      ? { equals: Number(cep) }                     : undefined,
         id_abrigo: id      ? { equals: Number(id) }                      : undefined,
+      },
+      // Inclui os dados da região vinculada para exibir nivelRisco e statusAlerta no mapa
+      include: {
+        regiao: {
+          select: { nivelRisco: true, statusAlerta: true }
+        }
       }
     })
 
@@ -156,6 +165,10 @@ export default async function abrigoRoutes(app) {
       // Incluídos agora para o Mapa plotar os marcadores sem precisar de geocoding
       latitude:          abrigo.latitude,
       longitude:         abrigo.longitude,
+      // Dados da região para exibir nível de risco no mapa e nas listagens
+      regiaoId:          abrigo.regiaoId,
+      nivelRisco:        abrigo.regiao?.nivelRisco   ?? null,
+      statusAlerta:      abrigo.regiao?.statusAlerta ?? null,
     }))
 
     return reply.status(200).send({
@@ -174,7 +187,16 @@ export default async function abrigoRoutes(app) {
     const { id } = request.params
 
     const abrigo = await prisma.abrigo.findUnique({
-      where: { id_abrigo: Number(id) }
+      where: { id_abrigo: Number(id) },
+      // Inclui os dados completos da região e a contagem de vítimas e voluntários vinculados
+      include: {
+        regiao: {
+          select: { bairro: true, cidade: true, estado: true, nivelRisco: true, statusAlerta: true }
+        },
+        vitimas:     { select: { id_vitima: true, nome: true } },
+        voluntarios: { select: { id_voluntario: true, nome: true } },
+        doacoes:     { select: { id_doacao: true, tipo: true, quantidade: true, status: true } },
+      }
     })
 
     if (!abrigo) {
@@ -196,7 +218,7 @@ export default async function abrigoRoutes(app) {
     const { nome, cep, estado, cidade, bairro, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
-      status, fotoAbrigo, latitude, longitude } = request.body
+      status, fotoAbrigo, latitude, longitude, regiaoId } = request.body
 
     const abrigoExistente = await prisma.abrigo.findUnique({
       where: { id_abrigo: Number(id) }
@@ -285,6 +307,8 @@ export default async function abrigoRoutes(app) {
         // Se não vieram (undefined), mantém os valores anteriores do banco
         latitude:  latitude  ?? abrigoExistente.latitude,
         longitude: longitude ?? abrigoExistente.longitude,
+        // Atualiza a região vinculada — se não vier, mantém a anterior
+        regiaoId:  regiaoId  ?? abrigoExistente.regiaoId,
       }
     })
 
@@ -311,6 +335,7 @@ export default async function abrigoRoutes(app) {
       fotoAbrigo:              abrigoAtualizado.fotoAbrigo,
       latitude:                abrigoAtualizado.latitude,
       longitude:               abrigoAtualizado.longitude,
+      regiaoId:                abrigoAtualizado.regiaoId,
     })
 
     } catch (erro) {
