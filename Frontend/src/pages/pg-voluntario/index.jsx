@@ -6,6 +6,23 @@ import { FaChevronRight, FaLocationDot } from 'react-icons/fa6';
 import { FiLogOut } from 'react-icons/fi';
 import { GoAlertFill } from 'react-icons/go';
 
+// ─── Labels e cores de status/categoria ─────────────────────────
+// Mesmo padrão usado nas outras telas de Solicitação de Ajuda
+const badgeStatus = {
+  aberto:       { label: 'Aberto',       bg: '#dbeafe', cor: '#1e40af' },
+  em_andamento: { label: 'Em andamento', bg: '#fef3c7', cor: '#92400e' },
+  concluido:    { label: 'Concluído',    bg: '#d1fae5', cor: '#065f46' },
+  cancelado:    { label: 'Cancelado',    bg: '#fee2e2', cor: '#991b1b' },
+}
+
+const categoriaLabel = {
+  doacao:         'Doação',
+  medicamento:    'Medicamento',
+  voluntariado:   'Voluntariado',
+  infraestrutura: 'Infraestrutura',
+  outro:          'Outro',
+}
+
 const PainelVoluntario = () => {
   const navigate = useNavigate();
 
@@ -14,12 +31,12 @@ const PainelVoluntario = () => {
   const voluntarioSalvo = JSON.parse(localStorage.getItem('voluntario') || '{}');
 
   // ─── ESTADOS ─────────────────────────────────────────────────
-  const [voluntario,     setVoluntario]     = useState(voluntarioSalvo);
-  const [abrigos,        setAbrigos]        = useState([]);
-  const [minhasDoacoes,  setMinhasDoacoes]  = useState([]);
-  const [carregando,     setCarregando]     = useState(true);
-  const [erro,           setErro]           = useState(null);
-  const [activePage,     setActivePage]     = useState('home');
+  const [voluntario,          setVoluntario]          = useState(voluntarioSalvo);
+  const [abrigos,              setAbrigos]              = useState([]);
+  const [minhasSolicitacoes,   setMinhasSolicitacoes]   = useState([]);
+  const [carregando,           setCarregando]           = useState(true);
+  const [erro,                 setErro]                 = useState(null);
+  const [activePage,           setActivePage]           = useState('home');
 
   // ─── TOKEN DO VOLUNTÁRIO ─────────────────────────────────────
   // Se não tiver token, redireciona para o login imediatamente
@@ -34,7 +51,7 @@ const PainelVoluntario = () => {
   }, []);
 
   // ─── BUSCA DE DADOS ──────────────────────────────────────────
-  // Busca em paralelo: abrigos em alerta + dados completos do voluntário + suas doações
+  // Busca em paralelo: abrigos em alerta + dados completos do voluntário + solicitações que ele atendeu
   async function buscarDados() {
     try {
       const [resAbrigos, resVoluntario] = await Promise.all([
@@ -59,7 +76,10 @@ const PainelVoluntario = () => {
 
       setAbrigos(abrigosNecessitando);
       setVoluntario(dadosVoluntario.voluntario);
-      setMinhasDoacoes(dadosVoluntario.voluntario.doacoes || []);
+      // Antes era "doacoes" (model removido do schema). Agora é
+      // "solicitacoesAjudaAtendidas" — solicitações de ajuda que este
+      // voluntário atendeu de fato (atribuídas pelo ADM ao concluir).
+      setMinhasSolicitacoes(dadosVoluntario.voluntario.solicitacoesAjudaAtendidas || []);
 
     } catch (err) {
       setErro(err.message);
@@ -77,8 +97,9 @@ const PainelVoluntario = () => {
   }
 
   // ─── DERIVAÇÕES ──────────────────────────────────────────────
-  const totalDoacoes      = minhasDoacoes.length;
-  const doacoesPendentes  = minhasDoacoes.filter(d => d.status === 'pendente').length;
+  const totalSolicitacoes = minhasSolicitacoes.length;
+  const emAndamento       = minhasSolicitacoes.filter(s => s.status === 'em_andamento').length;
+  const concluidas        = minhasSolicitacoes.filter(s => s.status === 'concluido').length;
   const vinculado         = voluntario?.abrigo?.nome ?? null;
 
   const statCards = [
@@ -91,10 +112,10 @@ const PainelVoluntario = () => {
       accent: 'red',
     },
     {
-      id:     'doacoes',
-      label:  'Minhas doações',
-      value:  totalDoacoes,
-      sub:    `${doacoesPendentes} pendente${doacoesPendentes !== 1 ? 's' : ''}`,
+      id:     'solicitacoes',
+      label:  'Minhas contribuições',
+      value:  totalSolicitacoes,
+      sub:    `${concluidas} concluída${concluidas !== 1 ? 's' : ''}`,
       icon:   <FaHeart />,
       accent: 'cyan',
     },
@@ -130,20 +151,12 @@ const PainelVoluntario = () => {
             <FaHome className="icon" /> Home
           </li>
 
-          {/* Abrigos — só visualização, sem gestão */}
+          {/* Solicitações de ajuda que o voluntário pode atender */}
           <li
-            className={activePage === 'abrigos' ? 'active' : ''}
-            onClick={() => navigate('/abrigos')}
+            className={activePage === 'solicitacoes' ? 'active' : ''}
+            onClick={() => navigate('/solicitacoes-ajuda-voluntario')}
           >
-            <GoAlertFill className="icon" /> Abrigos
-          </li>
-
-          {/* Minhas doações */}
-          <li
-            className={activePage === 'doacoes' ? 'active' : ''}
-            onClick={() => setActivePage('doacoes')}
-          >
-            <FaDonate className="icon" /> Minhas doações
+            <FaDonate className="icon" /> Solicitações de Ajuda
           </li>
 
           {/* Mapa */}
@@ -182,11 +195,11 @@ const PainelVoluntario = () => {
           </div>
 
           <div className="top-controls">
-            {/* Badge com doações pendentes */}
+            {/* Badge com solicitações em andamento */}
             <button className="notif-btn">
               <FaRegBell />
-              {doacoesPendentes > 0 && (
-                <span className="notif-badge">{doacoesPendentes}</span>
+              {emAndamento > 0 && (
+                <span className="notif-badge">{emAndamento}</span>
               )}
             </button>
           </div>
@@ -259,10 +272,10 @@ const PainelVoluntario = () => {
                           )}
                         </div>
                       </div>
-                      {/* Botão redireciona para doação pré-preenchida com esse abrigo */}
+                      {/* Leva para as solicitações de ajuda abertas desse abrigo */}
                       <button
                         className="activity-btn"
-                        onClick={() => navigate(`/cadastro_doacao?abrigoId=${abrigo.id}`)}
+                        onClick={() => navigate(`/abrigos/${abrigo.id}/solicitacoes-ajuda`)}
                       >
                         Quero ajudar
                       </button>
@@ -280,40 +293,40 @@ const PainelVoluntario = () => {
           {/* ── LATERAL ── */}
           <div className="side-column">
 
-            {/* ── MINHAS DOAÇÕES RECENTES ── */}
+            {/* ── MINHAS CONTRIBUIÇÕES RECENTES ── */}
             <div className="panel chart-panel">
-              <h3>Minhas doações recentes</h3>
+              <h3>Minhas contribuições recentes</h3>
 
-              {minhasDoacoes.length === 0 ? (
+              {minhasSolicitacoes.length === 0 ? (
                 <p style={{ color: '#64748b', fontSize: '14px', marginTop: '8px' }}>
-                  Você ainda não registrou nenhuma doação.
+                  Você ainda não atendeu nenhuma solicitação.
                 </p>
               ) : (
                 <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {minhasDoacoes.slice(0, 5).map((doacao, index) => (
-                    <div key={index} style={{
-                      display: 'flex', justifyContent: 'space-between',
-                      alignItems: 'center', fontSize: '13px',
-                      borderBottom: '1px solid #f1f5f9', paddingBottom: '8px'
-                    }}>
-                      <span style={{ fontWeight: '600', color: '#0f172a' }}>
-                        {doacao.tipo}
-                      </span>
-                      <span style={{ color: '#64748b' }}>
-                        {doacao.quantidade} un.
-                      </span>
-                      {/* Badge de status com cor por estado */}
-                      <span style={{
-                        fontSize: '11px', padding: '2px 8px', borderRadius: '99px',
-                        background: doacao.status === 'recebida'    ? '#dcfce7' :
-                                    doacao.status === 'distribuida' ? '#dbeafe' : '#fef9c3',
-                        color:      doacao.status === 'recebida'    ? '#16a34a' :
-                                    doacao.status === 'distribuida' ? '#2563eb' : '#92400e',
+                  {minhasSolicitacoes.slice(0, 5).map((solicitacao, index) => {
+                    const badge = badgeStatus[solicitacao.status] ?? { label: solicitacao.status, bg: '#f1f5f9', cor: '#64748b' }
+                    return (
+                      <div key={index} style={{
+                        display: 'flex', justifyContent: 'space-between',
+                        alignItems: 'center', fontSize: '13px', gap: '8px',
+                        borderBottom: '1px solid #f1f5f9', paddingBottom: '8px'
                       }}>
-                        {doacao.status}
-                      </span>
-                    </div>
-                  ))}
+                        <span style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {solicitacao.titulo}
+                        </span>
+                        <span style={{ color: '#64748b', flexShrink: 0 }}>
+                          {categoriaLabel[solicitacao.categoria] ?? solicitacao.categoria}
+                        </span>
+                        {/* Badge de status com cor por estado */}
+                        <span style={{
+                          fontSize: '11px', padding: '2px 8px', borderRadius: '99px',
+                          background: badge.bg, color: badge.cor, flexShrink: 0
+                        }}>
+                          {badge.label}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -324,10 +337,10 @@ const PainelVoluntario = () => {
               <div className="quick-actions-grid">
                 <button
                   className="quick-action"
-                  onClick={() => navigate('/cadastro_doacao')}
+                  onClick={() => navigate('/solicitacoes-ajuda-voluntario')}
                 >
                   <span className="quick-action-icon"><FaDonate /></span>
-                  Registrar doação
+                  Ver solicitações
                 </button>
 
                 <button
@@ -336,14 +349,6 @@ const PainelVoluntario = () => {
                 >
                   <span className="quick-action-icon"><FaMap /></span>
                   Ver mapa
-                </button>
-
-                <button
-                  className="quick-action"
-                  onClick={() => navigate('/abrigos')}
-                >
-                  <span className="quick-action-icon"><FaHome /></span>
-                  Ver abrigos
                 </button>
 
                 <button

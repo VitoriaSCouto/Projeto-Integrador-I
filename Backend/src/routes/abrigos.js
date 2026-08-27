@@ -92,9 +92,9 @@ export default async function abrigoRoutes(app) {
       id: abrigo.id_abrigo,
       nome: abrigo.nome,
       cep: abrigo.cep,
-      estado: abrigo.estado,   // ← corrigido: estava abrigo.cidade
+      estado: abrigo.estado,
       cidade: abrigo.cidade,
-      bairro: abrigo.bairro,   // ← corrigido: estava abrigo.cidade
+      bairro: abrigo.bairro,
       endereco: abrigo.endereco,
       telefone: abrigo.telefone,
       responsavel: abrigo.responsavel,
@@ -193,9 +193,21 @@ export default async function abrigoRoutes(app) {
         regiao: {
           select: { bairro: true, cidade: true, estado: true, nivelRisco: true, statusAlerta: true }
         },
-        vitimas:     { select: { id_vitima: true, nome: true } },
+        vitimas: {
+          select: {
+            id_vitima:      true,
+            nome:           true,
+            dataNascimento: true, // ← necessário para calcular idade no frontend
+            dataEntrada:    true, // ← necessário para exibir horário de entrada
+            genero:         true, // ← necessário para exibir gênero no frontend
+          }
+        },
         voluntarios: { select: { id_voluntario: true, nome: true } },
-        doacoes:     { select: { id_doacao: true, tipo: true, quantidade: true, status: true } },
+        // Antes era "doacoes" (model removido do schema). Agora é "solicitacoesAjuda",
+        // que substitui o antigo model de doações.
+        solicitacoesAjuda: {
+          select: { id_solicitacao: true, titulo: true, categoria: true, urgencia: true, status: true }
+        },
       }
     })
 
@@ -317,7 +329,7 @@ export default async function abrigoRoutes(app) {
       id_abrigo:               abrigoAtualizado.id_abrigo,
       nome:                    abrigoAtualizado.nome,
       cep:                     abrigoAtualizado.cep,
-      estado:                  abrigoAtualizado.estado,  // ← corrigido: estava abrigoAtualiado (typo)
+      estado:                  abrigoAtualizado.estado,
       cidade:                  abrigoAtualizado.cidade,
       bairro:                  abrigoAtualizado.bairro,
       endereco:                abrigoAtualizado.endereco,
@@ -339,7 +351,6 @@ export default async function abrigoRoutes(app) {
     })
 
     } catch (erro) {
-      // Vai mostrar o erro real no terminal
       console.error('ERRO DETALHADO:', erro)
       return reply.status(500).send({ mensagem: erro.message })
     }

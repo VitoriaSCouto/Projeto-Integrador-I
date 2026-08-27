@@ -19,6 +19,11 @@ import Mapa from './pages/regioes/mapa';
 import CadastroVoluntario from './pages/cadastro-voluntario';
 import LoginVoluntario from './pages/login-voluntario';
 import PainelVoluntario from './pages/pg-voluntario';
+import VitimasDoAbrigo from './pages/abrigos/Vitimas-Abrigo';
+import SolicitacoesAjudaDoAbrigo from './pages/Solicitacoes-Ajuda/listar-solicitacoes-do-abrigo';
+import CadastrarSolicitacaoAjuda from './pages/Solicitacoes-Ajuda/cadastrar-solicitacao-ajuda';
+import DetalhesSolicitacaoAjuda from './pages/Solicitacoes-Ajuda/detalhes-solicitacao-ajuda';
+import SolicitacoesAjudaVoluntario from './pages/Solicitacoes-Ajuda/solicitacoes-ajuda-voluntario';
 
 function App() {
   return (
@@ -44,6 +49,13 @@ function App() {
           <Route path="/cadastro-voluntario" element={<CadastroVoluntario/>}/>
           <Route path="/login-voluntario" element={<LoginVoluntario/>}/>
           <Route path="/painel-voluntario" element={<PainelVoluntario/>}/>
+          <Route path="/abrigos/:id/vitimas" element={<VitimasDoAbrigo/>}/>
+          <Route path="/abrigos/:id/solicitacoes-ajuda" element={<SolicitacoesAjudaDoAbrigo/>}/>
+          <Route path="/abrigos/:id/cadastrar-solicitacao-ajuda" element={<CadastrarSolicitacaoAjuda/>}/>
+          <Route path="/visualizar-solicitacao-ajuda/:id" element={<DetalhesSolicitacaoAjuda/>}/>
+          <Route path="/solicitacoes-ajuda-voluntario" element={<SolicitacoesAjudaVoluntario/>}/>
+
+
         </Routes>
       </Router>
     </div>

@@ -36,7 +36,7 @@ const LoginVoluntario = () => {
                 localStorage.setItem("voluntario", JSON.stringify(data.voluntario));
 
                 // Redireciona para o painel do voluntário
-                navigate('/painel_voluntario');
+                navigate('/painel-voluntario');
             } else {
                 // Exibe a mensagem de erro retornada pelo backend (ex: "Email ou senha incorretos.")
                 setErro(data.mensagem || "Erro ao fazer login.");

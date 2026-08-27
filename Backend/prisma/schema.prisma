@@ -8,6 +8,10 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ─────────────────────────────────────────────
+// ADMIN
+// ─────────────────────────────────────────────
+
 model Admin {
   id          Int      @id @default(autoincrement())
   nome        String
@@ -18,10 +22,15 @@ model Admin {
   nivelAcesso String   @default("operador")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  solicitacoesAnalisadas SolicitacaoAbrigo[]
+  solicitacoesAnalisadas   SolicitacaoAbrigo[]
+  solicitacoesAjudaCriadas SolicitacaoAjuda[]  @relation("SolicitacoesAjudaCriadas")
 
   @@map("admin")
 }
+
+// ─────────────────────────────────────────────
+// REGIÃO
+// ─────────────────────────────────────────────
 
 model Regiao {
   id_regiao         Int      @id @default(autoincrement())
@@ -38,6 +47,10 @@ model Regiao {
 
   @@map("regiao")
 }
+
+// ─────────────────────────────────────────────
+// ABRIGO
+// ─────────────────────────────────────────────
 
 model Abrigo {
   id_abrigo               Int      @id @default(autoincrement())
@@ -63,16 +76,20 @@ model Abrigo {
   status                  String   @default("ativo")
   createdAt               DateTime @default(now()) @map("created_at")
 
-  regiaoId    Int?
-  regiao      Regiao?      @relation(fields: [regiaoId], references: [id_regiao])
+  regiaoId Int?
+  regiao   Regiao? @relation(fields: [regiaoId], references: [id_regiao])
 
-  solicitacao SolicitacaoAbrigo?
-  vitimas     Vitima[]
-  voluntarios Voluntario[]
-  doacoes     Doacao[]
+  solicitacao       SolicitacaoAbrigo?
+  vitimas           Vitima[]
+  voluntarios       Voluntario[]
+  solicitacoesAjuda SolicitacaoAjuda[]
 
   @@map("abrigo")
 }
+
+// ─────────────────────────────────────────────
+// VÍTIMA
+// ─────────────────────────────────────────────
 
 model Vitima {
   id_vitima      Int       @id @default(autoincrement())
@@ -82,7 +99,6 @@ model Vitima {
   dataNascimento DateTime  @db.Date
   genero         String
   fotoVitima     String?
-  // Data em que a vítima entrou no abrigo — preenchida quando abrigoId é definido
   dataEntrada    DateTime? @db.Date
   createdAt      DateTime  @default(now()) @map("created_at")
 
@@ -90,7 +106,6 @@ model Vitima {
   abrigo   Abrigo? @relation(fields: [abrigoId], references: [id_abrigo])
 
   deficiencias VitimaDeficiencia[]
-
 }
 
 model Deficiencia {
@@ -98,7 +113,6 @@ model Deficiencia {
   nome           String @unique
 
   vitimas VitimaDeficiencia[]
-
 }
 
 model VitimaDeficiencia {
@@ -110,6 +124,10 @@ model VitimaDeficiencia {
 
   @@id([id_vitima, id_deficiencia])
 }
+
+// ─────────────────────────────────────────────
+// VOLUNTÁRIO
+// ─────────────────────────────────────────────
 
 model Voluntario {
   id_voluntario  Int      @id @default(autoincrement())
@@ -126,29 +144,15 @@ model Voluntario {
   abrigoId Int?
   abrigo   Abrigo? @relation(fields: [abrigoId], references: [id_abrigo])
 
-  doacoes Doacao[]
+  solicitacoesAjudaAtendidas SolicitacaoAjuda[]
+  interessesAjuda            SolicitacaoAjudaInteresse[]
 
   @@map("voluntario")
 }
 
-model Doacao {
-  id_doacao  Int      @id @default(autoincrement())
-  tipo       String   // ALIMENTO, ROUPA, HIGIENE, DINHEIRO, OUTRO
-  quantidade Int      // Int para permitir soma no gráfico
-  descricao  String?
-  status     String   @default("pendente") // pendente, recebida, distribuida
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  // abrigoId obrigatório — toda doação vai para um abrigo específico
-  abrigoId Int
-  abrigo   Abrigo @relation(fields: [abrigoId], references: [id_abrigo])
-
-  // voluntarioId obrigatório — toda doação vem de um voluntário logado
-  voluntarioId Int
-  voluntario   Voluntario @relation(fields: [voluntarioId], references: [id_voluntario])
-
-  @@map("doacao")
-}
+// ─────────────────────────────────────────────
+// SOLICITAÇÃO DE ABRIGO
+// ─────────────────────────────────────────────
 
 enum StatusSolicitacao {
   pendente
@@ -191,9 +195,92 @@ model SolicitacaoAbrigo {
   abrigo    Abrigo? @relation(fields: [abrigo_id], references: [id_abrigo])
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt     @map("updated_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
 
   @@index([status])
   @@index([createdAt])
   @@map("solicitacao_abrigo")
+}
+
+// ─────────────────────────────────────────────
+// SOLICITAÇÃO DE AJUDA  (substitui Doacao)
+// ─────────────────────────────────────────────
+
+enum StatusSolicitacaoAjuda {
+  aberto
+  em_andamento
+  concluido
+  cancelado
+}
+
+enum CategoriaAjuda {
+  doacao         // roupas, alimentos, itens em geral
+  medicamento    // remédios, insumos médicos
+  voluntariado   // mão de obra, serviços presenciais
+  infraestrutura // reparos, equipamentos
+  outro          // pedido livre / personalizado
+}
+
+enum UrgenciaAjuda {
+  baixa
+  media
+  alta
+  critica
+}
+
+model SolicitacaoAjuda {
+  id_solicitacao Int @id @default(autoincrement())
+
+  // Conteúdo livre — o ADM descreve o que precisa
+  titulo    String
+  descricao String
+  categoria CategoriaAjuda
+  urgencia  UrgenciaAjuda  @default(media)
+
+  status StatusSolicitacaoAjuda @default(aberto)
+
+  // Observação interna preenchida ao concluir ou cancelar
+  observacaoFechamento String?
+
+  // ADM que criou a solicitação
+  criadoPorId Int
+  criadoPor   Admin @relation("SolicitacoesAjudaCriadas", fields: [criadoPorId], references: [id])
+
+  // Abrigo ao qual a solicitação pertence (sempre obrigatório)
+  abrigoId Int
+  abrigo   Abrigo @relation(fields: [abrigoId], references: [id_abrigo])
+
+  // Voluntário que atendeu — preenchido opcionalmente ao concluir
+  // Pode ficar nulo (anônimo ou sem vínculo)
+  voluntarioId Int?
+  voluntario   Voluntario? @relation(fields: [voluntarioId], references: [id_voluntario])
+
+  interesses SolicitacaoAjudaInteresse[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt       @map("updated_at")
+
+  @@index([status])
+  @@index([abrigoId])
+  @@index([categoria])
+  @@index([createdAt])
+  @@map("solicitacao_ajuda")
+}
+
+// Registro de interesse do voluntário
+// — somente visual, sem poder de gestão
+// — um voluntário não pode marcar interesse duas vezes na mesma solicitação
+model SolicitacaoAjudaInteresse {
+  id Int @id @default(autoincrement())
+
+  solicitacaoId Int
+  solicitacao   SolicitacaoAjuda @relation(fields: [solicitacaoId], references: [id_solicitacao])
+
+  voluntarioId Int
+  voluntario   Voluntario @relation(fields: [voluntarioId], references: [id_voluntario])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([solicitacaoId, voluntarioId])
+  @@map("solicitacao_ajuda_interesse")
 }

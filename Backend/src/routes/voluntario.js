@@ -126,8 +126,11 @@ export default async function voluntarioRoutes(app) {
         abrigo: {
           select: { nome: true, cidade: true }
         },
-        doacoes: {
-          select: { tipo: true, quantidade: true, status: true, createdAt: true }
+        // Antes era "doacoes" (model removido do schema).
+        // Agora é "solicitacoesAjudaAtendidas" — solicitações de ajuda que este
+        // voluntário atendeu (campo voluntarioId em SolicitacaoAjuda).
+        solicitacoesAjudaAtendidas: {
+          select: { titulo: true, categoria: true, status: true, createdAt: true }
         }
       }
     })
@@ -163,14 +166,16 @@ export default async function voluntarioRoutes(app) {
     })
 
     // Retorna apenas os campos necessários para a listagem
+    // Mantém "id_voluntario" (em vez de renomear para "id") para bater com o
+    // padrão usado no resto do projeto (id_abrigo, id_solicitacao, id_vitima...)
     const voluntariosListados = voluntarios.map((voluntario) => ({
-      id:        voluntario.id_voluntario,
-      nome:      voluntario.nome,
-      email:     voluntario.email,
-      telefone:  voluntario.telefone,
-      genero:    voluntario.genero,
-      status:    voluntario.status,
-      abrigo:    voluntario.abrigo
+      id_voluntario: voluntario.id_voluntario,
+      nome:          voluntario.nome,
+      email:         voluntario.email,
+      telefone:      voluntario.telefone,
+      genero:        voluntario.genero,
+      status:        voluntario.status,
+      abrigo:        voluntario.abrigo
     }))
 
     return reply.status(200).send({
@@ -191,8 +196,14 @@ export default async function voluntarioRoutes(app) {
     const voluntario = await prisma.voluntario.findUnique({
       where: { id_voluntario: Number(id) },
       include: {
-        abrigo:  { select: { nome: true, cidade: true } },
-        doacoes: { select: { tipo: true, quantidade: true, status: true, createdAt: true } }
+        abrigo: { select: { nome: true, cidade: true } },
+        // Antes era "doacoes" (model removido do schema).
+        // Agora é "solicitacoesAjudaAtendidas" — as solicitações de ajuda que
+        // este voluntário atendeu de fato (não confundir com "interessesAjuda",
+        // que são só os interesses marcados, sem confirmação do ADM).
+        solicitacoesAjudaAtendidas: {
+          select: { id_solicitacao: true, titulo: true, categoria: true, status: true, createdAt: true }
+        }
       }
     })
 
@@ -251,7 +262,7 @@ export default async function voluntarioRoutes(app) {
 
       return reply.status(200).send({
         mensagem:       'Informações do voluntário atualizadas com sucesso!',
-        id:             voluntarioAtualizado.id_voluntario,
+        id_voluntario:  voluntarioAtualizado.id_voluntario,
         nome:           voluntarioAtualizado.nome,
         email:          voluntarioAtualizado.email,
         cpf:            voluntarioAtualizado.cpf,

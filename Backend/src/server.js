@@ -9,8 +9,7 @@ import regiaoRoutes from './routes/regiao.js'
 import vitimaRoutes from './routes/vitima.js'
 import solicitacaoAbrigoRoutes from './routes/solicitacao_abrigo.js'
 import voluntarioRoutes from './routes/voluntario.js'
-import doacaoRoutes from './routes/doacao.js'
- 
+import solicitacaoAjudaRoutes from './routes/solicitacao_ajuda.js'
 import 'dotenv/config' // Garante que o process.env funcione
 
 //cria a instância
@@ -41,7 +40,8 @@ app.register(regiaoRoutes, { prefix: '/api/regioes' })
 app.register(vitimaRoutes, { prefix: '/api/vitimas' })
 app.register(solicitacaoAbrigoRoutes, { prefix: '/api/solicitacoes'})
 app.register(voluntarioRoutes, { prefix: '/api/voluntarios' })
-app.register(doacaoRoutes, { prefix: '/api/doacoes' })
+app.register(solicitacaoAjudaRoutes, { prefix: '/api/solicitacoes-ajuda' })
+
 
 // Inicia o servidor
 const start = async () => {
