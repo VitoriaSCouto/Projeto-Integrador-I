@@ -13,6 +13,8 @@ datasource db {
 // ─────────────────────────────────────────────
 
 model Admin {
+  alertasCriados Alerta[] @relation("AlertasCriados")
+  historicoAlertas HistoricoAlerta[] @relation("HistoricoAlertasAtor")
   id          Int      @id @default(autoincrement())
   nome        String
   email       String   @unique
@@ -33,6 +35,8 @@ model Admin {
 // ─────────────────────────────────────────────
 
 model Regiao {
+  alertas Alerta[]
+  inscricoesAlerta InscricaoAlerta[]
   id_regiao         Int      @id @default(autoincrement())
   bairro            String
   cidade            String
@@ -283,4 +287,158 @@ model SolicitacaoAjudaInteresse {
 
   @@unique([solicitacaoId, voluntarioId])
   @@map("solicitacao_ajuda_interesse")
+}
+
+// FRAGMENTO: acrescente ao final de Backend/prisma/schema.prisma.
+// Não substitui o schema existente; não contém generator nem datasource.
+// Acrescente também os campos inversos de relacoes-existentes.prisma.txt.
+
+enum TipoAlerta {
+  inundacao
+  deslizamento
+  tempestade
+  vento_forte
+  outro
+}
+
+enum SeveridadeAlerta {
+  baixa
+  moderada
+  alta
+  critica
+}
+
+enum StatusAlerta {
+  rascunho
+  em_revisao
+  publicado
+  encerrado
+  cancelado
+}
+
+enum AcaoHistoricoAlerta {
+  criar
+  editar
+  enviar_revisao
+  devolver_rascunho
+  publicar
+  encerrar
+  cancelar
+}
+
+model Alerta {
+  id_alerta   Int              @id @default(autoincrement())
+  titulo      String           @db.VarChar(140)
+  descricao   String           @db.Text
+  orientacoes String           @db.Text
+  tipo        TipoAlerta
+  severidade  SeveridadeAlerta
+
+  // A validade é um intervalo [inicioEm, expiraEm).
+  // Publicado + datas produz agendado/ativo/expirado, sem tarefa agendada.
+  status      StatusAlerta @default(rascunho)
+  versao      Int          @default(1)
+  inicioEm    DateTime     @db.Timestamptz(3)
+  expiraEm    DateTime     @db.Timestamptz(3)
+  publicadoEm DateTime?    @db.Timestamptz(3)
+  fonteNome   String       @db.VarChar(160)
+  fonteUrl    String?      @db.VarChar(2048)
+
+  regiaoId Int
+  regiao   Regiao @relation(fields: [regiaoId], references: [id_regiao], onDelete: Restrict)
+
+  criadoPorId Int
+  criadoPor   Admin @relation("AlertasCriados", fields: [criadoPorId], references: [id], onDelete: Restrict)
+
+  historico HistoricoAlerta[]
+  entregas  EntregaAlerta[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([status, inicioEm, expiraEm])
+  @@index([regiaoId, status])
+  @@index([severidade])
+  @@index([criadoPorId])
+  @@index([updatedAt])
+  @@map("alerta")
+}
+
+model HistoricoAlerta {
+  id         Int                  @id @default(autoincrement())
+  alertaId   Int
+  alerta     Alerta               @relation(fields: [alertaId], references: [id_alerta], onDelete: Restrict)
+  atorId     Int
+  ator       Admin                @relation("HistoricoAlertasAtor", fields: [atorId], references: [id], onDelete: Restrict)
+  acao       AcaoHistoricoAlerta
+  observacao String?              @db.Text
+  versao     Int
+  snapshot   Json
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  // Uma ação por versão; não há API para alterar/apagar o histórico.
+  @@unique([alertaId, versao])
+  @@index([alertaId, createdAt])
+  @@index([atorId])
+  @@map("historico_alerta")
+}
+
+// ESTRUTURA FUTURA: não existem endpoints nem processamento destes modelos.
+// Criar as tabelas não significa que email/SMS/WhatsApp estão integrados.
+enum CanalEntregaAlerta {
+  email
+  sms
+  whatsapp
+}
+
+enum StatusEntregaAlerta {
+  pendente
+  enviada
+  falha
+  cancelada
+}
+
+model InscricaoAlerta {
+  id                  Int                @id @default(autoincrement())
+  regiaoId            Int
+  regiao              Regiao             @relation(fields: [regiaoId], references: [id_regiao], onDelete: Restrict)
+  canal               CanalEntregaAlerta
+  destino             String             @db.VarChar(320)
+  severidadeMinima    SeveridadeAlerta   @default(baixa)
+  ativa               Boolean            @default(true)
+  consentidoEm        DateTime           @db.Timestamptz(3)
+  canceladaEm         DateTime?          @db.Timestamptz(3)
+  // Armazenar somente hash de token aleatório; nunca o token em texto puro.
+  cancelamentoTokenHash String?          @unique @db.VarChar(128)
+  entregas            EntregaAlerta[]
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([regiaoId, canal, destino])
+  @@index([regiaoId, ativa, severidadeMinima])
+  @@map("inscricao_alerta")
+}
+
+model EntregaAlerta {
+  id                 Int                 @id @default(autoincrement())
+  alertaId           Int
+  alerta             Alerta              @relation(fields: [alertaId], references: [id_alerta], onDelete: Restrict)
+  inscricaoId        Int
+  inscricao          InscricaoAlerta     @relation(fields: [inscricaoId], references: [id], onDelete: Restrict)
+  versaoAlerta       Int
+  status             StatusEntregaAlerta @default(pendente)
+  tentativas         Int                 @default(0)
+  proximaTentativaEm DateTime?           @db.Timestamptz(3)
+  ultimaTentativaEm  DateTime?           @db.Timestamptz(3)
+  enviadaEm          DateTime?           @db.Timestamptz(3)
+  provedorReferencia String?             @db.VarChar(255)
+  ultimoErro         String?             @db.Text
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Evita duplicar o mesmo envio ao mesmo destinatário e versão.
+  @@unique([alertaId, inscricaoId, versaoAlerta])
+  @@index([status, proximaTentativaEm])
+  @@index([inscricaoId])
+  @@map("entrega_alerta")
 }

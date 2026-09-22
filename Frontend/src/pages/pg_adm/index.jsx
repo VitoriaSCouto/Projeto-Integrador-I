@@ -1,3 +1,6 @@
+import { alertasService } from '../Alertas/alertas.service';
+import { statusEfetivo } from '../Alertas/alertas.utils';
+import AdminSidebar from '../../components/AdminSidebar';
 import './style.css'
 import { useState, useEffect } from 'react'; // ← useEffect adicionado: serve para executar código quando o componente carrega
 import { IoMdHome } from "react-icons/io";
@@ -17,7 +20,7 @@ const quickActions = [
   { id: 'mapa', label: 'Ver mapa', icon: <FaMap /> },
   { id: 'abrigos', label: 'Hub abrigos', icon: <FaHome /> },
   { id: 'vitimas', label: 'Hub vítimas', icon: <FaPeopleGroup /> },
-  { id: 'topico', label: 'Tópico vazio', icon: <FaCommentDots /> },
+  { id: 'alertas', label: 'Alertas', icon: <FaRegBell /> },
 ];
 
 const filters = [
@@ -27,6 +30,12 @@ const filters = [
 ];
 
 const PgAdm = () => {
+  const [resumoAlertas, setResumoAlertas] = useState(null);
+  useEffect(() => {
+    let ativo = true;
+    alertasService.listar().then(lista => { if (ativo) setResumoAlertas({ ativos: lista.filter(a => statusEfetivo(a) === 'ativo').length, revisao: lista.filter(a => a.status === 'em_revisao').length }); }).catch(() => { if (ativo) setResumoAlertas(null); });
+    return () => { ativo = false; };
+  }, []);
   const [activeFilter, setActiveFilter] = useState('todas');
   const [municipio, setMunicipio] = useState('Todos os Municípios');
   const [periodo, setPeriodo] = useState('Últimos 30 dias');
@@ -89,7 +98,7 @@ const PgAdm = () => {
     },
     { id: 'Doações',   label: 'Novas solicitações de doações',   value: 18, unread: 5, icon: <FaHeart />,            accent: 'cyan'   },
     { id: 'Remédios',  label: 'Novas solicitações de medicamentos',   value: 9,  unread: 2, icon: <FaPills />,            accent: 'teal'   },
-    { id: 'Alertas',  label: 'Alertas',                        value: 7,  unread: 2, icon: <FaRegBell />,          accent: 'red'    },
+    { id: 'Alertas',  label: 'Alertas ativos',                 value: resumoAlertas?.ativos ?? '—', unread: resumoAlertas?.revisao ?? '—', icon: <FaRegBell />,          accent: 'red'    },
     { id: 'Ajuda',    label: 'Pedidos de ajuda',               value: 6,  unread: 3, icon: <FaTriangleExclamation />, accent: 'orange' },
   ]
 
@@ -111,33 +120,13 @@ const PgAdm = () => {
   const maxValue = Math.max(...itensRequisitados.map(i => i.value));
 
   // ─── TELA DE CARREGANDO / ERRO ───────────────────────────────
-  if (carregando) return <div className="dashboard">Carregando...</div>
-  if (erro)       return <div className="dashboard">Erro: {erro}</div>
+
+
 
   return (
     // ... JSX igual ao seu, sem mudanças visuais
     <div className="dashboard">
-      <aside className="sidebar">
-        <div className="top-icons">
-          <img src="src/assets/logo.png" width="70px" />
-          <p>S.O.S. Vale</p>
-        </div>
-        <ul>
-          <li className="active"><FaHome className="icon" /> Home</li>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigos">
-            <li><FaBoxOpen className="icon" /> Abrigos</li>
-          </a>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/vitimas">
-            <li><FaUser className="icon" /> Vítimas</li>
-          </a>
-          <li><FaDonate className="icon" /> Doações</li>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/mapa">
-            <li><FaMap className="icon" /> Mapa</li>
-          </a>
-          <li><GoAlertFill className="icon" /> Ocorrências</li>
-          <li><FaGear className="icon" /> Configurações</li>
-        </ul>
-      </aside>
+      <AdminSidebar />
 
       <main className="main">
         <header className="top">
@@ -174,6 +163,8 @@ const PgAdm = () => {
           </div>
         </header>
 
+        {carregando && <p role="status">Carregando solicitações…</p>}
+        {erro && <p role="alert">Não foi possível carregar solicitações: {erro}</p>}
         <section className="stat-grid">
           {statCards.map(card => (
             <div className={`stat-card stat-card--${card.accent}`} key={card.id}>
@@ -181,7 +172,8 @@ const PgAdm = () => {
               <div className="stat-card-value">{card.value}</div>
               <div className="stat-card-label">{card.label}</div>
               <div className="stat-card-unread">
-                <span className="dot" /> {card.unread} não lidas
+                <span className="dot" /> {card.unread} {card.id === 'Alertas' ? 'em revisão' : 'não lidas'}
+                {card.id === 'Alertas' && <a href="/alertas" style={{ marginLeft: 8 }}>Ver alertas</a>}
               </div>
             </div>
           ))}
@@ -246,7 +238,7 @@ const PgAdm = () => {
               <h3>Ações Rápidas</h3>
               <div className="quick-actions-grid">
                 {quickActions.map(action => (
-                  <button className="quick-action" key={action.id}>
+                  <button className="quick-action" key={action.id} onClick={() => { window.location.href = `/${action.id}`; }}>
                     <span className="quick-action-icon">{action.icon}</span>
                     {action.label}
                   </button>

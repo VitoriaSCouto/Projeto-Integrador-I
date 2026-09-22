@@ -1,3 +1,6 @@
+import Alertas from './pages/Alertas';
+import { Navigate } from 'react-router-dom';
+import { MODO_DEMO } from './pages/Alertas/alertas.service.js';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
@@ -7,11 +10,11 @@ import Login from './pages/login';
 import PgAdm from './pages/pg_adm';
 import Cadastro from './pages/cadastro';
 import ListarAbrigos from './pages/abrigos/Hub-Abrigos';
-import CadastroVitima from './pages/vitimas/cadastro-vitima';
+import CadastroVitima from './pages/vitimas/Cadastro-Vitima';
 import ListarVitimas from './pages/vitimas/Hub-Vitimas';
 import CadastrarAbrigo from './pages/abrigos/Cadastrar-Abrigo';
 import DetalhesAbrigo from './pages/abrigos/Detalhes-Abrigo';
-import DetalhesVitimas from './pages/vitimas/Detalhes-vitima';
+import DetalhesVitimas from './pages/vitimas/Detalhes-Vitima';
 import DetalhesSolicitacaoAbrigo from './pages/Solicitacoes-Abrigo/Detalhes-solicitacao'
 import ListaSolicitacoesAbrigo from './pages/Solicitacoes-Abrigo/Listar-Solicitacoes'
 import CadastrarRegiao from './pages/regioes/CadastrarRegiao'
@@ -30,6 +33,7 @@ function App() {
     <div className="App">
       <Router>
         <Routes>
+          <Route path="/alertas" element={MODO_DEMO || localStorage.getItem("token_adm") ? <Alertas /> : <Navigate to="/login-adm" replace />} />
           {/* 2. DEFINIÇÃO DAS ROTAS */}
           <Route path="/" element={<Sosvale />} />
           <Route path="/login-adm" element={<LoginAdm />} />

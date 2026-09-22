@@ -1,0 +1,19 @@
+/* Menu compartilhado com a identidade do painel original. */
+.admin-sidebar { width: 280px; flex: 0 0 280px; background: #061f42; color: #fff; padding: 35px 20px; font-family: 'Inter', system-ui, sans-serif; }
+.admin-sidebar .admin-brand { display:flex; align-items:center; gap:12px; margin:20px 0; color:#fff; text-decoration:none; font-size:16px; }
+.admin-sidebar .admin-brand img { width:70px; height:auto; }
+.admin-sidebar nav ul { list-style:none; display:flex; flex-direction:column; gap:12px; margin:0; padding:0; }
+.admin-sidebar .admin-nav-item { display:flex; align-items:center; gap:16px; padding:14px 20px; color:#94a3b8; font-size:15px; font-weight:500; border-radius:8px; text-decoration:none; }
+.admin-sidebar .admin-nav-item svg { font-size:18px; flex-shrink:0; }
+.admin-sidebar a.admin-nav-item:hover { background:rgba(255,255,255,.05); color:#fff; }
+.admin-sidebar .admin-nav-active { background:#0b3168; color:#fff; font-weight:600; }
+.admin-sidebar a:focus-visible { outline:3px solid #80b6ff; outline-offset:2px; }
+.admin-sidebar .admin-nav-disabled { cursor:default; }
+@media(max-width:800px) {
+  .admin-sidebar { width:100%; flex-basis:auto; padding:16px; }
+  .admin-sidebar .admin-brand { margin:0 0 16px; }
+  .admin-sidebar .admin-brand img { width:44px; }
+  .admin-sidebar nav ul { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .admin-sidebar .admin-nav-item { padding:10px 6px; gap:6px; font-size:12px; }
+  .dashboard:has(> .admin-sidebar) { flex-direction:column; }
+}

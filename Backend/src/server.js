@@ -1,3 +1,4 @@
+import alertasRoutes from './routes/alertas.js'
 //Os imports necessários para o servidor
 
 import Fastify from 'fastify'
@@ -42,6 +43,8 @@ app.register(solicitacaoAbrigoRoutes, { prefix: '/api/solicitacoes'})
 app.register(voluntarioRoutes, { prefix: '/api/voluntarios' })
 app.register(solicitacaoAjudaRoutes, { prefix: '/api/solicitacoes-ajuda' })
 
+
+app.register(alertasRoutes, { prefix: '/api/alertas' })
 
 // Inicia o servidor
 const start = async () => {
