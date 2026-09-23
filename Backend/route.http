@@ -117,9 +117,9 @@ POST http://localhost:3000/api/auth/cadastrar
 Content-Type: application/json
 
 {
-  "nome": "Miguel Marques",
-  "email": "miguelmarques1504@gmail.com",
-  "senha": "150407",
+  "nome": "Marcos Camargo",
+  "email": "marcos@teste.com",
+  "senha": "1234",
   "cargo": "Administrador"
 }
 
@@ -129,8 +129,8 @@ POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "miguelmarques1504@gmail.com",
-  "senha": "150407"
+  "email": "marcos@teste.com",
+  "senha": "1234"
 }
 
 ###
