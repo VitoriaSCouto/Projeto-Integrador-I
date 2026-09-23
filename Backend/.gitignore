@@ -3,3 +3,5 @@ node_modules
 .env
 blocodenotas.txt
 /generated/prisma
+# Backups do banco (têm dados pessoais — nunca comitar)
+backups/

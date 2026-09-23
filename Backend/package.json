@@ -5,10 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run back\" \"npm run front\"",
-      "back": "node src/server.js",
-      "front": "cd ../Frontend && npm run front",
+    "back": "node src/server.js",
+    "front": "cd ../Frontend && npm run front",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "banco:teste": "node scripts/banco-teste.mjs",
+    "banco:teste:vazio": "node scripts/banco-teste.mjs --vazio",
+    "back:teste": "node scripts/api-teste.mjs",
+    "teste:api": "node testes/api.teste.mjs",
+    "backup": "node scripts/backup-banco.mjs",
+    "ensaiar-migracao": "node scripts/ensaiar-migracao.mjs"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +26,8 @@
     "cors": "^2.8.6"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
     "@fastify/cors": "^10.0.0",
     "@fastify/jwt": "^10.1.0",
     "@prisma/client": "^6.19.3",
