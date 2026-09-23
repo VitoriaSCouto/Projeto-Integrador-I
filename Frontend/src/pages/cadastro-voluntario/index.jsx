@@ -187,7 +187,7 @@ const CadastroVoluntario = () => {
                 {/* Link para quem já tem conta */}
                 <p className="link-secundario">
                     Já tem uma conta?{" "}
-                    <span onClick={() => navigate('/login_voluntario')}>
+                    <span onClick={() => navigate('/login-voluntario')}>
                         Faça login
                     </span>
                 </p>
