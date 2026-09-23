@@ -10,6 +10,8 @@ Content-Type: application/json
 
 {
   "nome": "Abrigo Teste",
+  "cep": "12000-000",
+  "cidadeId": 1,
   "endereco": "Rua Teste, 123",
   "telefone": "12123456789",
   "responsavel": "João Abrigos",
@@ -41,6 +43,8 @@ Content-Type: application/json
 
 {
   "nome": "Abrigo Teste Atualizado",
+  "cep": "12000-000",
+  "cidadeId": 1,
   "endereco": "Rua Teste, 123",
   "telefone": "12123456789",
   "responsavel": "João Abrigos",
@@ -60,53 +64,113 @@ DELETE http://localhost:3000/api/abrigos/excluir/3
 
 
 // --------------------------
-// Regioes
+// Regioes: Estado → Cidade → Bairro
+// (rotas de cadastro/edição exigem login de admin:
+//  Authorization: Bearer <token do /api/auth/login>)
 
-POST http://localhost:3000/api/regioes/cadastrar
+GET http://localhost:3000/api/estados/listar
+
+###
+
+GET http://localhost:3000/api/cidades/listar?estadoId=25
+
+###
+
+POST http://localhost:3000/api/cidades/cadastrar
 Content-Type: application/json
+Authorization: Bearer COLE_O_TOKEN_AQUI
 
 {
-  "bairro": "Centro",
-  "cidade": "Caçapava",
-  "estado": "SP",
+  "nome": "Caçapava",
+  "estadoId": 25
+}
+
+###
+
+PUT http://localhost:3000/api/cidades/atualizar/1
+Content-Type: application/json
+Authorization: Bearer COLE_O_TOKEN_AQUI
+
+{
+  "grupoWhatsappId": "120363012345678901@g.us"
+}
+
+###
+
+GET http://localhost:3000/api/bairros/listar?cidadeId=1
+
+###
+
+GET http://localhost:3000/api/bairros/cep/12070610
+// Consulta o ViaCEP e diz se a cidade/bairro já estão cadastrados
+
+###
+
+POST http://localhost:3000/api/bairros/cadastrar
+Content-Type: application/json
+Authorization: Bearer COLE_O_TOKEN_AQUI
+
+{
+  "nome": "Centro",
+  "cidadeId": 1,
   "populacaoEstimada": 40000,
   "areaKm2": 12.5,
-  "nivelRisco": "medio",
-  "statusAlerta": true
+  "nivelRisco": "medio"
 }
 
 ###
 
-GET http://localhost:3000/api/regioes/listar
+DELETE http://localhost:3000/api/bairros/excluir/1
+Authorization: Bearer COLE_O_TOKEN_AQUI
 
 ###
 
-GET http://localhost:3000/api/regioes/listar?cidade=Taubaté
-// GET com filtro por cidade
+
+// --------------------------
+// Alertas (painel admin — exige login de admin)
+
+GET http://localhost:3000/api/alertas/listar?status=em_verificacao
+Authorization: Bearer COLE_O_TOKEN_AQUI
 
 ###
 
-GET http://localhost:3000/api/regioes/listar?bairro=Centro
-// GET com filtro por bairro
+GET http://localhost:3000/api/alertas/listar/1
+Authorization: Bearer COLE_O_TOKEN_AQUI
 
 ###
 
-PUT http://localhost:3000/api/regioes/atualizar/1
+PATCH http://localhost:3000/api/alertas/cancelar/1
 Content-Type: application/json
+Authorization: Bearer COLE_O_TOKEN_AQUI
 
 {
-  "bairro": "Centro",
-  "cidade": "Taubaté",
-  "estado": "SP",
-  "populacaoEstimada": 55000,
-  "areaKm2": 12.5,
-  "nivelRisco": "medio",
-  "statusAlerta": false
+  "motivo": "Relato falso"
 }
 
 ###
 
-DELETE http://localhost:3000/api/regioes/excluir/1
+GET http://localhost:3000/api/inscritos/listar?busca=maria
+Authorization: Bearer COLE_O_TOKEN_AQUI
+
+###
+
+
+// --------------------------
+// Rotas do ChatBot (exigem o cabeçalho x-bot-key = BOT_API_KEY do .env)
+
+POST http://localhost:3000/api/bot/alertas/relatar
+Content-Type: application/json
+x-bot-key: COLE_A_CHAVE_AQUI
+
+{
+  "whatsappId": "5512999999999@c.us",
+  "tipo": "alagamento",
+  "gravidade": "grave",
+  "bairroId": 1,
+  "foto": "BASE64_DA_FOTO",
+  "fotoMimetype": "image/jpeg"
+}
+
 ###
 
 // --------------------------
@@ -164,9 +228,8 @@ Content-Type: application/json
   "nome": "Fatec",
   "cep": "12070-610",
   "endereco": "Av. Tomé Portes Del Rei, 525",
-  "cidade": "Taubaté",
-  "estado": "SP",
-  "bairro": "Vila São José",
+  "cidadeId": 1,
+  "bairroId": 2,
   "telefone": "(11) 99999-9999",
   "responsavel": "Governo",
   "tipoAbrigo": "Escola",

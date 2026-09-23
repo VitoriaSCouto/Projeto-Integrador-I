@@ -83,7 +83,7 @@ export default async function authRoutes(app) {
     // Esses dados ficam dentro do token e podem ser lidos depois
     // O token expira em 8 horas
     const token = app.jwt.sign(
-      { id: admin.id, email: admin.email, cargo: admin.cargo },
+      { id: admin.id, email: admin.email, cargo: admin.cargo, tipo: 'admin' },
       { expiresIn: '8h' }
     )
 

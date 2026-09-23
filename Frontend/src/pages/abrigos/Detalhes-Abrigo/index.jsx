@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fa';
 import { FaGear } from "react-icons/fa6";
 import { GoAlertFill } from "react-icons/go";
+import SeletorLocalidade from '../../../components/SeletorLocalidade';
 import "../../pg_adm/style.css";
 import './DetalhesAbrigo.css';
 
@@ -34,7 +35,6 @@ function DetalhesAbrigo() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [regioes, setRegioes] = useState([])
   const [dadosAbrigo, setDadosAbrigo] = useState({})
   const [carregando, setCarregando] = useState(true);
   const [editando, setEditando] = useState(false);
@@ -52,9 +52,21 @@ function DetalhesAbrigo() {
   const [capacidadeTotal, setCapacidadeTotal] = useState(0);
   const [capacidadeOcupada, setCapacidadeOcupada] = useState(0);
 
-  const estados = [...new Set(regioes.map(r => r.estado))]
-  const cidades = [...new Set(regioes.filter(r => r.estado === estado).map(r => r.cidade))]
-  const bairros = regioes.filter(r => r.cidade === cidade).map(r => r.bairro)
+  // IDs da localização (os nomes acima são só para exibir e para o geocoding)
+  const [cidadeId, setCidadeId] = useState(null);
+  const [bairroId, setBairroId] = useState(null);
+
+  const handleLocalidade = (localidade) => {
+    setCidadeId(localidade.cidadeId)
+    setBairroId(localidade.bairroId)
+    setEstado(localidade.estado)
+    setCidade(localidade.cidade)
+    setBairro(localidade.bairro)
+    // O endereço pode ter mudado: as coordenadas precisam ser buscadas de novo
+    setLatitude(null)
+    setLongitude(null)
+    setFeedbackGeo(null)
+  }
 
   const [fotoUrl, setFotoUrl] = useState(null);
   const [novaFoto, setNovaFoto] = useState(null);
@@ -103,6 +115,8 @@ function DetalhesAbrigo() {
         setEstado(dados.estado ?? '');
         setCidade(dados.cidade ?? '');
         setBairro(dados.bairro ?? '');
+        setCidadeId(dados.cidadeId ?? null);
+        setBairroId(dados.bairroId ?? null);
         setEndereco(dados.endereco ?? '');
         setTelefone(dados.telefone ?? '');
         setResponsavel(dados.responsavel ?? '');
@@ -143,12 +157,6 @@ function DetalhesAbrigo() {
       }
     };
 
-    const buscarRegioes = async () => {
-      const resposta = await fetch('http://localhost:3000/api/regioes/listar')
-      const dados = await resposta.json()
-      setRegioes(dados.regioes)
-    }
-
     // ─── NOVO: busca as 3 últimas solicitações deste abrigo ──────────────────
     const buscarSolicitacoesAjuda = async () => {
       try {
@@ -161,7 +169,6 @@ function DetalhesAbrigo() {
     }
 
     buscarAbrigo();
-    buscarRegioes();
     buscarSolicitacoesAjuda();
   }, [id]);
 
@@ -237,9 +244,8 @@ function DetalhesAbrigo() {
           nome: nomeAbrigo,
           status,
           cep,
-          estado,
-          cidade,
-          bairro,
+          cidadeId,
+          bairroId,
           endereco,
           telefone,
           responsavel,
@@ -255,9 +261,15 @@ function DetalhesAbrigo() {
 
       const dadosResultado = await resposta.json()
 
+      // Só confirma se a API aceitou (ex: bairro de outra cidade → 400)
+      if (!resposta.ok) {
+        alert(dadosResultado.mensagem ?? 'Não foi possível salvar o abrigo.')
+        return
+      }
+
       setDadosAbrigo({
         ...dadosAbrigo,
-        nome: nomeAbrigo, cep, estado, cidade, bairro, endereco,
+        nome: nomeAbrigo, cep, estado, cidade, bairro, cidadeId, bairroId, endereco,
         telefone, responsavel, tipoAbrigo, capacidadeTotal, capacidadeOcupada,
         latitude, longitude,
         possuiAtendimentoMedico: infraestrutura.possuiAtendimentoMedico,
@@ -309,6 +321,8 @@ function DetalhesAbrigo() {
     setEstado(dadosAbrigo.estado ?? '');
     setCidade(dadosAbrigo.cidade ?? '');
     setBairro(dadosAbrigo.bairro ?? '');
+    setCidadeId(dadosAbrigo.cidadeId ?? null);
+    setBairroId(dadosAbrigo.bairroId ?? null);
     setEndereco(dadosAbrigo.endereco)
     setTelefone(dadosAbrigo.telefone);
     setResponsavel(dadosAbrigo.responsavel);
@@ -367,7 +381,7 @@ function DetalhesAbrigo() {
             <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
             <li><FaDonate className="icon" /> Doações</li>
             <a href="/mapa"><li><FaMap className="icon" />Mapa</li></a>
-            <li><GoAlertFill className="icon" /> Ocorrências</li>
+            <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
             <li><FaGear className="icon" /> Configurações</li>
           </ul>
         </aside>
@@ -392,7 +406,7 @@ function DetalhesAbrigo() {
           <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
           <li><FaDonate className="icon" /> Doações</li>
           <a href="/mapa"><li><FaMap className="icon" />Mapa</li></a>
-          <li><GoAlertFill className="icon" /> Ocorrências</li>
+          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
           <li><FaGear className="icon" /> Configurações</li>
         </ul>
       </aside>
@@ -450,74 +464,31 @@ function DetalhesAbrigo() {
               )}
             </div>
 
-            <div className="form-group">
-              <label><FaMapMarkedAlt /> Estado</label>
-              {editando ? (
-                <select
-                  className="select-cidade"
-                  value={estado}
-                  onChange={(e) => {
-                    setEstado(e.target.value)
-                    setCidade('')
-                    setBairro('')
-                    setLatitude(null)
-                    setLongitude(null)
-                    setFeedbackGeo(null)
-                  }}
-                >
-                  <option value="" disabled>Selecione o estado</option>
-                  {estados.map((est) => (
-                    <option key={est} value={est}>{est}</option>
-                  ))}
-                </select>
-              ) : (
-                <p>{estado || '—'}</p>
-              )}
-            </div>
+            {/* Estado → Cidade → Bairro — no modo edição usa o seletor com as listas da API */}
+            {editando ? (
+              <SeletorLocalidade
+                cidadeId={cidadeId}
+                bairroId={bairroId}
+                onChange={handleLocalidade}
+              />
+            ) : (
+              <>
+                <div className="form-group">
+                  <label><FaMapMarkedAlt /> Estado</label>
+                  <p>{estado || '—'}</p>
+                </div>
 
-            <div className="form-group">
-              <label><FaMapMarkedAlt /> Cidade</label>
-              {editando ? (
-                <select
-                  className="select-cidade"
-                  value={cidade}
-                  disabled={!estado}
-                  onChange={(e) => {
-                    setCidade(e.target.value)
-                    setBairro('')
-                    setLatitude(null)
-                    setLongitude(null)
-                    setFeedbackGeo(null)
-                  }}
-                >
-                  <option value="" disabled>Selecione a cidade</option>
-                  {cidades.map((cid) => (
-                    <option key={cid} value={cid}>{cid}</option>
-                  ))}
-                </select>
-              ) : (
-                <p>{cidade}</p>
-              )}
-            </div>
+                <div className="form-group">
+                  <label><FaMapMarkedAlt /> Cidade</label>
+                  <p>{cidade}</p>
+                </div>
 
-            <div className="form-group">
-              <label><FaMapMarkedAlt /> Bairro</label>
-              {editando ? (
-                <select
-                  className="select-cidade"
-                  value={bairro}
-                  disabled={!cidade}
-                  onChange={(e) => setBairro(e.target.value)}
-                >
-                  <option value="" disabled>Selecione o bairro</option>
-                  {bairros.map((bai) => (
-                    <option key={bai} value={bai}>{bai}</option>
-                  ))}
-                </select>
-              ) : (
-                <p>{bairro || '—'}</p>
-              )}
-            </div>
+                <div className="form-group">
+                  <label><FaMapMarkedAlt /> Bairro</label>
+                  <p>{bairro || '—'}</p>
+                </div>
+              </>
+            )}
 
             <div className="form-group">
               <label><FaMapMarkerAlt /> Endereço</label>

@@ -38,6 +38,8 @@ const PgAdm = () => {
   const [solicitacoes, setSolicitacoes] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
+  // null = ainda não carregou (ou sem login) → o card mostra "—"
+  const [alertas, setAlertas] = useState(null);
 
   // ─── BUSCA DA API ────────────────────────────────────────────
   // useEffect com [] roda UMA VEZ quando o componente aparece na tela
@@ -62,7 +64,25 @@ const PgAdm = () => {
       }
     }
 
+    // Alertas exigem login de admin — se não houver token ou der erro,
+    // o card mostra "—" em vez de derrubar o dashboard
+    async function buscarAlertas() {
+      const token = localStorage.getItem('token_adm')
+      if (!token) return
+      try {
+        const resposta = await fetch('http://localhost:3000/api/alertas/listar', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (!resposta.ok) return
+        const dados = await resposta.json()
+        setAlertas(dados.alertas)
+      } catch (err) {
+        console.error('Erro ao buscar alertas:', err)
+      }
+    }
+
     buscarSolicitacoes()
+    buscarAlertas()
   }, []) // ← o [] garante que roda só uma vez (se fosse [periodo], rodaria toda vez que periodo mudasse)
 
   // ─── DERIVAÇÕES DOS DADOS ────────────────────────────────────
@@ -89,7 +109,17 @@ const PgAdm = () => {
     },
     { id: 'Doações',   label: 'Novas solicitações de doações',   value: 18, unread: 5, icon: <FaHeart />,            accent: 'cyan'   },
     { id: 'Remédios',  label: 'Novas solicitações de medicamentos',   value: 9,  unread: 2, icon: <FaPills />,            accent: 'teal'   },
-    { id: 'Alertas',  label: 'Alertas',                        value: 7,  unread: 2, icon: <FaRegBell />,          accent: 'red'    },
+    {
+      id: 'Alertas',
+      label: 'Alertas abertos',
+      // abertos = em verificação + ativos (vem da API)
+      value: alertas ? alertas.filter(a => ['em_verificacao', 'ativo'].includes(a.status)).length : '—',
+      unread: alertas ? alertas.filter(a => a.status === 'em_verificacao').length : '—',
+      unreadLabel: 'em verificação',
+      href: '/alertas',
+      icon: <FaRegBell />,
+      accent: 'red'
+    },
     { id: 'Ajuda',    label: 'Pedidos de ajuda',               value: 6,  unread: 3, icon: <FaTriangleExclamation />, accent: 'orange' },
   ]
 
@@ -99,7 +129,7 @@ const PgAdm = () => {
   const activitiesData = solicitacoes.slice(0, 6).map(s => ({
     id:    s.id_solicitacao,
     title: 'Abrigo solicitado',
-    place: `${s.bairro}, ${s.cidade}`,  // ← endereço real da solicitação
+    place: [s.bairro, s.cidade].filter(Boolean).join(', '),  // ← endereço real da solicitação (bairro é opcional)
     time:  formatarTempo(s.createdAt),  // ← função que vamos criar abaixo
     type:  'abrigo'
   }))
@@ -134,7 +164,7 @@ const PgAdm = () => {
           <a style={{ textDecoration: 'none', color: 'inherit' }} href="/mapa">
             <li><FaMap className="icon" /> Mapa</li>
           </a>
-          <li><GoAlertFill className="icon" /> Ocorrências</li>
+          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
           <li><FaGear className="icon" /> Configurações</li>
         </ul>
       </aside>
@@ -176,12 +206,17 @@ const PgAdm = () => {
 
         <section className="stat-grid">
           {statCards.map(card => (
-            <div className={`stat-card stat-card--${card.accent}`} key={card.id}>
+            <div
+              className={`stat-card stat-card--${card.accent}`}
+              key={card.id}
+              onClick={card.href ? () => { window.location.href = card.href } : undefined}
+              style={card.href ? { cursor: 'pointer' } : undefined}
+            >
               <div className="stat-card-icon">{card.icon}</div>
               <div className="stat-card-value">{card.value}</div>
               <div className="stat-card-label">{card.label}</div>
               <div className="stat-card-unread">
-                <span className="dot" /> {card.unread} não lidas
+                <span className="dot" /> {card.unread} {card.unreadLabel ?? 'não lidas'}
               </div>
             </div>
           ))}

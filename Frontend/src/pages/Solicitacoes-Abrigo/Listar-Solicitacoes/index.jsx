@@ -63,7 +63,7 @@ function ListaSolicitacoesAbrigo() {
             <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
             <li><FaDonate className="icon" /> Doações</li>
             <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-            <li><GoAlertFill className="icon" /> Ocorrências</li>
+            <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
             <li><FaGear className="icon" /> Configurações</li>
           </ul>
         </aside>
@@ -90,7 +90,7 @@ function ListaSolicitacoesAbrigo() {
           <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
           <li><FaDonate className="icon" /> Doações</li>
           <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-          <li><GoAlertFill className="icon" /> Ocorrências</li>
+          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
           <li className="active"><FaGear className="icon" /> Configurações</li>
         </ul>
       </aside>

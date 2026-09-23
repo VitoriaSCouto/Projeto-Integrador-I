@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import supabase from '../supabase.js'
+import { selectLocalizacao, achatarLocalizacao, validarCidadeBairro } from '../lib/localizacao.js'
 
 const prisma = new PrismaClient()
 
@@ -9,16 +10,24 @@ export default async function solicitacaoAbrigoRoutes(app) {
   // URL: POST http://localhost:3000/api/solicitacoes/criar
   app.post('/criar', async (request, reply) => {
     const {
-      nome, cep, endereco, cidade, estado, bairro, telefone, responsavel,
+      nome, cep, endereco, cidadeId, bairroId, telefone, responsavel,
       tipoAbrigo, capacidadeTotal, possuiAtendimentoMedico, possuiEnfermagem,
       possuiPets, possuiAcessibilidade, possuiCozinha, fotoAbrigo,
       solicitanteNome, solicitanteEmail, solicitanteTelefone
     } = request.body
 
+    // A cidade é obrigatória; o bairro, se vier, precisa ser da mesma cidade
+    const erroLocalizacao = await validarCidadeBairro(prisma, cidadeId, bairroId)
+    if (erroLocalizacao) {
+      return reply.status(400).send({ mensagem: erroLocalizacao })
+    }
+
     // Cria a solicitação primeiro sem foto para obter o ID
     const solicitacao = await prisma.solicitacaoAbrigo.create({
       data: {
-        nome, cep, endereco, cidade, estado, bairro,
+        nome, cep, endereco,
+        cidadeId: Number(cidadeId),
+        bairroId: bairroId ? Number(bairroId) : null,
         telefone: telefone ?? null,
         responsavel, tipoAbrigo, capacidadeTotal,
         possuiAtendimentoMedico: possuiAtendimentoMedico ?? false,
@@ -68,18 +77,23 @@ export default async function solicitacaoAbrigoRoutes(app) {
   // ----- Listar todas -----
   // URL: GET http://localhost:3000/api/solicitacoes/listar
   // Filtros: ?status=pendente | ?status=aprovado | ?status=recusado | ?solicitanteEmail=
+  //          ?cidadeId=1 | ?cidade=taubaté | ?estado=SP
   app.get('/listar', async (request, reply) => {
-    const { status, solicitanteEmail, cidade, estado } = request.query
+    const { status, solicitanteEmail, cidade, estado, cidadeId } = request.query
 
     const solicitacoes = await prisma.solicitacaoAbrigo.findMany({
       where: {
         status:          status          ? { equals: status }                               : undefined,
         solicitanteEmail: solicitanteEmail ? { contains: solicitanteEmail, mode: 'insensitive' } : undefined,
-        cidade:          cidade          ? { contains: cidade,  mode: 'insensitive' }       : undefined,
-        estado:          estado          ? { contains: estado,  mode: 'insensitive' }       : undefined,
+        cidadeId:        cidadeId        ? Number(cidadeId)                                 : undefined,
+        cidade: (cidade || estado) ? {
+          nome:   cidade ? { contains: cidade, mode: 'insensitive' } : undefined,
+          estado: estado ? { sigla: { equals: estado, mode: 'insensitive' } } : undefined,
+        } : undefined,
       },
       orderBy: { createdAt: 'desc' },
       include: {
+        ...selectLocalizacao,
         analisadoPor: {
           select: { id: true, nome: true, email: true }
         }
@@ -89,7 +103,8 @@ export default async function solicitacaoAbrigoRoutes(app) {
     return reply.status(200).send({
       mensagem: 'Lista de solicitações:',
       total: solicitacoes.length,
-      solicitacoes
+      // cidade, estado e bairro voltam como texto (+ cidadeId e bairroId)
+      solicitacoes: solicitacoes.map(achatarLocalizacao)
     })
   })
 
@@ -102,6 +117,7 @@ export default async function solicitacaoAbrigoRoutes(app) {
     const solicitacao = await prisma.solicitacaoAbrigo.findUnique({
       where: { id_solicitacao: Number(id) },
       include: {
+        ...selectLocalizacao,
         analisadoPor: {
           select: { id: true, nome: true, email: true }
         },
@@ -113,7 +129,7 @@ export default async function solicitacaoAbrigoRoutes(app) {
       return reply.status(404).send({ mensagem: 'Solicitação não encontrada.' })
     }
 
-    return reply.status(200).send(solicitacao)
+    return reply.status(200).send(achatarLocalizacao(solicitacao))
   })
 
 
@@ -155,9 +171,8 @@ export default async function solicitacaoAbrigoRoutes(app) {
             nome:                    solicitacao.nome,
             cep:                     solicitacao.cep,
             endereco:                solicitacao.endereco,
-            cidade:                  solicitacao.cidade,
-            estado:                  solicitacao.estado,
-            bairro:                  solicitacao.bairro,
+            cidadeId:                solicitacao.cidadeId,
+            bairroId:                solicitacao.bairroId,
             telefone:                solicitacao.telefone,
             responsavel:             solicitacao.responsavel,
             tipoAbrigo:              solicitacao.tipoAbrigo,

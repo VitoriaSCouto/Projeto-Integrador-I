@@ -1,84 +1,30 @@
 // solicitacao-flow.js
 import { userState } from "../state/state.js";
-import fetch from "node-fetch";
-import crypto from "crypto";
+import { api } from "../services/api.js";
+import { baixarFoto } from "../services/midia.js";
 
-// ── Busca as cidades únicas da API de regiões ──────────────────
+// ── Busca as cidades cadastradas na API ────────────────────────
 const buscarCidades = async () => {
   try {
-    const resposta = await fetch('http://localhost:3000/api/regioes/listar');
-    const dados = await resposta.json();
-    const cidades = [...new Set(dados.regioes.map(r => r.cidade))];
-    return cidades;
+    const { ok, dados } = await api('GET', '/cidades/listar');
+    if (!ok) throw new Error(dados.mensagem);
+    return dados.cidades.map(c => ({ id_cidade: c.id_cidade, nome: c.nome, estado: c.estado }));
   } catch (erro) {
     console.error('[SOL] Erro ao buscar cidades:', erro);
     return [];
   }
 };
 
-// ── Descriptografa mídia do WhatsApp usando crypto nativo ──────
-const descriptografarMidia = async (encryptedBuffer, mediaKeyBase64) => {
-  const mediaKey = Buffer.from(mediaKeyBase64, 'base64');
-  const info = Buffer.from('WhatsApp Image Keys');
-  const salt = Buffer.alloc(32, 0);
-
-  // HKDF extract
-  const prk = crypto.createHmac('sha256', salt).update(mediaKey).digest();
-
-  // HKDF expand — precisa de 2 blocos para gerar 48 bytes
-  const block1 = crypto.createHmac('sha256', prk)
-    .update(Buffer.concat([info, Buffer.from([0x01])]))
-    .digest();
-
-  const block2 = crypto.createHmac('sha256', prk)
-    .update(Buffer.concat([block1, info, Buffer.from([0x02])]))
-    .digest();
-
-  const derived = Buffer.concat([block1, block2]); // 64 bytes
-
-  const iv  = derived.slice(0, 16);
-  const key = derived.slice(16, 48);
-
-  console.log('[SOL] IV length:', iv.length);   // deve ser 16
-  console.log('[SOL] Key length:', key.length); // deve ser 32
-
-  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-  decipher.setAutoPadding(true);
-
-  const decrypted = Buffer.concat([
-    decipher.update(encryptedBuffer.slice(0, -10)),
-    decipher.final()
-  ]);
-
-  return decrypted;
-};
-
-// ── Baixa e descriptografa a mídia ────────────────────────────
-const baixarMidia = async (msg) => {
-  const mediaData = msg._data?.mediaData ?? msg._data;
-
-  if (!mediaData?.directPath || !mediaData?.mediaKey) {
-    throw new Error('Dados de mídia insuficientes');
+// ── Busca os bairros de uma cidade ─────────────────────────────
+const buscarBairros = async (cidadeId) => {
+  try {
+    const { ok, dados } = await api('GET', `/bairros/listar?cidadeId=${cidadeId}`);
+    if (!ok) throw new Error(dados.mensagem);
+    return dados.bairros.map(b => ({ id_bairro: b.id_bairro, nome: b.nome }));
+  } catch (erro) {
+    console.error('[SOL] Erro ao buscar bairros:', erro);
+    return [];
   }
-
-  const mediaUrl = `https://mmg.whatsapp.net${mediaData.directPath}`;
-  const response = await fetch(mediaUrl, {
-    headers: {
-      'Origin': 'https://web.whatsapp.com',
-      'Referer': 'https://web.whatsapp.com/',
-      'User-Agent': 'Mozilla/5.0'
-    }
-  });
-
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-  const encryptedBuffer = Buffer.from(await response.arrayBuffer());
-  const decrypted = await descriptografarMidia(encryptedBuffer, mediaData.mediaKey);
-
-  console.log('[SOL] Primeiros bytes:', decrypted.slice(0, 4).toString('hex'));
-  console.log('[SOL] Tamanho descriptografado:', decrypted.length);
-
-  return decrypted.toString('base64');
 };
 
 const TIPOS_ABRIGO = [
@@ -91,6 +37,15 @@ const TIPOS_ABRIGO = [
   'CentroComunitário',
   'Campo',
 ];
+
+// ── Pergunta o tipo do abrigo (depois da cidade/bairro) ────────
+const perguntarTipo = async (msg, from, state) => {
+  userState.set(from, { ...state, step: 'sol_tipo' });
+
+  const lista = TIPOS_ABRIGO.map((t, i) => `${i + 1} - ${t}`).join('\n');
+  await msg.reply(`🏷️ Qual o tipo do abrigo?\n\n${lista}`);
+  return true;
+};
 
 // ── Função principal ───────────────────────────────────────────
 export const solicitacaoFlow = async (msg, from, text, state) => {
@@ -127,7 +82,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     state.tempData._cidades = cidades;
     userState.set(from, { ...state, step: 'sol_cidade' });
 
-    const lista = cidades.map((c, i) => `${i + 1} - ${c}`).join('\n');
+    const lista = cidades.map((c, i) => `${i + 1} - ${c.nome}/${c.estado}`).join('\n');
     await msg.reply(`🌆 Qual a cidade?\n\n${lista}`);
     return true;
   }
@@ -142,15 +97,46 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
       return true;
     }
 
-    state.tempData.cidade = cidades[indice];
-    state.tempData.estado = 'SP';
-    state.tempData.bairro = '';
+    const cidade = cidades[indice];
+    state.tempData.cidadeId = cidade.id_cidade;
+    state.tempData.cidade = cidade.nome;
+    state.tempData.estado = cidade.estado;
+    state.tempData.bairroId = null;
+    state.tempData.bairro = null;
     delete state.tempData._cidades;
-    userState.set(from, { ...state, step: 'sol_tipo' });
 
-    const lista = TIPOS_ABRIGO.map((t, i) => `${i + 1} - ${t}`).join('\n');
-    await msg.reply(`🏷️ Qual o tipo do abrigo?\n\n${lista}`);
+    const bairros = await buscarBairros(cidade.id_cidade);
+
+    // Sem bairros cadastrados na cidade: segue sem bairro
+    if (bairros.length === 0) {
+      return perguntarTipo(msg, from, state);
+    }
+
+    state.tempData._bairros = bairros;
+    userState.set(from, { ...state, step: 'sol_bairro' });
+
+    const lista = bairros.map((b, i) => `${i + 1} - ${b.nome}`).join('\n');
+    await msg.reply(`🏘️ Qual o bairro?\n\n${lista}\n\n0 - Não sei / não está na lista`);
     return true;
+  }
+
+  // ── ETAPA 4b: Bairro (opcional) ───────────────────────────────
+  if (state.step === 'sol_bairro') {
+    const bairros = state.tempData._bairros;
+    const indice = parseInt(text) - 1;
+
+    if (text !== '0' && (isNaN(indice) || !bairros[indice])) {
+      await msg.reply(`❌ Digite um número de 1 a ${bairros.length}, ou 0 para pular.`);
+      return true;
+    }
+
+    if (text !== '0') {
+      state.tempData.bairroId = bairros[indice].id_bairro;
+      state.tempData.bairro = bairros[indice].nome;
+    }
+    delete state.tempData._bairros;
+
+    return perguntarTipo(msg, from, state);
   }
 
   // ── ETAPA 5: Tipo ─────────────────────────────────────────────
@@ -242,34 +228,20 @@ Envie a imagem normalmente pelo WhatsApp, ou:
 
     } else if (msg.hasMedia) {
 
-      // Tenta via downloadMedia (foto normal)
+      // Tenta via downloadMedia e, se falhar, baixa e descriptografa manualmente
       try {
-        const media = await msg.downloadMedia();
-        if (media?.data) {
-          fotoBase64 = media.data;
-          console.log('[SOL] Foto baixada via downloadMedia ✓');
-        } else {
-          throw new Error('Media vazia');
-        }
-      } catch (erroPuppeteer) {
-        console.warn('[SOL] downloadMedia falhou, tentando fetch direto:', erroPuppeteer.message);
-
-        // Fallback: fetch + descriptografia manual
-        try {
-          fotoBase64 = await baixarMidia(msg);
-          console.log('[SOL] Foto baixada via fetch direto ✓');
-        } catch (erroFetch) {
-          console.error('[SOL] Fetch direto também falhou:', erroFetch.message);
-          await msg.reply(
+        fotoBase64 = (await baixarFoto(msg, '[SOL]')).data;
+      } catch (erroFetch) {
+        console.error('[SOL] Não foi possível baixar a foto:', erroFetch.message);
+        await msg.reply(
 `⚠️ Não consegui baixar a imagem.
 
 Tente enviar como *documento*:
 Clipe 📎 → Documento → selecione a foto
 
 Ou digite *pular* para continuar sem foto.`
-          );
-          return true;
-        }
+        );
+        return true;
       }
 
     } else {
@@ -288,6 +260,7 @@ Ou digite *pular* para continuar sem foto.`
 📍 CEP: ${d.cep}
 🏘️ Endereço: ${d.endereco}
 🌆 Cidade: ${d.cidade} - ${d.estado}
+🏘️ Bairro: ${d.bairro ?? '-'}
 🏷️ Tipo: ${d.tipoAbrigo}
 👥 Capacidade: ${d.capacidadeTotal}
 👤 Responsável: ${d.responsavel}
@@ -317,15 +290,9 @@ Digite *confirmar* para enviar ou *cancelar* para desistir.`
     }
 
     try {
-      const resposta = await fetch('http://localhost:3000/api/solicitacoes/criar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state.tempData)
-      });
+      const { ok, dados: resultado } = await api('POST', '/solicitacoes/criar', state.tempData);
 
-      const resultado = await resposta.json();
-
-      if (resposta.ok) {
+      if (ok) {
         await msg.reply(
 `✅ Solicitação enviada com sucesso!
 

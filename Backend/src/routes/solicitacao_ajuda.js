@@ -1,6 +1,13 @@
 import { PrismaClient } from '@prisma/client'
+import { selectLocalizacao, achatarLocalizacao } from '../lib/localizacao.js'
 
 const prisma = new PrismaClient()
+
+// Devolve cidade/estado/bairro do abrigo como texto (formato usado pelas telas)
+const comAbrigoAchatado = (solicitacao) => ({
+  ...solicitacao,
+  abrigo: achatarLocalizacao(solicitacao.abrigo)
+})
 
 export default async function solicitacaoAjudaRoutes(app) {
 
@@ -78,7 +85,7 @@ export default async function solicitacaoAjudaRoutes(app) {
           urgencia:  urgencia  ?? undefined,
         },
         include: {
-          abrigo:     { select: { nome: true, cidade: true, telefone: true } },
+          abrigo:     { select: { nome: true, telefone: true, ...selectLocalizacao } },
           criadoPor:  { select: { nome: true, email: true } },
           voluntario: { select: { nome: true, telefone: true, email: true } },
           _count:     { select: { interesses: true } },
@@ -88,7 +95,7 @@ export default async function solicitacaoAjudaRoutes(app) {
 
       return reply.status(200).send({
         mensagem: 'Lista:',
-        solicitacoes,
+        solicitacoes: solicitacoes.map(comAbrigoAchatado),
       })
 
     } catch (erro) {
@@ -143,14 +150,14 @@ export default async function solicitacaoAjudaRoutes(app) {
       const solicitacoes = await prisma.solicitacaoAjuda.findMany({
         where: { status: { in: ['aberto', 'em_andamento'] } },
         include: {
-          abrigo: { select: { nome: true, cidade: true, estado: true, telefone: true } },
+          abrigo: { select: { nome: true, telefone: true, ...selectLocalizacao } },
         },
         orderBy: { createdAt: 'desc' },
       })
 
       return reply.status(200).send({
         mensagem: 'Lista:',
-        solicitacoes,
+        solicitacoes: solicitacoes.map(comAbrigoAchatado),
       })
 
     } catch (erro) {
@@ -201,8 +208,8 @@ export default async function solicitacaoAjudaRoutes(app) {
         include: {
           abrigo: {
             select: {
-              id_abrigo: true, nome: true, endereco: true, bairro: true,
-              cidade: true, estado: true, telefone: true, responsavel: true,
+              id_abrigo: true, nome: true, endereco: true,
+              telefone: true, responsavel: true, ...selectLocalizacao,
             }
           },
           criadoPor:  { select: { id: true, nome: true, email: true } },
@@ -217,7 +224,7 @@ export default async function solicitacaoAjudaRoutes(app) {
         return reply.status(404).send({ mensagem: 'Solicitação não encontrada.' })
       }
 
-      return reply.status(200).send(solicitacao)
+      return reply.status(200).send(comAbrigoAchatado(solicitacao))
 
     } catch (erro) {
       console.error('ERRO DETALHADO:', erro)
@@ -275,14 +282,14 @@ export default async function solicitacaoAjudaRoutes(app) {
             : solicitacaoExistente.voluntarioId,
         },
         include: {
-          abrigo:     { select: { nome: true, cidade: true } },
+          abrigo:     { select: { nome: true, ...selectLocalizacao } },
           voluntario: { select: { nome: true, telefone: true, email: true } },
         }
       })
 
       return reply.status(200).send({
         mensagem:    'Solicitação atualizada com sucesso!',
-        solicitacao: solicitacaoAtualizada,
+        solicitacao: comAbrigoAchatado(solicitacaoAtualizada),
       })
 
     } catch (erro) {

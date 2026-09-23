@@ -87,7 +87,7 @@ const ListarAbrigos = () => {
           <a href="/mapa">
             <li><FaMap className="icon" /> Mapa</li>
           </a>
-          <li><GoAlertFill className="icon" /> Ocorrências</li>
+          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
           <li><FaGear className="icon" /> Configurações</li>
         </ul>
       </aside>

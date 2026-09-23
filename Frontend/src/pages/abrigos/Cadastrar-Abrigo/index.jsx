@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin, 
   FaUpload, FaMapMarkerAlt, FaPhoneAlt, FaDog, FaUserNurse,
@@ -8,35 +8,28 @@ import {
 } from 'react-icons/fa';
 import { GoAlertFill } from "react-icons/go";
 import { FaGear } from "react-icons/fa6";
+import SeletorLocalidade from "../../../components/SeletorLocalidade";
 import "../../pg_adm/style.css";
-import "./CadastroAbrigo.css"; 
+import "./CadastroAbrigo.css";
 
 const CadastrarAbrigo = () => {
   const [mensagem, setMensagem] = useState('');
+  const [erroEnvio, setErroEnvio] = useState(false);
   const [fotoAbrigo, setFotoAbrigo] = useState(null);
-  const [regioes, setRegioes] = useState([]);
   const [status, setStatus] = useState('ativo');
 
-  // ── Filtro em cascata: Estado → Cidade → Bairro ──────────────────────────
-  // Cada seleção reseta os níveis abaixo dela
-  const [estadoSelecionado, setEstadoSelecionado] = useState('')
-  const [cidadeSelecionada, setCidadeSelecionada] = useState('')
-  const [bairroSelecionado, setBairroSelecionado] = useState('')
+  // ── Localização: Estado → Cidade → Bairro ────────────────────────────────
+  // O SeletorLocalidade busca as listas na API e devolve os IDs + os nomes
+  // (os nomes são usados no geocoding do endereço)
+  const [localidade, setLocalidade] = useState({ cidadeId: null, bairroId: null, estado: '', cidade: '', bairro: '' })
 
-  // Lista de estados únicos (sem repetição)
-  const estados = [...new Set(regioes.map(r => r.estado))]
-
-  // Apenas cidades do estado escolhido
-  const cidades = [...new Set(
-    regioes
-      .filter(r => r.estado === estadoSelecionado)
-      .map(r => r.cidade)
-  )]
-
-  // Apenas bairros da cidade escolhida
-  const bairros = regioes
-    .filter(r => r.cidade === cidadeSelecionada)
-    .map(r => r.bairro)
+  const handleLocalidade = (novaLocalidade) => {
+    setLocalidade(novaLocalidade)
+    // Limpa as coordenadas ao trocar a localização pois o endereço pode ter mudado
+    setLatitude(null)
+    setLongitude(null)
+    setFeedbackGeo(null)
+  }
   // ─────────────────────────────────────────────────────────────────────────
 
   const [capacidadeTotal, setCapacidadeTotal] = useState(0);
@@ -61,16 +54,6 @@ const CadastrarAbrigo = () => {
   const [feedbackGeo, setFeedbackGeo] = useState(null)
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Roda sempre que recarrega
-  useEffect(() => {
-    const buscarRegioes = async () => {
-      const resposta = await fetch('http://localhost:3000/api/regioes/listar')
-      const dados = await resposta.json()
-      setRegioes(dados.regioes)
-    }
-    buscarRegioes()
-  }, [])
-
   // ── Handler do geocoding ─────────────────────────────────────────────────
   // Roda quando o usuário sai do campo endereço (onBlur)
   // Só tenta geocodificar se o endereço E a cidade estiverem preenchidos
@@ -78,7 +61,7 @@ const CadastrarAbrigo = () => {
     const endereco = e.target.value.trim()
 
     // Se o endereço estiver vazio ou a cidade não foi selecionada ainda, não faz nada
-    if (!endereco || !cidadeSelecionada) {
+    if (!endereco || !localidade.cidade) {
       setFeedbackGeo({ tipo: 'erro', mensagem: 'Preencha a cidade antes de inserir o endereço.' })
       return
     }
@@ -89,7 +72,7 @@ const CadastrarAbrigo = () => {
     try {
       // Monta a query com o máximo de informação possível para aumentar a precisão
       // Ex: "Rua das Flores 123, Centro, Taubaté, SP, Brasil"
-      const query = encodeURIComponent(`${endereco}, ${bairroSelecionado}, ${cidadeSelecionada}, ${estadoSelecionado}, Brasil`)
+      const query = encodeURIComponent(`${endereco}, ${localidade.bairro}, ${localidade.cidade}, ${localidade.estado}, Brasil`)
       const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`
 
       const res = await fetch(url, {
@@ -144,9 +127,8 @@ const CadastrarAbrigo = () => {
       status: e.target.status.value,
       nome: e.target.nome.value,
       cep: e.target.cep.value,
-      estado: e.target.estado.value,
-      cidade: e.target.cidade.value,
-      bairro: e.target.bairro.value,
+      cidadeId: localidade.cidadeId,
+      bairroId: localidade.bairroId,
       endereco: e.target.endereco.value,
       telefone: e.target.telefone.value,
       responsavel: e.target.responsavel.value,
@@ -177,6 +159,7 @@ const CadastrarAbrigo = () => {
     })
 
     const resultado = await resposta.json()
+    setErroEnvio(!resposta.ok)
     setMensagem(resultado.mensagem)
   }
 
@@ -190,7 +173,7 @@ const CadastrarAbrigo = () => {
           <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
           <li><FaDonate className="icon" /> Doações</li>
           <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-          <li><GoAlertFill className="icon" /> Ocorrências</li>
+          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
           <li><FaGear className="icon" />Configurações</li>
         </ul>
       </aside>
@@ -239,76 +222,13 @@ const CadastrarAbrigo = () => {
               <input type="text" name="cep" placeholder="12345-12" required />
             </div>
 
-            {/* SELECT ESTADO — mostra apenas estados únicos do banco */}
-            <div className="form-group">
-              <label><FaMapMarkedAlt /> Estado</label>
-              <select
-                className="select-cidade"
-                name="estado"
-                value={estadoSelecionado}
-                onChange={(e) => {
-                  setEstadoSelecionado(e.target.value)
-                  setCidadeSelecionada('')  // reseta cidade ao trocar estado
-                  setBairroSelecionado('')  // reseta bairro ao trocar estado
-                  // Limpa as coordenadas ao trocar estado pois o endereço pode ter mudado
-                  setLatitude(null)
-                  setLongitude(null)
-                  setFeedbackGeo(null)
-                }}
-                required>
-                <option value="" disabled>Selecione o estado</option>
-                {estados.map((estado) => (
-                  <option key={estado} value={estado}>
-                    {estado}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* SELECT CIDADE — só habilita após escolher estado, filtra pelo estado */}
-            <div className="form-group">
-              <label><FaMapMarkedAlt /> Cidade</label>
-              <select
-                className="select-cidade"
-                name="cidade"
-                value={cidadeSelecionada}
-                disabled={!estadoSelecionado}
-                onChange={(e) => {
-                  setCidadeSelecionada(e.target.value)
-                  setBairroSelecionado('')  // reseta bairro ao trocar cidade
-                  // Limpa as coordenadas ao trocar cidade
-                  setLatitude(null)
-                  setLongitude(null)
-                  setFeedbackGeo(null)
-                }}
-                required>
-                <option value="" disabled>Selecione a cidade</option>
-                {cidades.map((cidade) => (
-                  <option key={cidade} value={cidade}>
-                    {cidade}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* SELECT BAIRRO — só habilita após escolher cidade, filtra pela cidade */}
-            <div className="form-group">
-              <label><FaMapMarkedAlt /> Bairro</label>
-              <select
-                className="select-cidade"
-                name="bairro"
-                value={bairroSelecionado}
-                disabled={!cidadeSelecionada}
-                onChange={(e) => setBairroSelecionado(e.target.value)}
-                required>
-                <option value="" disabled>Selecione o bairro</option>
-                {bairros.map((bairro) => (
-                  <option key={bairro} value={bairro}>
-                    {bairro}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Estado → Cidade → Bairro (listas vindas da API de regiões) */}
+            <SeletorLocalidade
+              cidadeId={localidade.cidadeId}
+              bairroId={localidade.bairroId}
+              bairroObrigatorio
+              onChange={handleLocalidade}
+            />
 
             {/* Campo endereço com geocoding automático no onBlur ──────────── */}
             {/* onBlur = roda quando o usuário sai do campo (clica em outro lugar) */}
@@ -473,7 +393,7 @@ const CadastrarAbrigo = () => {
                 Cadastrar Abrigo
               </button>
               {mensagem && (
-                <p style={{ color: '#10b981', fontSize: '14px', textAlign: 'center' }}>
+                <p style={{ color: erroEnvio ? '#ef4444' : '#10b981', fontSize: '14px', textAlign: 'center' }}>
                   {mensagem}
                 </p>
               )}

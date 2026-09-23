@@ -1,6 +1,7 @@
 // Importa o Prisma Client
 import { PrismaClient } from '@prisma/client'
 import supabase from '../supabase.js'
+import { selectLocalizacao, achatarLocalizacao } from '../lib/localizacao.js'
 
 // Cria a instância do Prisma — conexão com o banco
 const prisma = new PrismaClient()
@@ -135,7 +136,7 @@ export default async function vitimaRoutes(app) {
         abrigoId: abrigoId ? Number(abrigoId)                       : undefined,
       },
       include: {
-        abrigo: { select: { nome: true, cidade: true } }
+        abrigo: { select: { nome: true, ...selectLocalizacao } }
       }
     })
 
@@ -149,7 +150,7 @@ export default async function vitimaRoutes(app) {
       fotoVitima: vitima.fotoVitima,
       // Inclui o abrigo vinculado para exibir na listagem
       abrigoId:  vitima.abrigoId,
-      abrigo:    vitima.abrigo ?? null,
+      abrigo:    achatarLocalizacao(vitima.abrigo) ?? null,
     }))
 
     return reply.status(200).send({
@@ -170,7 +171,7 @@ export default async function vitimaRoutes(app) {
       where: { id_vitima: Number(id) },
       // Inclui os dados do abrigo vinculado para exibir na tela de detalhes
       include: {
-        abrigo: { select: { nome: true, cidade: true, endereco: true, telefone: true } }
+        abrigo: { select: { nome: true, endereco: true, telefone: true, ...selectLocalizacao } }
       }
     })
 
@@ -182,6 +183,7 @@ export default async function vitimaRoutes(app) {
     // Formata a data para exibição no padrão brasileiro antes de retornar
     return reply.status(200).send({
       ...vitima,
+      abrigo: achatarLocalizacao(vitima.abrigo),
       dataNascimento: vitima.dataNascimento?.toLocaleDateString('pt-BR')
     })
   })

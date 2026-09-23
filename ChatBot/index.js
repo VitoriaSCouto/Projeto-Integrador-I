@@ -2,8 +2,13 @@ import "dotenv/config";
 import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
 import { handleMessage } from "./controllers/message-controller.js";
+import { iniciarEnvioDeNotificacoes } from "./services/notificacao-service.js";
 
 const { Client, LocalAuth } = pkg;
+
+if (!process.env.BOT_API_KEY) {
+    console.warn("⚠️  BOT_API_KEY não definida no .env — o sistema de alertas não vai funcionar.");
+}
 
 const client = new Client({
     authStrategy: new LocalAuth()
@@ -16,10 +21,17 @@ client.on("qr", (qr) => {
 
 client.on("ready", () => {
     console.log("Bot conectado!");
+    // Começa a enviar os alertas que estão na fila da API
+    iniciarEnvioDeNotificacoes(client);
 });
 
 client.on("message", async (msg) => {
-    await handleMessage(msg, client);
+    try {
+        await handleMessage(msg, client);
+    } catch (erro) {
+        // Um erro numa conversa não pode derrubar o bot
+        console.error("[BOT] Erro ao processar mensagem:", erro);
+    }
 });
 
 client.initialize();

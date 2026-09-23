@@ -10,8 +10,8 @@
     "qrcode-terminal": "^0.12.0",
     "whatsapp-web.js": "^1.34.7"
   },
-  "devDependencies": {
-    "@prisma/client": "^5.22.0",
-    "prisma": "^5.22.0"
+  "scripts": {
+    "teste:conversa": "node testes/simular-conversa.mjs",
+    "teste:interativo": "node testes/conversa-interativa.mjs"
   }
 }

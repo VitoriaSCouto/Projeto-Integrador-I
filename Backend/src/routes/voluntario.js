@@ -1,6 +1,7 @@
 // Importa o Prisma Client
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcrypt'
+import { selectLocalizacao, achatarLocalizacao } from '../lib/localizacao.js'
 
 // Cria a instância do Prisma — conexão com o banco
 const prisma = new PrismaClient()
@@ -85,7 +86,7 @@ export default async function voluntarioRoutes(app) {
     // Gera o token JWT com os dados do voluntário
     // O token expira em 8 horas
     const token = app.jwt.sign(
-      { id: voluntario.id_voluntario, email: voluntario.email },
+      { id: voluntario.id_voluntario, email: voluntario.email, tipo: 'voluntario' },
       { expiresIn: '8h' }
     )
 
@@ -124,7 +125,7 @@ export default async function voluntarioRoutes(app) {
         dataNascimento: true,
         status:         true,
         abrigo: {
-          select: { nome: true, cidade: true }
+          select: { nome: true, ...selectLocalizacao }
         },
         // Antes era "doacoes" (model removido do schema).
         // Agora é "solicitacoesAjudaAtendidas" — solicitações de ajuda que este
@@ -139,7 +140,9 @@ export default async function voluntarioRoutes(app) {
       return reply.status(404).send({ mensagem: 'Voluntário não encontrado.' })
     }
 
-    return reply.status(200).send({ voluntario })
+    return reply.status(200).send({
+      voluntario: { ...voluntario, abrigo: achatarLocalizacao(voluntario.abrigo) }
+    })
   })
 
 
@@ -161,7 +164,7 @@ export default async function voluntarioRoutes(app) {
         abrigoId: abrigoId ? Number(abrigoId)                       : undefined,
       },
       include: {
-        abrigo: { select: { nome: true, cidade: true } }
+        abrigo: { select: { nome: true, ...selectLocalizacao } }
       }
     })
 
@@ -175,7 +178,7 @@ export default async function voluntarioRoutes(app) {
       telefone:      voluntario.telefone,
       genero:        voluntario.genero,
       status:        voluntario.status,
-      abrigo:        voluntario.abrigo
+      abrigo:        achatarLocalizacao(voluntario.abrigo)
     }))
 
     return reply.status(200).send({
@@ -196,7 +199,7 @@ export default async function voluntarioRoutes(app) {
     const voluntario = await prisma.voluntario.findUnique({
       where: { id_voluntario: Number(id) },
       include: {
-        abrigo: { select: { nome: true, cidade: true } },
+        abrigo: { select: { nome: true, ...selectLocalizacao } },
         // Antes era "doacoes" (model removido do schema).
         // Agora é "solicitacoesAjudaAtendidas" — as solicitações de ajuda que
         // este voluntário atendeu de fato (não confundir com "interessesAjuda",
@@ -212,8 +215,12 @@ export default async function voluntarioRoutes(app) {
     }
 
     // Formata a data para exibição no padrão brasileiro antes de retornar
+    // Nunca devolve o hash da senha
+    const { senha, ...voluntarioSemSenha } = voluntario
+
     return reply.status(200).send({
-      ...voluntario,
+      ...voluntarioSemSenha,
+      abrigo: achatarLocalizacao(voluntario.abrigo),
       dataNascimento: voluntario.dataNascimento?.toLocaleDateString('pt-BR')
     })
   })

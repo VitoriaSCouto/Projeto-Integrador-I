@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import supabase from '../supabase.js'
+import { selectLocalizacao, achatarLocalizacao, validarCidadeBairro } from '../lib/localizacao.js'
 
 const prisma = new PrismaClient()
 
@@ -10,10 +11,16 @@ export default async function abrigoRoutes(app) {
   //URL: http://localhost:3000/api/abrigos/cadastrar
   app.post('/cadastrar', async (request, reply) => {
 
-    const { nome, cep, estado, cidade, bairro, endereco, telefone, responsavel, tipoAbrigo,
+    const { nome, cep, cidadeId, bairroId, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
-      status, fotoAbrigo, latitude, longitude, regiaoId } = request.body
+      status, fotoAbrigo, latitude, longitude } = request.body
+
+    // A cidade é obrigatória; o bairro, se vier, precisa ser da mesma cidade
+    const erroLocalizacao = await validarCidadeBairro(prisma, cidadeId, bairroId)
+    if (erroLocalizacao) {
+      return reply.status(400).send({ mensagem: erroLocalizacao })
+    }
 
     // Verifica se já existe um abrigo com o mesmo nome e endereço
     const abrigoExistente = await prisma.abrigo.findFirst({
@@ -30,9 +37,8 @@ export default async function abrigoRoutes(app) {
       data: {
         nome,
         cep,
-        estado,
-        cidade,
-        bairro,
+        cidadeId: Number(cidadeId),
+        bairroId: bairroId ? Number(bairroId) : null,
         endereco,
         telefone,
         responsavel,
@@ -50,9 +56,8 @@ export default async function abrigoRoutes(app) {
         // Podem ser null se o geocoding falhou ou o usuário não preencheu o endereço
         latitude: latitude ?? null,
         longitude: longitude ?? null,
-        // Região vinculada ao abrigo — opcional, usado para exibir nivelRisco no mapa
-        regiaoId: regiaoId ?? null,
-      }
+      },
+      include: selectLocalizacao
     })
 
     // Se veio uma foto em base64, faz o upload usando o ID do abrigo + timestamp como nome do arquivo
@@ -87,14 +92,18 @@ export default async function abrigoRoutes(app) {
       abrigo.fotoAbrigo = urlData.publicUrl
     }
 
+    const local = achatarLocalizacao(abrigo)
+
     return reply.status(201).send({
       mensagem: 'Abrigo cadastrado com sucesso!',
       id: abrigo.id_abrigo,
       nome: abrigo.nome,
       cep: abrigo.cep,
-      estado: abrigo.estado,
-      cidade: abrigo.cidade,
-      bairro: abrigo.bairro,
+      estado: local.estado,
+      cidade: local.cidade,
+      bairro: local.bairro,
+      cidadeId: local.cidadeId,
+      bairroId: local.bairroId,
       endereco: abrigo.endereco,
       telefone: abrigo.telefone,
       responsavel: abrigo.responsavel,
@@ -110,7 +119,6 @@ export default async function abrigoRoutes(app) {
       fotoAbrigo: abrigo.fotoAbrigo,
       latitude: abrigo.latitude,
       longitude: abrigo.longitude,
-      regiaoId: abrigo.regiaoId,
     })
   })
 
@@ -121,9 +129,10 @@ export default async function abrigoRoutes(app) {
   //URL: http://localhost:3000/api/abrigos/listar?nome=
   //URL: http://localhost:3000/api/abrigos/listar?cidade=
   //URL: http://localhost:3000/api/abrigos/listar?endereco=
+  //URL: http://localhost:3000/api/abrigos/listar?cidadeId=1&bairroId=2&status=ativo
   app.get('/listar', async (request, reply) => {
 
-    const { id, nome, cep, endereco, cidade, estado, bairro } = request.query
+    const { id, nome, cep, endereco, cidade, estado, bairro, cidadeId, bairroId, status } = request.query
 
     const abrigos = await prisma.abrigo.findMany({
       where: {
@@ -132,16 +141,26 @@ export default async function abrigoRoutes(app) {
         // undefined remove o filtro se o query param não for informado
         nome:     nome     ? { contains: nome,     mode: 'insensitive' } : undefined,
         endereco: endereco ? { contains: endereco, mode: 'insensitive' } : undefined,
-        cidade:   cidade   ? { contains: cidade,   mode: 'insensitive' } : undefined,
-        estado:   estado   ? { contains: estado,   mode: 'insensitive' } : undefined,
-        bairro:   bairro   ? { contains: bairro,   mode: 'insensitive' } : undefined,
-        cep:      cep      ? { equals: Number(cep) }                     : undefined,
+        cep:      cep      ? { contains: cep }                           : undefined,
+        status:   status   || undefined,
         id_abrigo: id      ? { equals: Number(id) }                      : undefined,
+        cidadeId: cidadeId ? Number(cidadeId)                            : undefined,
+        bairroId: bairroId ? Number(bairroId)                            : undefined,
+        // Filtros por nome da cidade / sigla do estado / nome do bairro
+        cidade: (cidade || estado) ? {
+          nome:   cidade ? { contains: cidade, mode: 'insensitive' } : undefined,
+          estado: estado ? { sigla: { equals: estado, mode: 'insensitive' } } : undefined,
+        } : undefined,
+        bairro: bairro ? { nome: { contains: bairro, mode: 'insensitive' } } : undefined,
       },
-      // Inclui os dados da região vinculada para exibir nivelRisco e statusAlerta no mapa
       include: {
-        regiao: {
-          select: { nivelRisco: true, statusAlerta: true }
+        cidade: selectLocalizacao.cidade,
+        // Nível de risco do bairro + quantos alertas ativos existem nele (para o mapa)
+        bairro: {
+          select: {
+            id_bairro: true, nome: true, nivelRisco: true,
+            _count: { select: { alertas: { where: { status: 'ativo' } } } }
+          }
         }
       }
     })
@@ -153,10 +172,13 @@ export default async function abrigoRoutes(app) {
       id:                abrigo.id_abrigo,
       nome:              abrigo.nome,
       cep:               abrigo.cep,
-      estado:            abrigo.estado,
-      cidade:            abrigo.cidade,
-      bairro:            abrigo.bairro,
+      estado:            abrigo.cidade.estado.sigla,
+      cidade:            abrigo.cidade.nome,
+      bairro:            abrigo.bairro?.nome ?? null,
+      cidadeId:          abrigo.cidadeId,
+      bairroId:          abrigo.bairroId,
       endereco:          abrigo.endereco,
+      telefone:          abrigo.telefone,
       status:            abrigo.status,
       tipoAbrigo:        abrigo.tipoAbrigo,
       capacidadeTotal:   abrigo.capacidadeTotal,
@@ -165,10 +187,9 @@ export default async function abrigoRoutes(app) {
       // Incluídos agora para o Mapa plotar os marcadores sem precisar de geocoding
       latitude:          abrigo.latitude,
       longitude:         abrigo.longitude,
-      // Dados da região para exibir nível de risco no mapa e nas listagens
-      regiaoId:          abrigo.regiaoId,
-      nivelRisco:        abrigo.regiao?.nivelRisco   ?? null,
-      statusAlerta:      abrigo.regiao?.statusAlerta ?? null,
+      // Dados do bairro para exibir nível de risco e alerta no mapa e nas listagens
+      nivelRisco:        abrigo.bairro?.nivelRisco ?? null,
+      statusAlerta:      (abrigo.bairro?._count.alertas ?? 0) > 0,
     }))
 
     return reply.status(200).send({
@@ -190,9 +211,7 @@ export default async function abrigoRoutes(app) {
       where: { id_abrigo: Number(id) },
       // Inclui os dados completos da região e a contagem de vítimas e voluntários vinculados
       include: {
-        regiao: {
-          select: { bairro: true, cidade: true, estado: true, nivelRisco: true, statusAlerta: true }
-        },
+        ...selectLocalizacao,
         vitimas: {
           select: {
             id_vitima:      true,
@@ -216,7 +235,8 @@ export default async function abrigoRoutes(app) {
     }
 
     // O Prisma já retorna todos os campos automaticamente com o findUnique
-    return reply.status(200).send(abrigo)
+    // achatarLocalizacao devolve cidade, estado e bairro como texto (+ os IDs)
+    return reply.status(200).send(achatarLocalizacao(abrigo))
   })
 
 
@@ -227,10 +247,10 @@ export default async function abrigoRoutes(app) {
     try {
 
     const { id } = request.params
-    const { nome, cep, estado, cidade, bairro, endereco, telefone, responsavel, tipoAbrigo,
+    const { nome, cep, cidadeId, bairroId, endereco, telefone, responsavel, tipoAbrigo,
       capacidadeTotal, capacidadeOcupada, possuiAtendimentoMedico,
       possuiEnfermagem, possuiPets, possuiAcessibilidade, possuiCozinha,
-      status, fotoAbrigo, latitude, longitude, regiaoId } = request.body
+      status, fotoAbrigo, latitude, longitude } = request.body
 
     const abrigoExistente = await prisma.abrigo.findUnique({
       where: { id_abrigo: Number(id) }
@@ -238,6 +258,16 @@ export default async function abrigoRoutes(app) {
 
     if (!abrigoExistente) {
       return reply.status(404).send({ mensagem: 'Abrigo não encontrado.' })
+    }
+
+    // Se a cidade ou o bairro vieram no body, confere se combinam
+    // (undefined = mantém o atual | bairroId null = remove o bairro)
+    const novaCidadeId = cidadeId !== undefined ? Number(cidadeId) : abrigoExistente.cidadeId
+    const novoBairroId = bairroId !== undefined ? (bairroId ? Number(bairroId) : null) : abrigoExistente.bairroId
+
+    const erroLocalizacao = await validarCidadeBairro(prisma, novaCidadeId, novoBairroId)
+    if (erroLocalizacao) {
+      return reply.status(400).send({ mensagem: erroLocalizacao })
     }
 
     // Define a URL da foto que vai ser salva no banco
@@ -299,9 +329,8 @@ export default async function abrigoRoutes(app) {
       data: {
         nome,
         cep,
-        estado,
-        cidade,
-        bairro,
+        cidadeId: novaCidadeId,
+        bairroId: novoBairroId,
         endereco,
         telefone,
         responsavel,
@@ -319,19 +348,22 @@ export default async function abrigoRoutes(app) {
         // Se não vieram (undefined), mantém os valores anteriores do banco
         latitude:  latitude  ?? abrigoExistente.latitude,
         longitude: longitude ?? abrigoExistente.longitude,
-        // Atualiza a região vinculada — se não vier, mantém a anterior
-        regiaoId:  regiaoId  ?? abrigoExistente.regiaoId,
-      }
+      },
+      include: selectLocalizacao
     })
+
+    const local = achatarLocalizacao(abrigoAtualizado)
 
     return reply.status(200).send({
       mensagem: 'Informações do abrigo atualizadas com sucesso!',
       id_abrigo:               abrigoAtualizado.id_abrigo,
       nome:                    abrigoAtualizado.nome,
       cep:                     abrigoAtualizado.cep,
-      estado:                  abrigoAtualizado.estado,
-      cidade:                  abrigoAtualizado.cidade,
-      bairro:                  abrigoAtualizado.bairro,
+      estado:                  local.estado,
+      cidade:                  local.cidade,
+      bairro:                  local.bairro,
+      cidadeId:                local.cidadeId,
+      bairroId:                local.bairroId,
       endereco:                abrigoAtualizado.endereco,
       telefone:                abrigoAtualizado.telefone,
       responsavel:             abrigoAtualizado.responsavel,
@@ -347,7 +379,6 @@ export default async function abrigoRoutes(app) {
       fotoAbrigo:              abrigoAtualizado.fotoAbrigo,
       latitude:                abrigoAtualizado.latitude,
       longitude:               abrigoAtualizado.longitude,
-      regiaoId:                abrigoAtualizado.regiaoId,
     })
 
     } catch (erro) {

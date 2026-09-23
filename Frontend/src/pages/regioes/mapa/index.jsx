@@ -196,7 +196,7 @@ function Mapa() {
             <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
             <li><FaDonate className="icon" /> Doações</li>
             <a href="/mapa"><li  className="active"><FaMap className="icon" />Mapa</li></a>
-            <li><GoAlertFill className="icon" /> Ocorrências</li>
+            <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
             <li><FaGear className="icon" /> Configurações</li>
           </ul>
         </aside>
@@ -225,7 +225,7 @@ function Mapa() {
             <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
             <li><FaDonate className="icon" /> Doações</li>
             <a href="/mapa"><li  className="active"><FaMap className="icon" />Mapa</li></a>
-            <li><GoAlertFill className="icon" /> Ocorrências</li>
+            <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
             <li><FaGear className="icon" /> Configurações</li>
           </ul>
         </aside>
@@ -294,10 +294,10 @@ function Mapa() {
           {/* Botão de cadastrar nova região — navega para a página de cadastro */}
           <button
             type="button"
-            onClick={() => navigate('/Cadastrar-Regiao')}
+            onClick={() => navigate('/regioes')}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
-            <FaPlus /> Cadastrar nova região
+            <FaPlus /> Gerenciar regiões
           </button>
 
         </div>

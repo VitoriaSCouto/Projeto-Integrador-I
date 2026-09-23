@@ -24,28 +24,76 @@ model Admin {
 
   solicitacoesAnalisadas   SolicitacaoAbrigo[]
   solicitacoesAjudaCriadas SolicitacaoAjuda[]  @relation("SolicitacoesAjudaCriadas")
+  alertasAnalisados        Alerta[]
 
   @@map("admin")
 }
 
 // ─────────────────────────────────────────────
-// REGIÃO
+// REGIÕES: ESTADO → CIDADE → BAIRRO
+// Substitui a antiga tabela "regiao", que repetia cidade e estado
+// como texto em cada bairro.
 // ─────────────────────────────────────────────
 
-model Regiao {
-  id_regiao         Int      @id @default(autoincrement())
-  bairro            String
-  cidade            String
-  estado            String
+model Estado {
+  id_estado Int    @id @default(autoincrement())
+  nome      String
+  sigla     String @unique @db.VarChar(2)
+
+  cidades Cidade[]
+
+  @@map("estado")
+}
+
+model Cidade {
+  id_cidade Int    @id @default(autoincrement())
+  nome      String
+
+  estadoId Int
+  estado   Estado @relation(fields: [estadoId], references: [id_estado])
+
+  // ID do grupo de WhatsApp que recebe os alertas da cidade (ex: 1203630@g.us)
+  // Pode ser preenchido pelo painel ou pelo comando "!alertas vincular" no grupo
+  grupoWhatsappId String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  bairros            Bairro[]
+  abrigos            Abrigo[]
+  solicitacoesAbrigo SolicitacaoAbrigo[]
+  notificacoes       Notificacao[]
+
+  @@unique([nome, estadoId])
+  @@map("cidade")
+}
+
+enum NivelRisco {
+  baixo
+  medio
+  alto
+  critico
+}
+
+model Bairro {
+  id_bairro Int    @id @default(autoincrement())
+  nome      String
+
+  cidadeId Int
+  cidade   Cidade @relation(fields: [cidadeId], references: [id_cidade])
+
   populacaoEstimada Int?
   areaKm2           Float?
-  nivelRisco        String   @default("baixo")
-  statusAlerta      Boolean  @default(false)
-  createdAt         DateTime @default(now()) @map("created_at")
+  nivelRisco        NivelRisco @default(baixo)
+  createdAt         DateTime   @default(now()) @map("created_at")
 
-  abrigos Abrigo[]
+  abrigos               Abrigo[]
+  solicitacoesAbrigo    SolicitacaoAbrigo[]
+  moradores             InscritoAlerta[]
+  inscritosInteressados InscritoBairro[]
+  alertas               Alerta[]
 
-  @@map("regiao")
+  @@unique([nome, cidadeId])
+  @@map("bairro")
 }
 
 // ─────────────────────────────────────────────
@@ -57,9 +105,6 @@ model Abrigo {
   nome                    String
   cep                     String   @db.VarChar(9)
   endereco                String
-  cidade                  String
-  estado                  String
-  bairro                  String?
   latitude                Float?
   longitude               Float?
   telefone                String?
@@ -76,8 +121,12 @@ model Abrigo {
   status                  String   @default("ativo")
   createdAt               DateTime @default(now()) @map("created_at")
 
-  regiaoId Int?
-  regiao   Regiao? @relation(fields: [regiaoId], references: [id_regiao])
+  // Localização: a cidade é obrigatória, o bairro é opcional
+  // (o estado vem pela cidade)
+  cidadeId Int
+  cidade   Cidade  @relation(fields: [cidadeId], references: [id_cidade])
+  bairroId Int?
+  bairro   Bairro? @relation(fields: [bairroId], references: [id_bairro])
 
   solicitacao       SolicitacaoAbrigo?
   vitimas           Vitima[]
@@ -166,9 +215,6 @@ model SolicitacaoAbrigo {
   nome                    String
   cep                     String  @db.VarChar(9)
   endereco                String
-  cidade                  String
-  estado                  String
-  bairro                  String
   telefone                String? @db.VarChar(15)
   responsavel             String
   tipoAbrigo              String
@@ -179,6 +225,11 @@ model SolicitacaoAbrigo {
   possuiAcessibilidade    Boolean @default(false)
   possuiCozinha           Boolean @default(false)
   fotoAbrigo              String?
+
+  cidadeId Int
+  cidade   Cidade  @relation(fields: [cidadeId], references: [id_cidade])
+  bairroId Int?
+  bairro   Bairro? @relation(fields: [bairroId], references: [id_bairro])
 
   solicitanteNome     String
   solicitanteEmail    String
@@ -195,7 +246,7 @@ model SolicitacaoAbrigo {
   abrigo    Abrigo? @relation(fields: [abrigo_id], references: [id_abrigo])
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([status])
   @@index([createdAt])
@@ -214,11 +265,11 @@ enum StatusSolicitacaoAjuda {
 }
 
 enum CategoriaAjuda {
-  doacao         // roupas, alimentos, itens em geral
-  medicamento    // remédios, insumos médicos
-  voluntariado   // mão de obra, serviços presenciais
+  doacao // roupas, alimentos, itens em geral
+  medicamento // remédios, insumos médicos
+  voluntariado // mão de obra, serviços presenciais
   infraestrutura // reparos, equipamentos
-  outro          // pedido livre / personalizado
+  outro // pedido livre / personalizado
 }
 
 enum UrgenciaAjuda {
@@ -258,7 +309,7 @@ model SolicitacaoAjuda {
   interesses SolicitacaoAjudaInteresse[]
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt       @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([status])
   @@index([abrigoId])
@@ -283,4 +334,190 @@ model SolicitacaoAjudaInteresse {
 
   @@unique([solicitacaoId, voluntarioId])
   @@map("solicitacao_ajuda_interesse")
+}
+
+// ─────────────────────────────────────────────
+// SISTEMA DE ALERTAS
+//
+// Fluxo:
+//   1. O morador se inscreve pelo bot (InscritoAlerta) informando nome,
+//      e-mail e o bairro onde mora. Pode acompanhar outros bairros
+//      (InscritoBairro).
+//   2. Ele relata uma ocorrência respondendo perguntas fechadas
+//      (tipo, gravidade) + foto → vira um RelatoAlerta.
+//   3. Relatos do mesmo tipo no mesmo bairro são agrupados em um Alerta.
+//      Enquanto não atinge o mínimo de relatos (ALERTA_CONFIRMACOES_MINIMAS),
+//      o alerta fica "em_verificacao".
+//   4. Ao atingir o mínimo (ou se um admin confirmar), o alerta vira "ativo"
+//      e são geradas as Notificacoes: uma para cada inscrito que mora ou
+//      acompanha o bairro e uma para o grupo de WhatsApp da cidade.
+//   5. O bot busca as notificações pendentes na API e as envia.
+// ─────────────────────────────────────────────
+
+model InscritoAlerta {
+  id_inscrito Int    @id @default(autoincrement())
+  nome        String
+  email       String
+
+  // ID do chat no WhatsApp (ex: 5512999999999@c.us). É para ele que o bot
+  // envia as notificações, por isso é único.
+  whatsappId String  @unique
+  telefone   String? @db.VarChar(20)
+
+  ativo Boolean @default(true)
+
+  // Bairro onde a pessoa mora — sempre recebe os alertas dele
+  bairroId Int
+  bairro   Bairro @relation(fields: [bairroId], references: [id_bairro])
+
+  // Bairros extras que a pessoa escolheu acompanhar
+  bairrosInteresse InscritoBairro[]
+  relatos          RelatoAlerta[]
+  notificacoes     Notificacao[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([bairroId])
+  @@map("inscrito_alerta")
+}
+
+model InscritoBairro {
+  inscritoId Int
+  inscrito   InscritoAlerta @relation(fields: [inscritoId], references: [id_inscrito], onDelete: Cascade)
+  bairroId   Int
+  bairro     Bairro         @relation(fields: [bairroId], references: [id_bairro], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([inscritoId, bairroId])
+  @@map("inscrito_bairro")
+}
+
+enum TipoAlerta {
+  alagamento
+  deslizamento
+  arvore_caida
+  falta_energia
+  incendio
+  via_interditada
+  vendaval
+}
+
+enum GravidadeAlerta {
+  leve
+  medio
+  grave
+}
+
+enum StatusAlerta {
+  em_verificacao // aguardando confirmação de outros moradores
+  ativo // confirmado e disparado
+  encerrado // ocorrência resolvida
+  cancelado // cancelado por um admin (ex: alerta falso)
+}
+
+model Alerta {
+  id_alerta Int             @id @default(autoincrement())
+  tipo      TipoAlerta
+  // Gravidade mais relatada entre os relatos (empate → a mais grave)
+  gravidade GravidadeAlerta
+  status    StatusAlerta    @default(em_verificacao)
+
+  bairroId Int
+  bairro   Bairro @relation(fields: [bairroId], references: [id_bairro])
+
+  disparadoEm       DateTime?
+  // true quando o admin disparou antes de atingir o mínimo de relatos
+  disparadoPorAdmin Boolean   @default(false)
+
+  // Preenchidos quando um admin confirma, encerra ou cancela o alerta
+  analisadoPorId     Int?
+  analisadoPor       Admin?    @relation(fields: [analisadoPorId], references: [id], onDelete: SetNull)
+  motivoCancelamento String?
+  finalizadoEm       DateTime?
+
+  relatos      RelatoAlerta[]
+  notificacoes Notificacao[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([bairroId, tipo, status])
+  @@index([status])
+  @@index([createdAt])
+  @@map("alerta")
+}
+
+model RelatoAlerta {
+  id_relato Int @id @default(autoincrement())
+
+  alertaId Int
+  alerta   Alerta @relation(fields: [alertaId], references: [id_alerta], onDelete: Cascade)
+
+  // Se o inscrito for excluído, o relato continua contando para o alerta
+  inscritoId Int?
+  inscrito   InscritoAlerta? @relation(fields: [inscritoId], references: [id_inscrito], onDelete: SetNull)
+
+  gravidade  GravidadeAlerta
+  fotoRelato String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // A mesma pessoa não pode confirmar o mesmo alerta duas vezes
+  @@unique([alertaId, inscritoId])
+  @@map("relato_alerta")
+}
+
+enum EventoNotificacao {
+  disparo // aviso do alerta
+  cancelamento // correção enviada quando o admin cancela um alerta já disparado
+}
+
+enum DestinoNotificacao {
+  inscrito
+  grupo
+}
+
+enum StatusNotificacao {
+  pendente
+  enviando
+  enviada
+  falha
+  cancelada
+}
+
+// Fila de saída: a API cria as notificações e o bot (que tem a sessão do
+// WhatsApp) as envia e informa o resultado.
+model Notificacao {
+  id_notificacao Int @id @default(autoincrement())
+
+  alertaId Int
+  alerta   Alerta @relation(fields: [alertaId], references: [id_alerta], onDelete: Cascade)
+
+  evento      EventoNotificacao  @default(disparo)
+  tipoDestino DestinoNotificacao
+  // whatsappId do inscrito ou ID do grupo da cidade
+  destino     String
+
+  inscritoId Int?
+  inscrito   InscritoAlerta? @relation(fields: [inscritoId], references: [id_inscrito], onDelete: SetNull)
+  cidadeId   Int?
+  cidade     Cidade?         @relation(fields: [cidadeId], references: [id_cidade], onDelete: SetNull)
+
+  mensagem String
+  fotoUrl  String?
+
+  status     StatusNotificacao @default(pendente)
+  tentativas Int               @default(0)
+  erro       String?
+  enviadaEm  DateTime?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Impede enviar o mesmo aviso duas vezes para o mesmo destino
+  @@unique([alertaId, evento, destino])
+  @@index([status])
+  @@map("notificacao")
 }

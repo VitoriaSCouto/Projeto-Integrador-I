@@ -45,7 +45,7 @@ const ListarVitimas = () => {
           <a href="/vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
           <li><FaDonate className="icon" /> Doações</li>
           <a href="/mapa"><li><FaMap className="icon" />Mapa</li></a>
-          <li><GoAlertFill className="icon" /> Ocorrências</li>
+          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
           <a href="/configuracoes"><li><FaGear className="icon" /> Configurações</li></a>
         </ul>
       </aside>
