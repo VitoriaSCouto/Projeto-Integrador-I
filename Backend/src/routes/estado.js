@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 
-const prisma = new PrismaClient()
 
 // Os 27 estados são cadastrados pela migração — aqui só existe a listagem
 export default async function estadoRoutes(app) {

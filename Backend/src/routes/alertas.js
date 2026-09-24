@@ -1,14 +1,13 @@
 // Rotas do painel admin para acompanhar e gerenciar os alertas
 // Todas exigem login de administrador (token JWT no cabeçalho Authorization)
 
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { removerFotos } from '../lib/armazenamento.js'
 import {
   formatarAlerta, includeListagemAlerta, dispararAlerta, cancelarAlerta,
   encerrarAlerta, ErroAlerta, STATUS_ALERTA, TIPOS_ALERTA, GRAVIDADES, CONFIRMACOES_MINIMAS
 } from '../lib/alertas.js'
 
-const prisma = new PrismaClient()
 
 // Transforma ErroAlerta em resposta HTTP; outros erros seguem para o Fastify
 function responderErro(reply, erro) {

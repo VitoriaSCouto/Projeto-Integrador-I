@@ -24,6 +24,7 @@ import SolicitacoesAjudaDoAbrigo from './pages/Solicitacoes-Ajuda/listar-solicit
 import CadastrarSolicitacaoAjuda from './pages/Solicitacoes-Ajuda/cadastrar-solicitacao-ajuda';
 import DetalhesSolicitacaoAjuda from './pages/Solicitacoes-Ajuda/detalhes-solicitacao-ajuda';
 import SolicitacoesAjudaVoluntario from './pages/Solicitacoes-Ajuda/solicitacoes-ajuda-voluntario';
+import ListarSolicitacoesAjuda from './pages/Solicitacoes-Ajuda/listar-todas';
 import ListarAlertas from './pages/alertas/Listar-Alertas';
 import DetalhesAlerta from './pages/alertas/Detalhes-Alerta';
 import ListarInscritos from './pages/inscritos/Listar-Inscritos';
@@ -60,6 +61,8 @@ function App() {
           <Route path="/abrigos/:id/cadastrar-solicitacao-ajuda" element={<CadastrarSolicitacaoAjuda/>}/>
           <Route path="/visualizar-solicitacao-ajuda/:id" element={<DetalhesSolicitacaoAjuda/>}/>
           <Route path="/solicitacoes-ajuda-voluntario" element={<SolicitacoesAjudaVoluntario/>}/>
+          <Route path="/solicitacoes-ajuda" element={<ListarSolicitacoesAjuda/>}/>
+          <Route path="/voluntario/mapa" element={<Mapa modulo="voluntario"/>}/>
           <Route path="/alertas" element={<ListarAlertas/>}/>
           <Route path="/alertas/:id" element={<DetalhesAlerta/>}/>
           <Route path="/inscritos" element={<ListarInscritos/>}/>

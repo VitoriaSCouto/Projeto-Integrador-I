@@ -1,10 +1,8 @@
 // Importa o Prisma Client
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import supabase from '../supabase.js'
 import { selectLocalizacao, achatarLocalizacao } from '../lib/localizacao.js'
 
-// Cria a instância do Prisma — conexão com o banco
-const prisma = new PrismaClient()
 
 // Exporta a função que define as rotas de vítima
 export default async function vitimaRoutes(app) {

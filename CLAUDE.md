@@ -76,7 +76,7 @@ Veja `Backend/.env.example` e `ChatBot/.env.example`.
 ### Backend (`Backend/src/`)
 - `server.js` registra CORS, JWT e três autenticadores: `app.authenticate` (qualquer token), `app.authenticateAdmin` (token com `tipo: 'admin'`, gerado em `/api/auth/login`) e `app.authenticateBot` (cabeçalho `x-bot-key` igual ao `BOT_API_KEY`).
 - Prefixos: `/api/auth` (admin), `/api/abrigos`, `/api/estados`, `/api/cidades`, `/api/bairros`, `/api/vitimas`, `/api/solicitacoes` (solicitação de **abrigo**), `/api/voluntarios`, `/api/solicitacoes-ajuda`, `/api/alertas` (admin), `/api/inscritos` (admin), `/api/bot` (só o ChatBot).
-- Cada arquivo em `routes/` é um plugin Fastify que cria o próprio `new PrismaClient()`. Lógica compartilhada fica em `src/lib/`: `localizacao.js` (select/achatamento de cidade-estado-bairro, ViaCEP), `alertas.js` (regras de relato, disparo, cancelamento e textos das mensagens), `inscritos.js`, `armazenamento.js` (upload no Supabase).
+- Cada arquivo em `routes/` é um plugin Fastify. **Todos usam o mesmo cliente do banco:** `import prisma from '../lib/prisma.js'` (nunca `new PrismaClient()` num arquivo de rota — isso estourava o limite de conexões do Supabase, erro `EMAXCONN`). Lógica compartilhada fica em `src/lib/`: `localizacao.js` (select/achatamento de cidade-estado-bairro, ViaCEP), `alertas.js` (regras de relato, disparo, cancelamento e textos das mensagens), `inscritos.js`, `armazenamento.js` (upload no Supabase).
 - Convenção de endpoints: `POST /cadastrar`, `GET /listar`, `GET /listar/:id`, `PUT /atualizar/:id`, `DELETE /excluir/:id`. Solicitação de abrigo usa `POST /criar` e `PATCH /analisar/:id`. Leituras de regiões são públicas; escrita exige admin.
 - Respostas de erro usam `{ mensagem: '...' }`.
 - Fotos chegam em **base64** e vão para o Supabase Storage (buckets `fotos-abrigo`, `fotos-vitima`, `fotos-alerta`). Limite de corpo = 1 MiB, exceto `POST /api/bot/alertas/relatar` (15 MiB).
@@ -99,6 +99,7 @@ Veja `Backend/.env.example` e `ChatBot/.env.example`.
 
 ### Frontend (`Frontend/src/`)
 - Rotas em `App.jsx`; uma pasta por página em `pages/<modulo>/<Pagina>/index.jsx` + CSS ao lado.
+- **Sidebar:** use sempre `components/SidebarAdm.jsx` (`<SidebarAdm ativo="abrigos" />`) nas telas do admin e `components/SidebarVoluntario.jsx` nas do voluntário. Para mudar um item do menu, mude só a lista dentro do componente. O Mapa serve os dois módulos (`/mapa` e `/voluntario/mapa`, prop `modulo`).
 - Telas antigas usam `fetch` direto. Telas novas (`alertas/`, `inscritos/`, `regioes/Gerenciar-Regioes`) usam `services/api.js` (`apiAdmin`: envia `token_adm`, lança erro se a resposta não for ok, volta ao login em 401), `components/SidebarAdm.jsx` e `components/SeletorLocalidade.jsx` (Estado → Cidade → Bairro, também usado nos formulários de abrigo). Estilos dos módulos novos: `pages/alertas/alertas.css`.
 - Autenticação: tokens em `localStorage` (`token_adm`, `token_voluntario`, `voluntario`). Mapa via Leaflet + geocodificação no navegador com Nominatim.
 
@@ -128,5 +129,5 @@ Ordem de prioridade sugerida pelo relatório: segurança → integridade de dado
 - Comentários explicativos em português são comuns e bem-vindos (projeto acadêmico); mantenha o estilo do arquivo.
 - Ao criar rota nova: novo plugin em `Backend/src/routes/`, registrar em `server.js` com prefixo `/api/...`, seguir o padrão de verbos acima e adicionar exemplo em `route.http`. Rotas administrativas novas devem usar `app.authenticateAdmin`.
 - Ao alterar o schema: gerar migração com nome descritivo e rodar `npx prisma generate`. O bot não usa Prisma — se ele precisar de dados novos, crie uma rota em `/api/bot`.
-- Ao criar página: pasta em `Frontend/src/pages/...`, registrar em `App.jsx` respeitando a caixa exata do caminho.
+- Ao criar página: pasta em `Frontend/src/pages/...`, registrar em `App.jsx` respeitando a caixa exata do caminho, e usar o componente de sidebar do módulo.
 - Ambiente de desenvolvimento é Windows; os commits são feitos direto na `main` pela equipe.

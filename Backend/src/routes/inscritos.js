@@ -1,11 +1,10 @@
 // Rotas do painel admin para gerenciar os inscritos no sistema de alertas
 // Todas exigem login de administrador (token JWT no cabeçalho Authorization)
 
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { includeInscrito, formatarInscrito, emailValido } from '../lib/inscritos.js'
 import { TIPOS_ALERTA, GRAVIDADES } from '../lib/alertas.js'
 
-const prisma = new PrismaClient()
 
 export default async function inscritoRoutes(app) {
 

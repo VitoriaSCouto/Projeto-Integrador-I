@@ -12,6 +12,8 @@ import { FaGear } from "react-icons/fa6";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import SidebarAdm from '../../../components/SidebarAdm';
+import SidebarVoluntario from '../../../components/SidebarVoluntario';
 import "../../pg_adm/style.css";
 
 //Fim dos imports
@@ -80,7 +82,12 @@ function VoarParaAbrigo({ alvo }) {
 }
 
 //------- Começo Função Principal -----
-function Mapa() {
+// modulo: 'admin' (rota /mapa) ou 'voluntario' (rota /voluntario/mapa)
+// muda só a sidebar e esconde o botão de gerenciar regiões para o voluntário
+function Mapa({ modulo = 'admin' }) {
+
+  const ehVoluntario = modulo === 'voluntario'
+  const sidebar = ehVoluntario ? <SidebarVoluntario ativo="mapa" /> : <SidebarAdm ativo="mapa" />
 
   // ─── ESTADOS ────────────────────────────────────────────────
   const navigate = useNavigate()
@@ -185,21 +192,7 @@ function Mapa() {
   if (carregando) {
     return (
       <div className="dashboard">
-          <aside className="sidebar">
-          <div className="top-icons">
-            <img src="../src/assets/logo.png" width="70px" />
-            <p>S.O.S. Vale</p>
-          </div>
-          <ul>
-            <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-            <a href="/abrigos"><li><FaBoxOpen className="icon" />Abrigos</li></a>
-            <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-            <li><FaDonate className="icon" /> Doações</li>
-            <a href="/mapa"><li  className="active"><FaMap className="icon" />Mapa</li></a>
-            <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-            <li><FaGear className="icon" /> Configurações</li>
-          </ul>
-        </aside>
+          {sidebar}
         <main className="main">
           <p style={{ padding: '40px', color: '#64748b' }}>Carregando mapa...</p>
         </main>
@@ -214,21 +207,7 @@ function Mapa() {
     <div className="dashboard">
 
       {/* Código do Sidebar */}
-              <aside className="sidebar">
-          <div className="top-icons">
-            <img src="../src/assets/logo.png" width="70px" />
-            <p>S.O.S. Vale</p>
-          </div>
-          <ul>
-            <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-            <a href="/abrigos"><li><FaBoxOpen className="icon" />Abrigos</li></a>
-            <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-            <li><FaDonate className="icon" /> Doações</li>
-            <a href="/mapa"><li  className="active"><FaMap className="icon" />Mapa</li></a>
-            <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-            <li><FaGear className="icon" /> Configurações</li>
-          </ul>
-        </aside>
+              {sidebar}
 
       {/* Código do Main */}
       <main className="main">
@@ -291,14 +270,16 @@ function Mapa() {
             )}
           </div>
 
-          {/* Botão de cadastrar nova região — navega para a página de cadastro */}
-          <button
-            type="button"
-            onClick={() => navigate('/regioes')}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            <FaPlus /> Gerenciar regiões
-          </button>
+          {/* Botão de gerenciar regiões — só para o admin */}
+          {!ehVoluntario && (
+            <button
+              type="button"
+              onClick={() => navigate('/regioes')}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              <FaPlus /> Gerenciar regiões
+            </button>
+          )}
 
         </div>
 

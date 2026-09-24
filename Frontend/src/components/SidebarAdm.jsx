@@ -1,25 +1,32 @@
 import {
-  FaHome, FaBoxOpen, FaUser, FaDonate, FaMap, FaUsers, FaMapMarkedAlt
+  FaHome, FaBoxOpen, FaUser, FaMap, FaUsers, FaMapMarkedAlt, FaHandHoldingHeart, FaClipboardList
 } from 'react-icons/fa';
-import { FaGear } from 'react-icons/fa6';
 import { GoAlertFill } from 'react-icons/go';
+import { FiLogOut } from 'react-icons/fi';
 import logo from '../assets/logo.png';
 
-// Sidebar do painel administrativo
-// "ativo" recebe o id do item que deve aparecer selecionado
+// Sidebar do painel ADMINISTRATIVO — usada em todas as telas do admin.
+// Para adicionar/renomear um item, mude só esta lista.
+// "ativo" recebe o id do item que deve aparecer selecionado.
 const itens = [
-  { id: 'home',      href: '/pg_adm',   label: 'Home',      icone: <FaHome className="icon" /> },
-  { id: 'abrigos',   href: '/abrigos',  label: 'Abrigos',   icone: <FaBoxOpen className="icon" /> },
-  { id: 'vitimas',   href: '/vitimas',  label: 'Vítimas',   icone: <FaUser className="icon" /> },
-  { id: 'doacoes',   href: null,        label: 'Doações',   icone: <FaDonate className="icon" /> },
-  { id: 'mapa',      href: '/mapa',     label: 'Mapa',      icone: <FaMap className="icon" /> },
-  { id: 'alertas',   href: '/alertas',  label: 'Alertas',   icone: <GoAlertFill className="icon" /> },
-  { id: 'inscritos', href: '/inscritos', label: 'Inscritos', icone: <FaUsers className="icon" /> },
-  { id: 'regioes',   href: '/regioes',  label: 'Regiões',   icone: <FaMapMarkedAlt className="icon" /> },
-  { id: 'config',    href: null,        label: 'Configurações', icone: <FaGear className="icon" /> },
+  { id: 'home',                href: '/pg_adm',                    label: 'Home',                   icone: <FaHome className="icon" /> },
+  { id: 'abrigos',             href: '/abrigos',                   label: 'Abrigos',                icone: <FaBoxOpen className="icon" /> },
+  { id: 'vitimas',             href: '/vitimas',                   label: 'Vítimas',                icone: <FaUser className="icon" /> },
+  { id: 'ajuda',               href: '/solicitacoes-ajuda',        label: 'Solicitações de ajuda',  icone: <FaHandHoldingHeart className="icon" /> },
+  { id: 'solicitacoes-abrigo', href: '/listar-solicitação-abrigo', label: 'Solicitações de abrigo', icone: <FaClipboardList className="icon" /> },
+  { id: 'mapa',                href: '/mapa',                      label: 'Mapa',                   icone: <FaMap className="icon" /> },
+  { id: 'alertas',             href: '/alertas',                   label: 'Alertas',                icone: <GoAlertFill className="icon" /> },
+  { id: 'inscritos',           href: '/inscritos',                 label: 'Inscritos',              icone: <FaUsers className="icon" /> },
+  { id: 'regioes',             href: '/regioes',                   label: 'Regiões',                icone: <FaMapMarkedAlt className="icon" /> },
 ]
 
 function SidebarAdm({ ativo }) {
+
+  const sair = () => {
+    localStorage.removeItem('token_adm')
+    window.location.href = '/login-adm'
+  }
+
   return (
     <aside className="sidebar">
       <div className="top-icons">
@@ -27,17 +34,20 @@ function SidebarAdm({ ativo }) {
         <p>S.O.S. Vale</p>
       </div>
       <ul>
-        {itens.map(item => {
-          const li = (
+        {itens.map(item => (
+          <a key={item.id} href={item.href}>
             <li className={item.id === ativo ? 'active' : undefined}>
               {item.icone} {item.label}
             </li>
-          )
-          return item.href
-            ? <a key={item.id} href={item.href}>{li}</a>
-            : <span key={item.id}>{li}</span>
-        })}
+          </a>
+        ))}
       </ul>
+
+      <div className="sidebar-footer">
+        <button className="logout-btn" onClick={sair}>
+          <FiLogOut className="icon" /> Sair
+        </button>
+      </div>
     </aside>
   )
 }

@@ -11,6 +11,7 @@ import { GoAlertFill } from "react-icons/go";
 
 import "../../pg_adm/style.css";
 import './DetalhesVitima.css';
+import SidebarAdm from '../../../components/SidebarAdm';
 
 //------- Começo Função Principal -----
 function DetalhesVitimas() {
@@ -154,21 +155,7 @@ function DetalhesVitimas() {
   if (carregando) {
     return (
       <div className="dashboard">
-        <aside className="sidebar">
-          <div className="top-icons">
-            <img src="src/assets/logo.png" width="70px" />
-            <p>S.O.S. Vale</p>
-          </div>
-          <ul>
-            <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-            <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
-            <a href="/vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
-            <li><FaDonate className="icon" /> Doações</li>
-            <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-            <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-            <a href="/configuracoes"><li><FaGear className="icon" /> Configurações</li></a>
-          </ul>
-        </aside>
+        <SidebarAdm ativo="vitimas" />
         <main className="main">
           <p style={{ padding: '40px', color: '#64748b' }}>Carregando dados da vítima...</p>
         </main>
@@ -180,21 +167,7 @@ function DetalhesVitimas() {
   return (
     <div className="dashboard">
 
-      <aside className="sidebar">
-        <div className="top-icons">
-          <img src="../src/assets/logo.png" width="70px" />
-          <p>S.O.S. Vale</p>
-        </div>
-        <ul>
-          <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-          <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
-          <a href="/vitimas"><li className="active"><FaUser className="icon" /> Vítimas</li></a>
-          <li><FaDonate className="icon" /> Doações</li>
-          <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-          <a href="/configuracoes"><li><FaGear className="icon" /> Configurações</li></a>
-        </ul>
-      </aside>
+      <SidebarAdm ativo="vitimas" />
 
       <main className="main">
 

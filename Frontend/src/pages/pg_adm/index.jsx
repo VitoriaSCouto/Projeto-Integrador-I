@@ -1,29 +1,33 @@
 import './style.css'
 import { useState, useEffect } from 'react'; // ← useEffect adicionado: serve para executar código quando o componente carrega
 import { IoMdHome } from "react-icons/io";
-import { FaBoxOpen, FaMapPin, FaRegBell, FaUser, FaHome, FaDonate, FaChevronDown, FaChevronRight, FaPills } from "react-icons/fa";
+import { FaBoxOpen, FaMapPin, FaRegBell, FaUser, FaHome, FaDonate, FaChevronDown, FaChevronRight, FaPills, FaHandHoldingHeart } from "react-icons/fa";
 import { GoAlertFill } from "react-icons/go";
 import { FaHeart, FaGear, FaClipboardList, FaTriangleExclamation, FaClock, FaLocationDot, FaMap, FaPeopleGroup, FaCommentDots } from "react-icons/fa6";
+import SidebarAdm from '../../components/SidebarAdm';
 
-const itensRequisitados = [
-  { label: 'Roupas', value: 92 },
-  { label: 'Alimentos não perecíveis', value: 78 },
-  { label: 'Água potável', value: 60 },
-  { label: 'Cobertores', value: 34 },
-  { label: 'Produtos de higiene', value: 85 },
-];
+// Categorias das solicitações de ajuda (mesmos valores do enum do banco)
+const categoriasAjuda = {
+  doacao:         'Doações',
+  medicamento:    'Medicamentos',
+  voluntariado:   'Voluntariado',
+  infraestrutura: 'Infraestrutura',
+  outro:          'Outros',
+};
 
 const quickActions = [
-  { id: 'mapa', label: 'Ver mapa', icon: <FaMap /> },
-  { id: 'abrigos', label: 'Hub abrigos', icon: <FaHome /> },
-  { id: 'vitimas', label: 'Hub vítimas', icon: <FaPeopleGroup /> },
-  { id: 'topico', label: 'Tópico vazio', icon: <FaCommentDots /> },
+  { id: 'mapa',    label: 'Ver mapa',              icon: <FaMap />,              href: '/mapa' },
+  { id: 'abrigos', label: 'Hub abrigos',           icon: <FaHome />,             href: '/abrigos' },
+  { id: 'vitimas', label: 'Hub vítimas',           icon: <FaPeopleGroup />,      href: '/vitimas' },
+  { id: 'ajuda',   label: 'Solicitações de ajuda', icon: <FaHandHoldingHeart />, href: '/solicitacoes-ajuda' },
 ];
 
+// Cada aba das atividades tem a sua página de "ver todas"
 const filters = [
-  { id: 'todas', label: 'Todas' },
-  { id: 'abrigo', label: 'Abrigo' },
-  { id: 'alerta', label: 'Alertas' },
+  { id: 'todas',  label: 'Todas',   verTodas: null },
+  { id: 'abrigo', label: 'Abrigo',  verTodas: { href: '/listar-solicitação-abrigo', label: 'Ver todas as solicitações de abrigo' } },
+  { id: 'ajuda',  label: 'Ajuda',   verTodas: { href: '/solicitacoes-ajuda',        label: 'Ver todas as solicitações de ajuda' } },
+  { id: 'alerta', label: 'Alertas', verTodas: { href: '/alertas',                   label: 'Ver todos os alertas' } },
 ];
 
 const PgAdm = () => {
@@ -40,6 +44,8 @@ const PgAdm = () => {
   const [erro, setErro] = useState(null);
   // null = ainda não carregou (ou sem login) → o card mostra "—"
   const [alertas, setAlertas] = useState(null);
+  // Solicitações de ajuda dos abrigos (substituem o antigo "Doações")
+  const [ajuda, setAjuda] = useState([]);
 
   // ─── BUSCA DA API ────────────────────────────────────────────
   // useEffect com [] roda UMA VEZ quando o componente aparece na tela
@@ -81,8 +87,20 @@ const PgAdm = () => {
       }
     }
 
+    async function buscarAjuda() {
+      try {
+        const resposta = await fetch('http://localhost:3000/api/solicitacoes-ajuda/listar')
+        if (!resposta.ok) return
+        const dados = await resposta.json()
+        setAjuda(dados.solicitacoes)
+      } catch (err) {
+        console.error('Erro ao buscar solicitações de ajuda:', err)
+      }
+    }
+
     buscarSolicitacoes()
     buscarAlertas()
+    buscarAjuda()
   }, []) // ← o [] garante que roda só uma vez (se fosse [periodo], rodaria toda vez que periodo mudasse)
 
   // ─── DERIVAÇÕES DOS DADOS ────────────────────────────────────
@@ -94,6 +112,16 @@ const PgAdm = () => {
 
   // Quantas ainda estão pendentes (= "não lidas" para o card)
   const pendentesSolicitacoesAbrigo = solicitacoes.filter(s => s.status === 'pendente').length
+
+  // Solicitações de ajuda ainda não resolvidas (aberto ou em andamento)
+  const ajudaEmAberto = ajuda.filter(s => ['aberto', 'em_andamento'].includes(s.status))
+  const ajudaDaCategoria = (categoria) => ajudaEmAberto.filter(s => s.categoria === categoria)
+  const criticas = (lista) => lista.filter(s => s.urgencia === 'critica' || s.urgencia === 'alta').length
+
+  // Gráfico: solicitações em aberto por categoria
+  const itensRequisitados = Object.entries(categoriasAjuda).map(([categoria, label]) => ({
+    label, value: ajudaDaCategoria(categoria).length
+  }))
 
   // ─── MONTAGEM DINÂMICA DOS CARDS ────────────────────────────
   // Antes era um array fixo fora do componente
@@ -107,8 +135,26 @@ const PgAdm = () => {
       icon: <FaClipboardList />,
       accent: 'blue'
     },
-    { id: 'Doações',   label: 'Novas solicitações de doações',   value: 18, unread: 5, icon: <FaHeart />,            accent: 'cyan'   },
-    { id: 'Remédios',  label: 'Novas solicitações de medicamentos',   value: 9,  unread: 2, icon: <FaPills />,            accent: 'teal'   },
+    {
+      id: 'Doações',
+      label: 'Pedidos de doações',
+      value: ajudaDaCategoria('doacao').length,
+      unread: criticas(ajudaDaCategoria('doacao')),
+      unreadLabel: 'urgentes',
+      href: '/solicitacoes-ajuda',
+      icon: <FaHeart />,
+      accent: 'cyan'
+    },
+    {
+      id: 'Remédios',
+      label: 'Pedidos de medicamentos',
+      value: ajudaDaCategoria('medicamento').length,
+      unread: criticas(ajudaDaCategoria('medicamento')),
+      unreadLabel: 'urgentes',
+      href: '/solicitacoes-ajuda',
+      icon: <FaPills />,
+      accent: 'teal'
+    },
     {
       id: 'Alertas',
       label: 'Alertas abertos',
@@ -120,25 +166,68 @@ const PgAdm = () => {
       icon: <FaRegBell />,
       accent: 'red'
     },
-    { id: 'Ajuda',    label: 'Pedidos de ajuda',               value: 6,  unread: 3, icon: <FaTriangleExclamation />, accent: 'orange' },
+    {
+      id: 'Ajuda',
+      label: 'Solicitações de ajuda em aberto',
+      value: ajudaEmAberto.length,
+      unread: ajudaEmAberto.filter(s => s.status === 'aberto').length,
+      unreadLabel: 'sem voluntário',
+      href: '/solicitacoes-ajuda',
+      icon: <FaTriangleExclamation />,
+      accent: 'orange'
+    },
   ]
 
   // ─── ATIVIDADES DINÂMICAS ────────────────────────────────────
   // Transformamos as solicitações da API no formato que a lista espera
   // .slice(0, 6) pega só as 6 mais recentes (a API já retorna ordenado por createdAt desc)
-  const activitiesData = solicitacoes.slice(0, 6).map(s => ({
-    id:    s.id_solicitacao,
-    title: 'Abrigo solicitado',
-    place: [s.bairro, s.cidade].filter(Boolean).join(', '),  // ← endereço real da solicitação (bairro é opcional)
-    time:  formatarTempo(s.createdAt),  // ← função que vamos criar abaixo
-    type:  'abrigo'
-  }))
+  // Junta solicitações de abrigo, solicitações de ajuda e alertas numa só lista,
+  // cada item com o link para a sua própria tela
+  const activitiesData = [
+    ...solicitacoes.map(s => ({
+      id:     `abrigo-${s.id_solicitacao}`,
+      title:  `Abrigo solicitado: ${s.nome}`,
+      place:  [s.bairro, s.cidade].filter(Boolean).join(', '),  // ← bairro é opcional
+      data:   s.createdAt,
+      type:   'abrigo',
+      icon:   <FaHome />,
+      href:   `/visualizar-solicitação-abrigo/${s.id_solicitacao}`,
+      botao:  'Ver solicitação',
+    })),
+    ...ajuda.map(s => ({
+      id:     `ajuda-${s.id_solicitacao}`,
+      title:  `Ajuda: ${s.titulo}`,
+      place:  [s.abrigo?.nome, s.abrigo?.cidade].filter(Boolean).join(' — '),
+      data:   s.createdAt,
+      type:   'ajuda',
+      icon:   <FaHandHoldingHeart />,
+      href:   `/visualizar-solicitacao-ajuda/${s.id_solicitacao}`,
+      botao:  'Ver pedido',
+    })),
+    ...(alertas ?? []).map(a => ({
+      id:     `alerta-${a.id_alerta}`,
+      title:  `Alerta: ${a.tipoLabel}`,
+      place:  `${a.bairro}, ${a.cidade}`,
+      data:   a.createdAt,
+      type:   'alerta',
+      icon:   <GoAlertFill />,
+      href:   `/alertas/${a.id_alerta}`,
+      botao:  'Ver alerta',
+    })),
+  ]
+    .sort((a, b) => new Date(b.data) - new Date(a.data))
+    .map(item => ({ ...item, time: formatarTempo(item.data) }))
 
-  const filteredActivities = activeFilter === 'todas'
+  // As 6 mais recentes da aba escolhida
+  const filteredActivities = (activeFilter === 'todas'
     ? activitiesData
-    : activitiesData.filter(a => a.type === activeFilter);
+    : activitiesData.filter(a => a.type === activeFilter)
+  ).slice(0, 6);
 
-  const maxValue = Math.max(...itensRequisitados.map(i => i.value));
+  const verTodas = filters.find(f => f.id === activeFilter)?.verTodas
+
+  // Math.max(1, ...) evita divisão por zero quando não há nenhuma solicitação
+  const maxValue = Math.max(1, ...itensRequisitados.map(i => i.value));
 
   // ─── TELA DE CARREGANDO / ERRO ───────────────────────────────
   if (carregando) return <div className="dashboard">Carregando...</div>
@@ -147,27 +236,7 @@ const PgAdm = () => {
   return (
     // ... JSX igual ao seu, sem mudanças visuais
     <div className="dashboard">
-      <aside className="sidebar">
-        <div className="top-icons">
-          <img src="src/assets/logo.png" width="70px" />
-          <p>S.O.S. Vale</p>
-        </div>
-        <ul>
-          <li className="active"><FaHome className="icon" /> Home</li>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/abrigos">
-            <li><FaBoxOpen className="icon" /> Abrigos</li>
-          </a>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/vitimas">
-            <li><FaUser className="icon" /> Vítimas</li>
-          </a>
-          <li><FaDonate className="icon" /> Doações</li>
-          <a style={{ textDecoration: 'none', color: 'inherit' }} href="/mapa">
-            <li><FaMap className="icon" /> Mapa</li>
-          </a>
-          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-          <li><FaGear className="icon" /> Configurações</li>
-        </ul>
-      </aside>
+      <SidebarAdm ativo="home" />
 
       <main className="main">
         <header className="top">
@@ -179,7 +248,11 @@ const PgAdm = () => {
             <p className="subtitle">Gerencie informações recentes</p>
           </div>
           <div className="top-controls">
-            <button className="notif-btn">
+            <button
+              className="notif-btn"
+              title="Solicitações de abrigo pendentes"
+              onClick={() => { window.location.href = '/listar-solicitação-abrigo' }}
+            >
               <FaRegBell />
               {/* Badge dinâmico: total de pendentes em todas as categorias */}
               <span className="notif-badge">{pendentesSolicitacoesAbrigo}</span>
@@ -241,9 +314,12 @@ const PgAdm = () => {
             </div>
 
             <div className="activities-list">
+              {filteredActivities.length === 0 && (
+                <p style={{ color: '#94a3b8', padding: '16px 0', fontSize: '14px' }}>Nenhuma atividade recente.</p>
+              )}
               {filteredActivities.map(item => (
                 <div className="activity-row" key={item.id}>
-                  <div className="activity-icon"><FaHome /></div>
+                  <div className="activity-icon">{item.icon}</div>
                   <div className="activity-info">
                     <p className="activity-title">{item.title}</p>
                     <div className="activity-meta">
@@ -251,27 +327,32 @@ const PgAdm = () => {
                       <span><FaClock /> {item.time}</span>
                     </div>
                   </div>
-                  <a href={`/visualizar-solicitação-abrigo/${item.id}`}><button className="activity-btn" on>Ver solicitação</button></a>
+                  <a href={item.href}><button className="activity-btn">{item.botao}</button></a>
                 </div>
               ))}
             </div>
 
-            <button className="see-all-btn">
-              Ver todas as solicitações <FaChevronRight />
-            </button>
+            {/* Na aba "Todas" não há uma página única — o botão aparece nas outras abas */}
+            {verTodas && (
+              <a href={verTodas.href} style={{ textDecoration: 'none' }}>
+                <button className="see-all-btn">
+                  {verTodas.label} <FaChevronRight />
+                </button>
+              </a>
+            )}
           </div>
 
           <div className="side-column">
             <div className="panel chart-panel">
               <h3>Gráfico</h3>
-              <p className="chart-subtitle">ITENS MAIS REQUISITADOS</p>
+              <p className="chart-subtitle">SOLICITAÇÕES DE AJUDA EM ABERTO POR CATEGORIA</p>
               <div className="bar-chart">
                 {itensRequisitados.map(item => (
                   <div className="bar-row" key={item.label}>
                     <div className="bar-track">
                       <div className="bar-fill" style={{ width: `${(item.value / maxValue) * 100}%` }} />
                     </div>
-                    <span className="bar-label">{item.label}</span>
+                    <span className="bar-label">{item.label} ({item.value})</span>
                   </div>
                 ))}
               </div>
@@ -281,7 +362,11 @@ const PgAdm = () => {
               <h3>Ações Rápidas</h3>
               <div className="quick-actions-grid">
                 {quickActions.map(action => (
-                  <button className="quick-action" key={action.id}>
+                  <button
+                    className="quick-action"
+                    key={action.id}
+                    onClick={() => { window.location.href = action.href }}
+                  >
                     <span className="quick-action-icon">{action.icon}</span>
                     {action.label}
                   </button>

@@ -11,6 +11,7 @@ import { FaGear, FaClipboardList } from "react-icons/fa6";
 import { GoAlertFill } from "react-icons/go";
 import "../../pg_adm/style.css";
 import './DetalhesSolicitacao.css';
+import SidebarAdm from '../../../components/SidebarAdm';
 
 function DetalhesSolicitacao() {
 
@@ -213,21 +214,7 @@ function DetalhesSolicitacao() {
   if (carregando) {
     return (
       <div className="dashboard">
-        <aside className="sidebar">
-          <div className="top-icons">
-            <img src="../src/assets/logo.png" width="70px" />
-            <p>S.O.S. Vale</p>
-          </div>
-          <ul>
-            <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-            <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
-            <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-            <li><FaDonate className="icon" /> Doações</li>
-            <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-            <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-            <li><FaGear className="icon" /> Configurações</li>
-          </ul>
-        </aside>
+        <SidebarAdm ativo="solicitacoes-abrigo" />
         <main className="main">
           <p style={{ padding: '40px', color: '#64748b' }}>Carregando dados da solicitação...</p>
         </main>
@@ -239,21 +226,7 @@ function DetalhesSolicitacao() {
   // ─── TELA PRINCIPAL ─────────────────────────────────────────
   return (
     <div className="dashboard">
-      <aside className="sidebar">
-        <div className="top-icons">
-          <img src="../src/assets/logo.png" width="70px" />
-          <p>S.O.S. Vale</p>
-        </div>
-        <ul>
-          <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-          <a href="/abrigos"><li><FaBoxOpen className="icon" /> Abrigos</li></a>
-          <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-          <li><FaDonate className="icon" /> Doações</li>
-          <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-          <li className="active"><FaGear className="icon" /> Configurações</li>
-        </ul>
-      </aside>
+      <SidebarAdm ativo="solicitacoes-abrigo" />
 
       <main className="main">
         <header className="top">

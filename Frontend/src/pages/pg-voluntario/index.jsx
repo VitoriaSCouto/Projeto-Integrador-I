@@ -1,10 +1,9 @@
 import './style.css'
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaHome, FaHeart, FaDonate, FaMap, FaUser, FaRegBell } from 'react-icons/fa';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FaHome, FaHeart, FaDonate, FaMap, FaUser, FaRegBell, FaEnvelope, FaPhoneAlt, FaIdCard, FaBirthdayCake } from 'react-icons/fa';
 import { FaChevronRight, FaLocationDot } from 'react-icons/fa6';
-import { FiLogOut } from 'react-icons/fi';
-import { GoAlertFill } from 'react-icons/go';
+import SidebarVoluntario from '../../components/SidebarVoluntario';
 
 // ─── Labels e cores de status/categoria ─────────────────────────
 // Mesmo padrão usado nas outras telas de Solicitação de Ajuda
@@ -36,7 +35,10 @@ const PainelVoluntario = () => {
   const [minhasSolicitacoes,   setMinhasSolicitacoes]   = useState([]);
   const [carregando,           setCarregando]           = useState(true);
   const [erro,                 setErro]                 = useState(null);
-  const [activePage,           setActivePage]           = useState('home');
+
+  // Aba exibida: /painel-voluntario (home) ou /painel-voluntario?aba=perfil
+  const [parametros] = useSearchParams();
+  const aba = parametros.get('aba') === 'perfil' ? 'perfil' : 'home';
 
   // ─── TOKEN DO VOLUNTÁRIO ─────────────────────────────────────
   // Se não tiver token, redireciona para o login imediatamente
@@ -44,7 +46,7 @@ const PainelVoluntario = () => {
 
   useEffect(() => {
     if (!token) {
-      navigate('/login_voluntario');
+      navigate('/login-voluntario');
       return;
     }
     buscarDados();
@@ -88,14 +90,6 @@ const PainelVoluntario = () => {
     }
   }
 
-  // ─── LOGOUT ──────────────────────────────────────────────────
-  // Remove os dados do voluntário do localStorage e volta para o login
-  function fazerLogout() {
-    localStorage.removeItem('token_voluntario');
-    localStorage.removeItem('voluntario');
-    navigate('/login_voluntario');
-  }
-
   // ─── DERIVAÇÕES ──────────────────────────────────────────────
   const totalSolicitacoes = minhasSolicitacoes.length;
   const emAndamento       = minhasSolicitacoes.filter(s => s.status === 'em_andamento').length;
@@ -137,49 +131,7 @@ const PainelVoluntario = () => {
     <div className="dashboard">
 
       {/* ── SIDEBAR ── */}
-      <aside className="sidebar">
-        <div className="top-icons">
-          <img src="src/assets/logo.png" width="70px" />
-          <p>S.O.S. Vale</p>
-        </div>
-
-        <ul>
-          <li
-            className={activePage === 'home' ? 'active' : ''}
-            onClick={() => setActivePage('home')}
-          >
-            <FaHome className="icon" /> Home
-          </li>
-
-          {/* Solicitações de ajuda que o voluntário pode atender */}
-          <li
-            className={activePage === 'solicitacoes' ? 'active' : ''}
-            onClick={() => navigate('/solicitacoes-ajuda-voluntario')}
-          >
-            <FaDonate className="icon" /> Solicitações de Ajuda
-          </li>
-
-          {/* Mapa */}
-          <li onClick={() => navigate('/mapa')}>
-            <FaMap className="icon" /> Mapa
-          </li>
-
-          {/* Meu perfil */}
-          <li
-            className={activePage === 'perfil' ? 'active' : ''}
-            onClick={() => setActivePage('perfil')}
-          >
-            <FaUser className="icon" /> Meu perfil
-          </li>
-        </ul>
-
-        {/* Logout no rodapé da sidebar */}
-        <div className="sidebar-footer">
-          <button className="logout-btn" onClick={fazerLogout}>
-            <FiLogOut className="icon" /> Sair
-          </button>
-        </div>
-      </aside>
+      <SidebarVoluntario ativo={aba} />
 
       {/* ── MAIN ── */}
       <main className="main">
@@ -187,16 +139,24 @@ const PainelVoluntario = () => {
         {/* ── HEADER ── */}
         <header className="top">
           <div>
-            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Home &gt;</p>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+              Home &gt; {aba === 'perfil' && <span>Meu perfil</span>}
+            </p>
             <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
-              Olá, {voluntario?.nome?.split(' ')[0] ?? 'Voluntário'} 👋
+              {aba === 'perfil' ? 'Meu perfil' : <>Olá, {voluntario?.nome?.split(' ')[0] ?? 'Voluntário'} 👋</>}
             </h1>
-            <p className="subtitle">Veja onde você pode ajudar hoje</p>
+            <p className="subtitle">
+              {aba === 'perfil' ? 'Seus dados de cadastro' : 'Veja onde você pode ajudar hoje'}
+            </p>
           </div>
 
           <div className="top-controls">
-            {/* Badge com solicitações em andamento */}
-            <button className="notif-btn">
+            {/* Badge com solicitações em andamento — leva para as solicitações */}
+            <button
+              className="notif-btn"
+              title="Solicitações de ajuda"
+              onClick={() => navigate('/solicitacoes-ajuda-voluntario')}
+            >
               <FaRegBell />
               {emAndamento > 0 && (
                 <span className="notif-badge">{emAndamento}</span>
@@ -205,6 +165,39 @@ const PainelVoluntario = () => {
           </div>
         </header>
 
+        {aba === 'perfil' ? (
+
+          /* ── ABA MEU PERFIL ── */
+          <section className="panel" style={{ maxWidth: '640px' }}>
+            {[
+              { icone: <FaUser />,         rotulo: 'Nome',            valor: voluntario?.nome },
+              { icone: <FaEnvelope />,     rotulo: 'E-mail',          valor: voluntario?.email },
+              { icone: <FaPhoneAlt />,     rotulo: 'Telefone',        valor: voluntario?.telefone },
+              { icone: <FaIdCard />,       rotulo: 'CPF',             valor: voluntario?.cpf },
+              { icone: <FaBirthdayCake />, rotulo: 'Data de nascimento',
+                valor: voluntario?.dataNascimento
+                  // A data vem como "2000-01-31T00:00:00.000Z" — UTC evita mostrar o dia anterior
+                  ? new Date(voluntario.dataNascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+                  : null },
+              { icone: <FaUser />,         rotulo: 'Gênero',          valor: voluntario?.genero },
+              { icone: <FaLocationDot />,  rotulo: 'Abrigo vinculado',
+                valor: voluntario?.abrigo ? `${voluntario.abrigo.nome} — ${voluntario.abrigo.cidade}` : 'Sem abrigo vinculado' },
+              { icone: <FaHeart />,        rotulo: 'Solicitações atendidas', valor: `${totalSolicitacoes} (${concluidas} concluída${concluidas !== 1 ? 's' : ''})` },
+            ].map(campo => (
+              <div
+                key={campo.rotulo}
+                style={{ display: 'flex', gap: '12px', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}
+              >
+                <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', minWidth: '200px' }}>
+                  {campo.icone} {campo.rotulo}
+                </span>
+                <span style={{ color: '#0f172a', fontWeight: '500' }}>{campo.valor || '—'}</span>
+              </div>
+            ))}
+          </section>
+
+        ) : (
+        <>
         {/* ── CARDS DE TOPO ── */}
         <section className="stat-grid">
           {statCards.map(card => (
@@ -275,7 +268,7 @@ const PainelVoluntario = () => {
                       {/* Leva para as solicitações de ajuda abertas desse abrigo */}
                       <button
                         className="activity-btn"
-                        onClick={() => navigate(`/abrigos/${abrigo.id}/solicitacoes-ajuda`)}
+                        onClick={() => navigate(`/solicitacoes-ajuda-voluntario?abrigo=${abrigo.id}`)}
                       >
                         Quero ajudar
                       </button>
@@ -285,7 +278,7 @@ const PainelVoluntario = () => {
               )}
             </div>
 
-            <button className="see-all-btn" onClick={() => navigate('/abrigos')}>
+            <button className="see-all-btn" onClick={() => navigate('/voluntario/mapa')}>
               Ver todos os abrigos <FaChevronRight />
             </button>
           </div>
@@ -345,7 +338,7 @@ const PainelVoluntario = () => {
 
                 <button
                   className="quick-action"
-                  onClick={() => navigate('/mapa')}
+                  onClick={() => navigate('/voluntario/mapa')}
                 >
                   <span className="quick-action-icon"><FaMap /></span>
                   Ver mapa
@@ -353,7 +346,7 @@ const PainelVoluntario = () => {
 
                 <button
                   className="quick-action"
-                  onClick={() => setActivePage('perfil')}
+                  onClick={() => navigate('/painel-voluntario?aba=perfil')}
                 >
                   <span className="quick-action-icon"><FaUser /></span>
                   Meu perfil
@@ -363,6 +356,8 @@ const PainelVoluntario = () => {
 
           </div>
         </section>
+        </>
+        )}
       </main>
     </div>
   );

@@ -1,6 +1,6 @@
 // ─── Imports ──────────────────────────────────────────────────────────────────
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   FaHome, FaUser, FaMap, FaHandHoldingHeart,
   FaPhoneAlt, FaBuilding, FaHeart, FaRegHeart
@@ -8,6 +8,7 @@ import {
 import { FaGear } from 'react-icons/fa6';
 import { GoAlertFill } from 'react-icons/go';
 import '../../pg_adm/style.css';
+import SidebarVoluntario from '../../../components/SidebarVoluntario';
 
 // ─── Badges e labels ──────────────────────────────────────────────────────────
 const badgeUrgencia = {
@@ -30,32 +31,18 @@ const CATEGORIAS = ['todas', 'doacao', 'medicamento', 'voluntariado', 'infraestr
 // TODO: substituir pelo id real do voluntário logado (contexto de auth / JWT)
 const VOLUNTARIO_LOGADO_ID = 1
 
-// ─── Sidebar do módulo voluntário ─────────────────────────────────────────────
-const Sidebar = () => (
-  <aside className="sidebar">
-    <div className="top-icons">
-      <img src="../src/assets/logo.png" width="70px" />
-      <p>S.O.S. Vale</p>
-    </div>
-    <ul>
-      <a href="/voluntario"><li><FaHome className="icon" /> Home</li></a>
-      <a href="/voluntario/solicitacoes"><li className="active"><FaHandHoldingHeart className="icon" /> Solicitações</li></a>
-      <a href="/voluntario/perfil"><li><FaUser className="icon" /> Meu Perfil</li></a>
-      <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-      <li><GoAlertFill className="icon" /> Ocorrências</li>
-      <li><FaGear className="icon" /> Configurações</li>
-    </ul>
-  </aside>
-)
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function SolicitacoesAjudaVoluntario() {
 
-  const navigate = useNavigate()
 
   const [solicitacoes, setSolicitacoes]   = useState([])
   const [carregando, setCarregando]       = useState(true)
   const [filtroCategoria, setFiltroCategoria] = useState('todas')
+
+  // ?abrigo=ID na URL (vindo do "Quero ajudar" do painel) mostra só as solicitações daquele abrigo
+  const [parametros, setParametros] = useSearchParams()
+  const filtroAbrigo = Number(parametros.get('abrigo')) || null
 
   // Guarda os IDs das solicitações em que o voluntário marcou interesse
   const [interesses, setInteresses]       = useState(new Set())
@@ -124,15 +111,17 @@ function SolicitacoesAjudaVoluntario() {
   }
 
   // ─── Filtro ──────────────────────────────────────────────────────────────────
-  const lista = filtroCategoria === 'todas'
-    ? solicitacoes
-    : solicitacoes.filter(s => s.categoria === filtroCategoria)
+  const lista = solicitacoes
+    .filter(s => filtroCategoria === 'todas' || s.categoria === filtroCategoria)
+    .filter(s => !filtroAbrigo || s.abrigoId === filtroAbrigo)
+
+  const abrigoFiltrado = filtroAbrigo ? solicitacoes.find(s => s.abrigoId === filtroAbrigo)?.abrigo : null
 
   // ─── Loading ─────────────────────────────────────────────────────────────────
   if (carregando) {
     return (
       <div className="dashboard">
-        <Sidebar />
+        <SidebarVoluntario ativo="ajuda" />
         <main className="main">
           <p style={{ padding: '40px', color: '#64748b' }}>Carregando solicitações...</p>
         </main>
@@ -143,7 +132,7 @@ function SolicitacoesAjudaVoluntario() {
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="dashboard">
-      <Sidebar />
+      <SidebarVoluntario ativo="ajuda" />
 
       <main className="main">
 
@@ -186,6 +175,17 @@ function SolicitacoesAjudaVoluntario() {
                 {c === 'todas' ? 'Todas' : categoriaLabel[c]}
               </button>
             ))}
+
+            {/* Filtro de abrigo vindo do painel — dá para remover */}
+            {filtroAbrigo && (
+              <button
+                onClick={() => setParametros({})}
+                title="Mostrar todos os abrigos"
+                style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid #bae6fd', background: '#e0f2fe', color: '#0c4a6e', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Abrigo: {abrigoFiltrado?.nome ?? `#${filtroAbrigo}`} ✕
+              </button>
+            )}
 
             <span style={{ marginLeft: 'auto', fontSize: '13px', color: '#94a3b8', alignSelf: 'center' }}>
               {lista.length} solicitaç{lista.length !== 1 ? 'ões' : 'ão'}

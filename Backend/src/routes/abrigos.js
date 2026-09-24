@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import supabase from '../supabase.js'
 import { selectLocalizacao, achatarLocalizacao, validarCidadeBairro } from '../lib/localizacao.js'
 
-const prisma = new PrismaClient()
 
 export default async function abrigoRoutes(app) {
 

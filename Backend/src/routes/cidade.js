@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { normalizarTexto } from '../lib/localizacao.js'
 
-const prisma = new PrismaClient()
 
 // Formata a cidade para as respostas: estado em texto + contadores
 function formatarCidade({ estado, _count, ...cidade }) {

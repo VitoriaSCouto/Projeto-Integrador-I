@@ -44,7 +44,7 @@ const CadastroVoluntario = () => {
                 console.log("Voluntário cadastrado com sucesso!");
 
                 // Após cadastro, redireciona para o login — o voluntário precisa entrar com as credenciais
-                navigate('/login_voluntario');
+                navigate('/login-voluntario');
             } else {
                 // Exibe a mensagem de erro retornada pelo backend (ex: "Email já cadastrado.")
                 setErro(data.mensagem || "Erro ao cadastrar.");

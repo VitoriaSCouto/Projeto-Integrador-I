@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { selectLocalizacao, achatarLocalizacao } from '../lib/localizacao.js'
 
-const prisma = new PrismaClient()
 
 // Devolve cidade/estado/bairro do abrigo como texto (formato usado pelas telas)
 const comAbrigoAchatado = (solicitacao) => ({

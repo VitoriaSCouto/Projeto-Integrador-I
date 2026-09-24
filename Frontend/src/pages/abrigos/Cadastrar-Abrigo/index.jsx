@@ -11,6 +11,7 @@ import { FaGear } from "react-icons/fa6";
 import SeletorLocalidade from "../../../components/SeletorLocalidade";
 import "../../pg_adm/style.css";
 import "./CadastroAbrigo.css";
+import SidebarAdm from '../../../components/SidebarAdm';
 
 const CadastrarAbrigo = () => {
   const [mensagem, setMensagem] = useState('');
@@ -166,17 +167,7 @@ const CadastrarAbrigo = () => {
   return (
     <div className="dashboard">
 
-      <aside className="sidebar">
-        <ul>
-          <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-          <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
-          <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-          <li><FaDonate className="icon" /> Doações</li>
-          <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-          <li><FaGear className="icon" />Configurações</li>
-        </ul>
-      </aside>
+      <SidebarAdm ativo="abrigos" />
 
       <main className="main">
 

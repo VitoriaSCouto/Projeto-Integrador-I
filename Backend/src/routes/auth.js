@@ -1,12 +1,10 @@
 // Importa o PrismaClient para acessar o banco de dados
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 
 // Importa o bcrypt para criptografar e comparar senhas
 // Nunca salvar a senha pura no banco
 import bcrypt from 'bcrypt'
 
-// Cria a instância do Prisma
-const prisma = new PrismaClient()
 
 // Exporta as rotas
 export default async function authRoutes(app) {

@@ -12,6 +12,7 @@ import { GoAlertFill } from "react-icons/go";
 import SeletorLocalidade from '../../../components/SeletorLocalidade';
 import "../../pg_adm/style.css";
 import './DetalhesAbrigo.css';
+import SidebarAdm from '../../../components/SidebarAdm';
 
 // ─── Badges das solicitações de ajuda ────────────────────────────────────────
 const badgeAjuda = {
@@ -370,21 +371,7 @@ function DetalhesAbrigo() {
   if (carregando) {
     return (
       <div className="dashboard">
-        <aside className="sidebar">
-          <div className="top-icons">
-            <img src="../src/assets/logo.png" width="70px" />
-            <p>S.O.S. Vale</p>
-          </div>
-          <ul>
-            <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-            <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" />Abrigos</li></a>
-            <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-            <li><FaDonate className="icon" /> Doações</li>
-            <a href="/mapa"><li><FaMap className="icon" />Mapa</li></a>
-            <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-            <li><FaGear className="icon" /> Configurações</li>
-          </ul>
-        </aside>
+        <SidebarAdm ativo="abrigos" />
         <main className="main">
           <p style={{ padding: '40px', color: '#64748b' }}>Carregando dados do abrigo...</p>
         </main>
@@ -395,21 +382,7 @@ function DetalhesAbrigo() {
   // ─── RENDER ───────────────────────────────────────────────────────────────────
   return (
     <div className="dashboard">
-      <aside className="sidebar">
-        <div className="top-icons">
-          <img src="../src/assets/logo.png" width="70px" />
-          <p>S.O.S. Vale</p>
-        </div>
-        <ul>
-          <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-          <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" />Abrigos</li></a>
-          <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-          <li><FaDonate className="icon" /> Doações</li>
-          <a href="/mapa"><li><FaMap className="icon" />Mapa</li></a>
-          <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-          <li><FaGear className="icon" /> Configurações</li>
-        </ul>
-      </aside>
+      <SidebarAdm ativo="abrigos" />
 
       <main className="main">
 

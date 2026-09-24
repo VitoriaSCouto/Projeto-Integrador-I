@@ -4,7 +4,7 @@
 // assim ninguém de fora consegue se passar pelo bot, disparar alertas ou
 // ler a fila de notificações (que tem os números dos inscritos).
 
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { consultarCep, obterOuCriarBairroPorCep } from '../lib/localizacao.js'
 import { includeInscrito, formatarInscrito, emailValido } from '../lib/inscritos.js'
 import { enviarFotoBase64, removerFotos } from '../lib/armazenamento.js'
@@ -12,7 +12,6 @@ import {
   registrarRelato, ErroAlerta, TIPOS_ALERTA, GRAVIDADES, MAX_TENTATIVAS_NOTIFICACAO
 } from '../lib/alertas.js'
 
-const prisma = new PrismaClient()
 
 // Se o bot cair no meio de um envio, a notificação fica "enviando".
 // Depois desse tempo ela volta para a fila.

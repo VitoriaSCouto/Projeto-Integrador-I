@@ -8,6 +8,7 @@ import {
 import { FaGear } from 'react-icons/fa6';
 import { GoAlertFill } from 'react-icons/go';
 import '../../pg_adm/style.css';
+import SidebarAdm from '../../../components/SidebarAdm';
 
 // ─── Badges e labels ──────────────────────────────────────────────────────────
 const badgeStatus = {
@@ -34,21 +35,7 @@ const categoriaLabel = {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 const Sidebar = () => (
-  <aside className="sidebar">
-    <div className="top-icons">
-      <img src="../../src/assets/logo.png" width="70px" />
-      <p>S.O.S. Vale</p>
-    </div>
-    <ul>
-      <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-      <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
-      <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-      <li><FaDonate className="icon" /> Doações</li>
-      <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-      <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-      <li><FaGear className="icon" /> Configurações</li>
-    </ul>
-  </aside>
+  <SidebarAdm ativo="ajuda" />
 )
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -184,7 +171,7 @@ function DetalhesSolicitacaoAjuda() {
               Abrigos &gt;{' '}
               <span
                 style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={() => navigate(`/abrigos/${dados.abrigoId}`)}
+                onClick={() => navigate(`/detalhes-abrigos/${dados.abrigoId}`)}
               >
                 {dados.abrigo?.nome ?? 'Abrigo'}
               </span>

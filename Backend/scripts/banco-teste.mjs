@@ -54,12 +54,42 @@ async function criarDadosDeExemplo() {
   await bairro('Centro', pinda)
   await bairro('Moreira César', pinda, 'alto')
 
-  await db.query(
+  const abrigo = (nome, cep, endereco, tipo, total, ocupada, lat, lng, cidadeId) => um(
     `INSERT INTO abrigo (nome, cep, endereco, "tipoAbrigo", "capacidadeTotal", "capacidadeOcupada",
-                         telefone, responsavel, latitude, longitude, "cidadeId", "bairroId")
-     VALUES ('Escola Municipal Centro', '12010-000', 'Rua Quatro de Março, 100', 'Escola', 80, 12,
-             '(12) 3600-0000', 'Maria Souza', -23.0262, -45.5553, $1, $2)`,
-    [taubate, centroTaubate]
+                         telefone, responsavel, latitude, longitude, "cidadeId")
+     VALUES ($1, $2, $3, $4, $5, $6, '(12) 3600-0000', 'Maria Souza', $7, $8, $9) RETURNING id_abrigo`,
+    [nome, cep, endereco, tipo, total, ocupada, lat, lng, cidadeId]
+  ).then(a => a.id_abrigo)
+
+  const escola = await abrigo('Escola Municipal Centro', '12010-000', 'Rua Quatro de Março, 100', 'Escola', 80, 12, -23.0262, -45.5553, taubate)
+  await db.query(`UPDATE abrigo SET "bairroId" = $1 WHERE id_abrigo = $2`, [centroTaubate, escola])
+  // Quase lotado (90%) → aparece em "Abrigos que precisam de ajuda" no painel do voluntário
+  const ginasio = await abrigo('Ginásio Poliesportivo', '12281-000', 'Av. Brasil, 500', 'Ginásio', 80, 72, -23.1008, -45.7069, cacapava)
+
+  // Voluntário para entrar no módulo do voluntário
+  const voluntario = await um(
+    `INSERT INTO voluntario (nome, email, senha, telefone, "dataNascimento", genero)
+     VALUES ('Vitor Voluntário', 'voluntario@teste.com', $1, '(12) 99999-0000', '1995-05-20', 'masculino')
+     RETURNING id_voluntario`,
+    [await bcrypt.hash('123456', 10)]
+  ).then(v => v.id_voluntario)
+
+  // Solicitações de ajuda dos abrigos (criadas pelo admin id 1)
+  const ajuda = (titulo, descricao, categoria, urgencia, status, abrigoId, voluntarioId = null) => um(
+    `INSERT INTO solicitacao_ajuda (titulo, descricao, categoria, urgencia, status, "criadoPorId", "abrigoId", "voluntarioId", updated_at)
+     VALUES ($1, $2, $3, $4, $5, 1, $6, $7, now()) RETURNING id_solicitacao`,
+    [titulo, descricao, categoria, urgencia, status, abrigoId, voluntarioId]
+  ).then(s => s.id_solicitacao)
+
+  const cobertores = await ajuda('Cobertores e colchões', 'Precisamos de 40 cobertores e 20 colchonetes.', 'doacao', 'alta', 'aberto', ginasio)
+  await ajuda('Insulina e medicamentos de pressão', 'Três acolhidos com diabetes e hipertensão.', 'medicamento', 'critica', 'aberto', ginasio)
+  await ajuda('Voluntários para a cozinha', 'Turno da noite, preparo do jantar.', 'voluntariado', 'media', 'em_andamento', escola, voluntario)
+  await ajuda('Kits de higiene', 'Sabonete, escova e pasta de dente.', 'doacao', 'baixa', 'aberto', escola)
+  await ajuda('Conserto do chuveiro', 'Vestiário masculino sem água quente.', 'infraestrutura', 'media', 'concluido', escola, voluntario)
+
+  await db.query(
+    `INSERT INTO solicitacao_ajuda_interesse ("solicitacaoId", "voluntarioId") VALUES ($1, $2)`,
+    [cobertores, voluntario]
   )
 
   // Dois moradores do Centro de Taubaté já inscritos...
@@ -108,9 +138,11 @@ if (VAZIO) {
 } else {
   console.log(`
 Dados de exemplo criados:
-  • Painel: adm@teste.com / senha 123456
+  • Painel admin:      adm@teste.com / senha 123456   (http://localhost:5173/login-adm)
+  • Painel voluntário: voluntario@teste.com / 123456  (http://localhost:5173/login-voluntario)
   • Cidades: Taubaté, Caçapava e Pindamonhangaba (SP), com bairros
-  • Abrigo: Escola Municipal Centro (Taubaté)
+  • Abrigos: Escola Municipal Centro (Taubaté) e Ginásio Poliesportivo (Caçapava, 90% ocupado)
+  • 5 solicitações de ajuda (doação, medicamento, voluntariado, infraestrutura)
   • Moradores inscritos no Centro de Taubaté: Ana (5512900000001) e Bruno (5512900000002)
   • Alerta de alagamento no Centro de Taubaté com 2 de 3 relatos
     → inscreva-se no Centro de Taubaté pelo bot e relate um alagamento: o seu relato dispara o alerta`)

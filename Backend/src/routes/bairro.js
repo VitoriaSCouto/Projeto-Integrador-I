@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { consultarCep, normalizarTexto } from '../lib/localizacao.js'
 
-const prisma = new PrismaClient()
 
 const NIVEIS_RISCO = ['baixo', 'medio', 'alto', 'critico']
 

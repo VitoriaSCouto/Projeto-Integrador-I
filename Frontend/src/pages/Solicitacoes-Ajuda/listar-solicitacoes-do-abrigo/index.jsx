@@ -8,6 +8,7 @@ import {
 import { FaGear } from 'react-icons/fa6';
 import { GoAlertFill } from 'react-icons/go';
 import '../../pg_adm/style.css';
+import SidebarAdm from '../../../components/SidebarAdm';
 
 // ─── Constantes de exibição ───────────────────────────────────────────────────
 const badgeStatus = {
@@ -36,21 +37,7 @@ const FILTROS = ['todas', 'aberto', 'em_andamento', 'concluido', 'cancelado']
 
 // ─── Sidebar reutilizável ─────────────────────────────────────────────────────
 const Sidebar = () => (
-  <aside className="sidebar">
-    <div className="top-icons">
-      <img src="../../src/assets/logo.png" width="70px" />
-      <p>S.O.S. Vale</p>
-    </div>
-    <ul>
-      <a href="/pg_adm"><li><FaHome className="icon" /> Home</li></a>
-      <a href="/abrigos"><li className="active"><FaBoxOpen className="icon" /> Abrigos</li></a>
-      <a href="/vitimas"><li><FaUser className="icon" /> Vítimas</li></a>
-      <li><FaDonate className="icon" /> Doações</li>
-      <a href="/mapa"><li><FaMap className="icon" /> Mapa</li></a>
-      <a href="/alertas"><li><GoAlertFill className="icon" /> Alertas</li></a>
-      <li><FaGear className="icon" /> Configurações</li>
-    </ul>
-  </aside>
+  <SidebarAdm ativo="ajuda" />
 )
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -117,7 +104,7 @@ function SolicitacoesAjudaDoAbrigo() {
               Abrigos &gt;{' '}
               <span
                 style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={() => navigate(`/abrigos/${id}`)}
+                onClick={() => navigate(`/detalhes-abrigos/${id}`)}
               >
                 {nomeAbrigo}
               </span>
@@ -131,7 +118,7 @@ function SolicitacoesAjudaDoAbrigo() {
 
           {/* Botão nova solicitação */}
           <button
-            onClick={() => navigate(`/abrigos/${id}/solicitacoes-ajuda/cadastrar`)}
+            onClick={() => navigate(`/abrigos/${id}/cadastrar-solicitacao-ajuda`)}
             style={{
               padding: '10px 20px',
               borderRadius: '8px',
