@@ -16,6 +16,7 @@ import solicitacaoAjudaRoutes from './routes/solicitacao_ajuda.js'
 import alertaRoutes from './routes/alertas.js'
 import inscritoRoutes from './routes/inscritos.js'
 import botRoutes from './routes/bot.js'
+import mapaRoutes from './routes/mapa.js'
 import 'dotenv/config' // Garante que o process.env funcione
 
 //cria a instância
@@ -82,6 +83,7 @@ app.register(solicitacaoAjudaRoutes, { prefix: '/api/solicitacoes-ajuda' })
 app.register(alertaRoutes, { prefix: '/api/alertas' })
 app.register(inscritoRoutes, { prefix: '/api/inscritos' })
 app.register(botRoutes, { prefix: '/api/bot' })
+app.register(mapaRoutes, { prefix: '/api/mapa' })
 
 
 // Inicia o servidor

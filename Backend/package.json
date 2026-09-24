@@ -14,6 +14,9 @@
     "back:teste": "node scripts/api-teste.mjs",
     "teste:api": "node testes/api.teste.mjs",
     "backup": "node scripts/backup-banco.mjs",
+    "demo:dados": "node scripts/dados-demonstracao.mjs",
+    "demo:remover": "node scripts/dados-demonstracao.mjs --remover",
+    "demo:conferir": "node scripts/dados-demonstracao.mjs --conferir",
     "ensaiar-migracao": "node scripts/ensaiar-migracao.mjs"
   },
   "keywords": [],

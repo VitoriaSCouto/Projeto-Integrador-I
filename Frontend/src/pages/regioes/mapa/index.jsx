@@ -1,198 +1,332 @@
 //--------- Imports-----------
-//Todos os imports necessarios para o código
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from "react-router-dom";
-import {
-  FaHome, FaBoxOpen, FaUser, FaDonate, FaMapPin,
-  FaSearch, FaPlus, FaMap
-} from 'react-icons/fa';
-import { GoAlertFill } from "react-icons/go";
-import { FaGear } from "react-icons/fa6";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { FaHome, FaSearch, FaPlus, FaCrosshairs, FaSyncAlt } from 'react-icons/fa';
+import { MapContainer, TileLayer, Marker, Popup, Circle, ZoomControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import SidebarAdm from '../../../components/SidebarAdm';
 import SidebarVoluntario from '../../../components/SidebarVoluntario';
+import { API_URL, formatarTempo } from '../../../services/api';
+import { geocodificar } from '../../../services/localizacao';
 import "../../pg_adm/style.css";
+import "./mapa.css";
 
-//Fim dos imports
-//--------------------------
+// ─── Configuração do mapa ───────────────────────────────────────────────────
+// Coordenadas conhecidas das cidades (as outras são buscadas no Nominatim)
+const COORDENADAS_CIDADES = {
+  'Taubaté':          [-23.0268, -45.5557],
+  'Caçapava':         [-23.1008, -45.7069],
+  'Pindamonhangaba':  [-22.9238, -45.4603],
+  'São José dos Campos': [-23.1896, -45.8841],
+  'Tremembé':         [-22.9575, -45.5494],
+  'Jacareí':          [-23.3053, -45.9658],
+  'Guaratinguetá':    [-22.8075, -45.1938],
+}
+const CIDADE_PADRAO = 'Taubaté'
+const ZOOM_CIDADE = 13
+const ZOOM_DETALHE = 16
 
-// ─── Correção de ícone padrão do Leaflet no Vite ───────────────────────────
-// O Vite não resolve os assets do Leaflet automaticamente, então precisamos
-// apontar manualmente para os ícones do pacote
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
+// O mapa não deixa "fugir" muito do Vale do Paraíba
+const LIMITES_VALE = [[-24.3, -46.9], [-22.1, -44.0]]
 
-// ─── Ícones customizados ────────────────────────────────────────────────────
-// Ícone azul para abrigos ativos com vagas disponíveis
-const iconeAzul = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-})
+// Cores e tamanhos dos círculos de alerta por gravidade
+const ESTILO_GRAVIDADE = {
+  leve:  { cor: '#eab308', raio: 500, label: 'Leve' },
+  medio: { cor: '#f97316', raio: 700, label: 'Médio' },
+  grave: { cor: '#dc2626', raio: 900, label: 'Grave' },
+}
 
-// Ícone vermelho para abrigos cheios ou inativos
-const iconeVermelho = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-})
+// Cores dos abrigos pela ocupação
+const COR_ABRIGO = {
+  livre:   '#16a34a', // menos de 70%
+  atencao: '#f59e0b', // 70% a 99%
+  lotado:  '#dc2626', // cheio ou inativo
+}
 
-// ─── Cidades do Vale do Paraíba disponíveis no select ──────────────────────
-// Cada cidade tem coordenadas e zoom definidos para o flyTo do mapa
-const CIDADES = [
-  { nome: 'Todas',               lat: -23.0,    lng: -45.55,   zoom: 9  },
-  { nome: 'Taubaté',             lat: -23.0268, lng: -45.5557, zoom: 13 },
-  { nome: 'Caçapava',            lat: -23.1008, lng: -45.7069, zoom: 13 },
-  { nome: 'Pindamonhangaba',     lat: -22.9238, lng: -45.4603, zoom: 13 }
-]
+// Coordenadas já descobertas ficam guardadas no navegador
+// (o Nominatim pede no máximo 1 consulta por segundo)
+const CHAVE_CACHE = 'sosvale_mapa_coordenadas'
+function lerCache() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_CACHE)) ?? {} } catch { return {} }
+}
+function salvarCache(cache) {
+  try { localStorage.setItem(CHAVE_CACHE, JSON.stringify(cache)) } catch { /* sem espaço: ignora */ }
+}
 
-// ─── Componente auxiliar: voa para a cidade selecionada no select ───────────
-// Precisa estar dentro do MapContainer para ter acesso ao useMap()
-function ControladorCidade({ cidade }) {
+// ─── Helpers ────────────────────────────────────────────────────────────────
+const porcentagemOcupacao = (abrigo) => {
+  if (!abrigo.capacidadeTotal) return 0
+  return Math.min(100, Math.round((abrigo.capacidadeOcupada / abrigo.capacidadeTotal) * 100))
+}
+
+const situacaoAbrigo = (abrigo) => {
+  const pct = porcentagemOcupacao(abrigo)
+  if (abrigo.status !== 'ativo' || pct >= 100) return 'lotado'
+  if (pct >= 70) return 'atencao'
+  return 'livre'
+}
+
+// Pino do abrigo: casinha na cor da ocupação
+const iconesAbrigo = {}
+function iconeAbrigo(situacao) {
+  if (!iconesAbrigo[situacao]) {
+    const casa = renderToStaticMarkup(<FaHome />)
+    iconesAbrigo[situacao] = L.divIcon({
+      className: 'mapa-pino-wrapper',
+      html: `<div class="mapa-pino" style="--cor:${COR_ABRIGO[situacao]}"><span>${casa}</span></div>`,
+      iconSize: [34, 42],
+      iconAnchor: [17, 40],
+      popupAnchor: [0, -36],
+    })
+  }
+  return iconesAbrigo[situacao]
+}
+
+// ─── Componentes auxiliares (precisam estar dentro do MapContainer) ─────────
+// Entrega a instância do Leaflet para a tela controlar o mapa (voar, abrir popup)
+function CapturarMapa({ aoCarregar }) {
   const map = useMap()
-  useEffect(() => {
-    if (cidade) {
-      map.flyTo([cidade.lat, cidade.lng], cidade.zoom, { duration: 1.2 })
-    }
-  }, [cidade, map])
+  useEffect(() => { aoCarregar(map) }, [map, aoCarregar])
   return null
 }
 
-// ─── Componente auxiliar: voa para o abrigo selecionado na busca ────────────
-// Também precisa estar dentro do MapContainer
-function VoarParaAbrigo({ alvo }) {
-  const map = useMap()
-  useEffect(() => {
-    if (alvo?.latitude && alvo?.longitude) {
-      map.flyTo([alvo.latitude, alvo.longitude], 16, { duration: 1.2 })
-    }
-  }, [alvo, map])
-  return null
-}
 
 //------- Começo Função Principal -----
 // modulo: 'admin' (rota /mapa) ou 'voluntario' (rota /voluntario/mapa)
-// muda só a sidebar e esconde o botão de gerenciar regiões para o voluntário
 function Mapa({ modulo = 'admin' }) {
 
   const ehVoluntario = modulo === 'voluntario'
   const sidebar = ehVoluntario ? <SidebarVoluntario ativo="mapa" /> : <SidebarAdm ativo="mapa" />
-
-  // ─── ESTADOS ────────────────────────────────────────────────
   const navigate = useNavigate()
 
-  // Lista de abrigos vindos da API — já trazem latitude e longitude do banco
-  // Não precisamos mais de geocoding aqui, as coordenadas vêm prontas
+  // ─── ESTADOS ────────────────────────────────────────────────
   const [abrigos, setAbrigos] = useState([])
-
-  // Cidade selecionada no select (objeto de CIDADES)
-  const [cidadeSelecionada, setCidadeSelecionada] = useState(CIDADES[0])
-
-  // Texto digitado na barra de busca
+  const [alertas, setAlertas] = useState([])          // alertas ativos com coordenadas
+  const [cidades, setCidades] = useState([])
+  const [cidadeSelecionada, setCidadeSelecionada] = useState(CIDADE_PADRAO)
+  const [camadas, setCamadas] = useState({ abrigos: true, alertas: true })
   const [busca, setBusca] = useState('')
-
-  // Sugestões que aparecem ao digitar na busca
   const [sugestoes, setSugestoes] = useState([])
-
-  // Abrigo alvo para voar no mapa após selecionar uma sugestão
-  const [abrigoAlvo, setAbrigoAlvo] = useState(null)
-
-  // Controla o loading enquanto os abrigos são buscados na API
   const [carregando, setCarregando] = useState(true)
+  const [avisoAlertas, setAvisoAlertas] = useState('')
+  const [atualizadoEm, setAtualizadoEm] = useState(null)
+
+  const mapaRef = useRef(null)
+  const marcadoresRef = useRef({})   // id do abrigo → marcador Leaflet
+  const circulosRef = useRef({})     // id do alerta → círculo Leaflet
+  const guardarMapa = useCallback((map) => { mapaRef.current = map }, [])
 
 
-  //-------- Busca dos dados ao carregar a página ----------------
-
+  //-------- Busca dos dados ----------------
   useEffect(() => {
-
-    // Busca todos os abrigos da API
-    // Diferente da versão anterior, não precisamos mais geocodificar aqui
-    // As coordenadas já vêm prontas do banco (latitude e longitude)
-    const buscarAbrigos = async () => {
+    const carregar = async () => {
       setCarregando(true)
       try {
-        const resposta = await fetch('http://localhost:3000/api/abrigos/listar')
-        const dados = await resposta.json()
-        setAbrigos(dados.abrigos)
+        const [respAbrigos, respCidades] = await Promise.all([
+          fetch(`${API_URL}/api/abrigos/listar`).then(r => r.json()),
+          fetch(`${API_URL}/api/cidades/listar`).then(r => r.json()),
+        ])
+        setAbrigos(respAbrigos.abrigos ?? [])
+        setCidades(respCidades.cidades ?? [])
       } catch (erro) {
-        console.error('Erro ao buscar abrigos:', erro)
+        console.error('Erro ao carregar o mapa:', erro)
       } finally {
         setCarregando(false)
       }
     }
+    carregar()
+  }, [])
 
-    // Roda ao montar o componente
-    buscarAbrigos()
+  // Alertas ativos: busca agora e a cada 1 minuto
+  const buscarAlertas = useCallback(async () => {
+    const token = localStorage.getItem(ehVoluntario ? 'token_voluntario' : 'token_adm')
+    if (!token) {
+      setAvisoAlertas('Faça login para ver os alertas ativos.')
+      return
+    }
+    try {
+      const resposta = await fetch(`${API_URL}/api/mapa/alertas`, { headers: { Authorization: `Bearer ${token}` } })
+      const dados = await resposta.json().catch(() => ({}))
+      if (!resposta.ok) throw new Error(dados.mensagem ?? `Erro ${resposta.status}`)
+      setAvisoAlertas('')
+      setAtualizadoEm(new Date())
+      setAlertas(await posicionarAlertas(dados.alertas ?? []))
+    } catch (erro) {
+      console.error('Erro ao buscar alertas:', erro)
+      setAvisoAlertas('Não foi possível carregar os alertas ativos.')
+    }
+    // posicionarAlertas usa os abrigos já carregados
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ehVoluntario, abrigos])
 
-  }, []) // Sem dependências: roda só uma vez ao montar o componente
+  useEffect(() => {
+    if (carregando) return
+    buscarAlertas()
+    const intervalo = setInterval(buscarAlertas, 60 * 1000)
+    return () => clearInterval(intervalo)
+  }, [carregando, buscarAlertas])
+
+  // Descobre onde desenhar cada alerta (o alerta é do bairro, não tem ponto exato):
+  // 1) cache do navegador → 2) média dos abrigos do mesmo bairro →
+  // 3) Nominatim (bairro, cidade) → 4) centro da cidade
+  async function posicionarAlertas(lista) {
+    const cache = lerCache()
+    const resultado = []
+
+    for (const alerta of lista) {
+      const chave = `bairro:${alerta.bairroId}`
+      let ponto = cache[chave]
+
+      if (!ponto) {
+        const doBairro = abrigos.filter(a => a.bairroId === alerta.bairroId && a.latitude && a.longitude)
+        if (doBairro.length > 0) {
+          ponto = {
+            latitude:  doBairro.reduce((s, a) => s + a.latitude, 0) / doBairro.length,
+            longitude: doBairro.reduce((s, a) => s + a.longitude, 0) / doBairro.length,
+            precisao: 'bairro',
+          }
+        } else {
+          const achado = await geocodificar({ bairro: alerta.bairro, cidade: alerta.cidade, estado: alerta.estado })
+          if (achado) ponto = { latitude: achado.latitude, longitude: achado.longitude, precisao: achado.precisao }
+        }
+        // Só guarda no cache o que foi achado pelo bairro (o centro da cidade é provisório)
+        if (ponto?.precisao === 'bairro') {
+          cache[chave] = ponto
+          salvarCache(cache)
+        }
+      }
+
+      if (!ponto && COORDENADAS_CIDADES[alerta.cidade]) {
+        const [latitude, longitude] = COORDENADAS_CIDADES[alerta.cidade]
+        ponto = { latitude, longitude, precisao: 'cidade' }
+      }
+      if (ponto) resultado.push({ ...alerta, ...ponto })
+    }
+
+    // Vários alertas no mesmo bairro: afasta um pouco os círculos para não ficarem idênticos
+    const vistos = {}
+    return resultado.map(alerta => {
+      const indice = vistos[alerta.bairroId] = (vistos[alerta.bairroId] ?? -1) + 1
+      if (indice === 0) return alerta
+      const angulo = indice * 2.1
+      return { ...alerta, latitude: alerta.latitude + Math.sin(angulo) * 0.003, longitude: alerta.longitude + Math.cos(angulo) * 0.003 }
+    })
+  }
 
 
-  //-------- Handlers --------
-  // Funções usadas nos eventos da tela
+  //-------- Cidade selecionada ----------------
+  // Coordenadas da cidade: tabela conhecida → abrigos da cidade → Nominatim
+  const centroDaCidade = useCallback(async (nome) => {
+    if (COORDENADAS_CIDADES[nome]) return COORDENADAS_CIDADES[nome]
+    const daCidade = abrigos.filter(a => a.cidade === nome && a.latitude && a.longitude)
+    if (daCidade.length > 0) return [daCidade[0].latitude, daCidade[0].longitude]
 
-  // Handler da barra de busca
-  // Filtra os abrigos pelo nome ou cidade conforme o usuário digita
+    const cache = lerCache()
+    if (cache[`cidade:${nome}`]) return cache[`cidade:${nome}`]
+    const cidade = cidades.find(c => c.nome === nome)
+    const achado = await geocodificar({ cidade: nome, estado: cidade?.estado })
+    if (!achado) return null
+    cache[`cidade:${nome}`] = [achado.latitude, achado.longitude]
+    salvarCache(cache)
+    return cache[`cidade:${nome}`]
+  }, [abrigos, cidades])
+
+  // Todos os pontos visíveis (abrigos + alertas) de uma cidade — ou de todas
+  const pontosDa = useCallback((nome) => [
+    ...(camadas.abrigos ? abrigos.filter(a => a.latitude && a.longitude && (!nome || a.cidade === nome)) : []),
+    ...(camadas.alertas ? alertas.filter(a => !nome || a.cidade === nome) : []),
+  ].map(p => [p.latitude, p.longitude]), [abrigos, alertas, camadas])
+
+  const enquadrar = useCallback(async (nome) => {
+    const map = mapaRef.current
+    if (!map) return
+    map.closePopup()
+
+    if (nome === 'todas') {
+      const pontos = pontosDa(null)
+      if (pontos.length > 0) map.flyToBounds(pontos, { padding: [60, 60], maxZoom: 14, duration: 1 })
+      else map.flyTo([-23.0, -45.55], 10, { duration: 1 })
+      return
+    }
+    const centro = await centroDaCidade(nome)
+    if (centro) map.flyTo(centro, ZOOM_CIDADE, { duration: 1 })
+  }, [centroDaCidade, pontosDa])
+
+  // Ao abrir a tela (e ao trocar a cidade), centraliza na cidade escolhida
+  useEffect(() => {
+    if (!carregando) enquadrar(cidadeSelecionada)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carregando, cidadeSelecionada])
+
+
+  //-------- Busca e foco ----------------
   const handleBusca = (e) => {
     const valor = e.target.value
     setBusca(valor)
-
     if (valor.trim().length < 2) {
       setSugestoes([])
       return
     }
-
     const termo = valor.toLowerCase()
-    // Filtra abrigos cujo nome ou cidade contém o termo digitado
-    const filtrados = abrigos.filter(
-      a => a.nome.toLowerCase().includes(termo) || a.cidade.toLowerCase().includes(termo)
-    )
-    setSugestoes(filtrados.slice(0, 6))
+    const achaAbrigos = abrigos
+      .filter(a => [a.nome, a.cidade, a.bairro].some(t => t?.toLowerCase().includes(termo)))
+      .map(a => ({ tipo: 'abrigo', item: a, titulo: a.nome, detalhe: [a.bairro, a.cidade].filter(Boolean).join(' — ') }))
+    const achaAlertas = alertas
+      .filter(a => [a.tipoLabel, a.bairro, a.cidade].some(t => t?.toLowerCase().includes(termo)))
+      .map(a => ({ tipo: 'alerta', item: a, titulo: `${a.emoji} ${a.tipoLabel}`, detalhe: `${a.bairro} — ${a.cidade}` }))
+    setSugestoes([...achaAlertas, ...achaAbrigos].slice(0, 8))
   }
 
-  // Handler ao clicar em uma sugestão
-  // Preenche a busca com o nome do abrigo e voa até ele no mapa
-  const handleSelecionarSugestao = (abrigo) => {
-    setBusca(abrigo.nome)
+  // Voa até o abrigo ou alerta e abre o balão dele
+  const focar = (tipo, item) => {
+    const map = mapaRef.current
+    if (!map || !item.latitude || !item.longitude) return
+    if (tipo === 'abrigo' && !camadas.abrigos) setCamadas(c => ({ ...c, abrigos: true }))
+    if (tipo === 'alerta' && !camadas.alertas) setCamadas(c => ({ ...c, alertas: true }))
+
+    map.flyTo([item.latitude, item.longitude], tipo === 'abrigo' ? ZOOM_DETALHE : 14.5, { duration: 1 })
+    map.once('moveend', () => {
+      const camada = tipo === 'abrigo' ? marcadoresRef.current[item.id] : circulosRef.current[item.id_alerta]
+      camada?.openPopup()
+    })
+  }
+
+  const selecionarSugestao = (sugestao) => {
+    setBusca(sugestao.titulo)
     setSugestoes([])
-    setAbrigoAlvo(abrigo)
+    focar(sugestao.tipo, sugestao.item)
   }
 
 
-  //-------- Helpers --------
-  // Funções auxiliares pequenas usadas no JSX
+  //-------- Números do painel ----------------
+  const filtroCidade = (item) => cidadeSelecionada === 'todas' || item.cidade === cidadeSelecionada
+  const abrigosDaCidade = useMemo(() => abrigos.filter(filtroCidade), [abrigos, cidadeSelecionada]) // eslint-disable-line react-hooks/exhaustive-deps
+  const alertasDaCidade = useMemo(() => alertas.filter(filtroCidade), [alertas, cidadeSelecionada]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Determina o ícone do marcador com base no status e ocupação do abrigo
-  // Azul = com vagas e ativo | Vermelho = cheio ou inativo
-  const iconeDoAbrigo = (abrigo) => {
-    const cheio = abrigo.capacidadeOcupada >= abrigo.capacidadeTotal
-    const inativo = abrigo.status !== 'ativo'
-    return (cheio || inativo) ? iconeVermelho : iconeAzul
-  }
+  const resumo = useMemo(() => ({
+    abrigos: abrigosDaCidade.length,
+    vagas: abrigosDaCidade
+      .filter(a => a.status === 'ativo')
+      .reduce((soma, a) => soma + Math.max(0, a.capacidadeTotal - a.capacidadeOcupada), 0),
+    quaseLotados: abrigosDaCidade.filter(a => situacaoAbrigo(a) !== 'livre').length,
+    alertas: alertasDaCidade.length,
+    graves: alertasDaCidade.filter(a => a.gravidade === 'grave').length,
+  }), [abrigosDaCidade, alertasDaCidade])
 
-  // Calcula a porcentagem de ocupação para a barra de progresso do popup
-  const porcentagemOcupacao = (abrigo) => {
-    if (!abrigo.capacidadeTotal) return 0
-    return Math.min(100, Math.round((abrigo.capacidadeOcupada / abrigo.capacidadeTotal) * 100))
-  }
+  const semLocalizacao = abrigos.filter(a => !a.latitude || !a.longitude).length
+
+  // Lista lateral: alertas mais graves primeiro; abrigos mais cheios primeiro
+  const alertasOrdenados = [...alertasDaCidade].sort((a, b) => b.pesoGravidade - a.pesoGravidade)
+  const abrigosOrdenados = [...abrigosDaCidade].sort((a, b) => porcentagemOcupacao(b) - porcentagemOcupacao(a))
 
 
   //------- Tela de loading ------
-  // Enquanto a API responde, mostra mensagem para o usuário não ver a tela vazia
   if (carregando) {
     return (
       <div className="dashboard">
-          {sidebar}
+        {sidebar}
         <main className="main">
           <p style={{ padding: '40px', color: '#64748b' }}>Carregando mapa...</p>
         </main>
@@ -201,184 +335,279 @@ function Mapa({ modulo = 'admin' }) {
   }
 
 
-  //------- Tela Principal (Carregado) ------
+  //------- Tela Principal ------
   return (
-
     <div className="dashboard">
+      {sidebar}
 
-      {/* Código do Sidebar */}
-              {sidebar}
+      <main className="main mapa-main">
 
-      {/* Código do Main */}
-      <main className="main">
-
-        <header className="top">
+        <header className="mapa-topo">
           <div>
-            {/* Breadcrumb */}
-            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-              Mapa &gt;
-            </p>
-            <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
-              Mapa de Abrigos
-            </h1>
-            <p className="subtitle">Visualize os abrigos cadastrados nas cidades do Vale do Paraíba</p>
+            <p className="mapa-breadcrumb">Mapa &gt;</p>
+            <h1 className="mapa-titulo">Mapa de abrigos e alertas</h1>
+            <p className="subtitle">Abrigos cadastrados e alertas ativos nas cidades do Vale do Paraíba</p>
           </div>
+          {!ehVoluntario && (
+            <button type="button" className="mapa-botao-primario" onClick={() => navigate('/regioes')}>
+              <FaPlus /> Gerenciar regiões
+            </button>
+          )}
         </header>
 
-        {/* ─── Barra de controles: select de cidade + busca + botão cadastrar ─── */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+        {/* ─── Resumo da cidade selecionada ─── */}
+        <section className="mapa-resumo">
+          <div className="mapa-card">
+            <span className="mapa-card-rotulo">Abrigos</span>
+            <strong>{resumo.abrigos}</strong>
+            <small>{resumo.quaseLotados > 0 ? `${resumo.quaseLotados} quase lotado(s) ou lotado(s)` : 'todos com folga'}</small>
+          </div>
+          <div className="mapa-card">
+            <span className="mapa-card-rotulo">Vagas livres</span>
+            <strong>{resumo.vagas}</strong>
+            <small>nos abrigos ativos</small>
+          </div>
+          <div className={`mapa-card ${resumo.alertas > 0 ? 'mapa-card-alerta' : ''}`}>
+            <span className="mapa-card-rotulo">Alertas ativos</span>
+            <strong>{resumo.alertas}</strong>
+            <small>{resumo.graves > 0 ? `${resumo.graves} grave(s)` : 'nenhum grave'}</small>
+          </div>
+        </section>
 
-          {/* Select de cidades — ao mudar, o mapa voa até a cidade escolhida */}
-          <select
-            value={cidadeSelecionada.nome}
-            onChange={e => setCidadeSelecionada(CIDADES.find(c => c.nome === e.target.value))}
-            style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', background: '#fff', color: '#0f172a', cursor: 'pointer', minWidth: '180px' }}
-          >
-            {CIDADES.map(c => (
-              <option key={c.nome} value={c.nome}>{c.nome}</option>
-            ))}
+        {/* ─── Controles ─── */}
+        <div className="mapa-controles">
+          <select value={cidadeSelecionada} onChange={e => setCidadeSelecionada(e.target.value)} className="mapa-select">
+            {cidades.map(c => <option key={c.id_cidade} value={c.nome}>{c.nome}</option>)}
+            {!cidades.some(c => c.nome === CIDADE_PADRAO) && <option value={CIDADE_PADRAO}>{CIDADE_PADRAO}</option>}
+            <option value="todas">Todas as cidades</option>
           </select>
 
-          {/* Barra de busca com dropdown de sugestões */}
-          {/* Ao digitar, filtra abrigos por nome ou cidade */}
-          {/* Ao clicar numa sugestão, o mapa voa até o abrigo */}
-          <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
-            <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }} />
+          <div className="mapa-busca">
+            <FaSearch className="mapa-busca-icone" />
             <input
-              style={{ width: '100%', padding: '9px 14px 9px 36px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', background: '#fff', color: '#0f172a', boxSizing: 'border-box' }}
-              placeholder="Pesquise por abrigo ou cidade..."
+              placeholder="Buscar abrigo, bairro, cidade ou tipo de alerta..."
               value={busca}
               onChange={handleBusca}
-              // O setTimeout evita que o dropdown feche antes do clique na sugestão ser registrado
               onBlur={() => setTimeout(() => setSugestoes([]), 200)}
             />
-
-            {/* Dropdown de sugestões — aparece ao digitar 2 ou mais caracteres */}
             {sugestoes.length > 0 && (
-              <ul style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', listStyle: 'none', margin: 0, padding: '4px 0', zIndex: 9999, boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}>
-                {sugestoes.map(a => (
-                  <li
-                    key={a.id}
-                    onMouseDown={() => handleSelecionarSugestao(a)}
-                    style={{ display: 'flex', flexDirection: 'column', padding: '8px 14px', cursor: 'pointer' }}
-                  >
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{a.nome}</span>
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>{a.cidade}</span>
+              <ul className="mapa-sugestoes">
+                {sugestoes.map(s => (
+                  <li key={`${s.tipo}-${s.item.id ?? s.item.id_alerta}`} onMouseDown={() => selecionarSugestao(s)}>
+                    <span className={`mapa-sugestao-tipo ${s.tipo}`}>{s.tipo === 'abrigo' ? 'Abrigo' : 'Alerta'}</span>
+                    <span className="mapa-sugestao-titulo">{s.titulo}</span>
+                    <span className="mapa-sugestao-detalhe">{s.detalhe}</span>
                   </li>
                 ))}
               </ul>
             )}
           </div>
 
-          {/* Botão de gerenciar regiões — só para o admin */}
-          {!ehVoluntario && (
-            <button
-              type="button"
-              onClick={() => navigate('/regioes')}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          <div className="mapa-camadas">
+            <label className={camadas.abrigos ? 'ativo' : ''}>
+              <input type="checkbox" checked={camadas.abrigos} onChange={e => setCamadas(c => ({ ...c, abrigos: e.target.checked }))} />
+              Abrigos
+            </label>
+            <label className={camadas.alertas ? 'ativo' : ''}>
+              <input type="checkbox" checked={camadas.alertas} onChange={e => setCamadas(c => ({ ...c, alertas: e.target.checked }))} />
+              Alertas
+            </label>
+          </div>
+        </div>
+
+        {(avisoAlertas || semLocalizacao > 0) && (
+          <div className="mapa-avisos">
+            {avisoAlertas && <span>⚠️ {avisoAlertas}</span>}
+            {semLocalizacao > 0 && <span>⚠️ {semLocalizacao} abrigo(s) sem localização cadastrada (não aparecem no mapa)</span>}
+          </div>
+        )}
+
+        {/* ─── Mapa + painel lateral ─── */}
+        <div className="mapa-layout">
+
+          <div className="mapa-area">
+            <MapContainer
+              center={COORDENADAS_CIDADES[CIDADE_PADRAO]}
+              zoom={ZOOM_CIDADE}
+              minZoom={8}
+              maxZoom={18}
+              maxBounds={LIMITES_VALE}
+              maxBoundsViscosity={0.8}
+              // Zoom mais suave: meio nível por clique e rolagem mais "fina"
+              zoomSnap={0.25}
+              zoomDelta={0.5}
+              wheelPxPerZoomLevel={100}
+              scrollWheelZoom={true}
+              zoomControl={false}
+              style={{ width: '100%', height: '100%' }}
             >
-              <FaPlus /> Gerenciar regiões
-            </button>
-          )}
+              <CapturarMapa aoCarregar={guardarMapa} />
+              <ZoomControl position="bottomright" />
 
-        </div>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                maxZoom={19}
+              />
 
-        {/* ─── Legenda dos marcadores ─── */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569' }}>
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2563eb', display: 'inline-block' }} />
-            Com vagas
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569' }}>
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
-            Sem vagas / Inativo
-          </span>
-          {/* Aviso para abrigos sem coordenadas cadastradas */}
-          {abrigos.some(a => !a.latitude || !a.longitude) && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#f59e0b' }}>
-              ⚠️ {abrigos.filter(a => !a.latitude || !a.longitude).length} abrigo(s) sem localização cadastrada
-            </span>
-          )}
-        </div>
-
-        {/* ─── Mapa Leaflet ─── */}
-        {/* O MapContainer é o componente principal do React Leaflet */}
-        {/* center e zoom definem a posição inicial — centralizado no Vale do Paraíba */}
-        <div style={{ height: '520px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-          <MapContainer
-            center={[-23.0, -45.55]}
-            zoom={9}
-            style={{ width: '100%', height: '100%' }}
-          >
-
-            {/* Tiles do OpenStreetMap — gratuito, sem API Key */}
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            {/* Voa para a cidade selecionada no select */}
-            <ControladorCidade cidade={cidadeSelecionada} />
-
-            {/* Voa para o abrigo selecionado na busca */}
-            {abrigoAlvo && <VoarParaAbrigo alvo={abrigoAlvo} />}
-
-            {/* Marcadores dos abrigos */}
-            {/* Filtra apenas os que têm latitude e longitude cadastrados no banco */}
-            {/* Abrigos cadastrados antes desta atualização podem não ter coordenadas ainda */}
-            {abrigos
-              .filter(a => a.latitude && a.longitude)
-              .map(abrigo => (
-                <Marker
-                  key={abrigo.id}
-                  position={[abrigo.latitude, abrigo.longitude]}
-                  icon={iconeDoAbrigo(abrigo)}
-                >
-                  {/* Popup ao clicar no marcador — mostra os dados do abrigo */}
-                  <Popup>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '180px' }}>
-
-                      <strong style={{ fontSize: '14px', color: '#0f172a' }}>{abrigo.nome}</strong>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{abrigo.cidade}</span>
-                      <span style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>{abrigo.endereco}</span>
-
-                      {/* Barra de ocupação — mesma lógica do Hub de Abrigos */}
-                      <span style={{ fontSize: '12px', color: '#475569' }}>
-                        Capacidade: {abrigo.capacidadeOcupada} / {abrigo.capacidadeTotal}
-                      </span>
-                      <div style={{ background: '#e2e8f0', borderRadius: '9999px', height: '6px', overflow: 'hidden', marginBottom: '8px' }}>
-                        <div style={{
-                          height: '100%',
-                          borderRadius: '9999px',
-                          width: `${porcentagemOcupacao(abrigo)}%`,
-                          background: porcentagemOcupacao(abrigo) >= 100 ? '#dc2626' : '#16a34a'
-                        }} />
+              {/* Círculos dos alertas ativos (mais graves por cima) */}
+              {camadas.alertas && [...alertas].sort((a, b) => a.pesoGravidade - b.pesoGravidade).map(alerta => {
+                const estilo = ESTILO_GRAVIDADE[alerta.gravidade] ?? ESTILO_GRAVIDADE.leve
+                const aproximado = alerta.precisao === 'cidade'
+                return (
+                  <Circle
+                    key={alerta.id_alerta}
+                    ref={camada => { if (camada) circulosRef.current[alerta.id_alerta] = camada }}
+                    center={[alerta.latitude, alerta.longitude]}
+                    radius={estilo.raio}
+                    pathOptions={{
+                      color: estilo.cor, fillColor: estilo.cor, fillOpacity: 0.22, weight: 2,
+                      dashArray: aproximado ? '6 6' : null,
+                      className: `mapa-circulo-alerta ${alerta.gravidade}`,
+                    }}
+                  >
+                    <Popup>
+                      <div className="mapa-popup">
+                        <span className="mapa-popup-selo" style={{ background: estilo.cor }}>{estilo.label}</span>
+                        <strong className="mapa-popup-titulo">{alerta.emoji} {alerta.tipoLabel}</strong>
+                        <span className="mapa-popup-sub">{alerta.bairro} — {alerta.cidade}/{alerta.estado}</span>
+                        <span className="mapa-popup-info">
+                          ✅ Confirmado por {alerta.totalRelatos} morador(es)
+                          {alerta.disparadoPorAdmin ? ' + administrador' : ''}
+                        </span>
+                        {alerta.disparadoEm && <span className="mapa-popup-info">🕒 {formatarTempo(alerta.disparadoEm)}</span>}
+                        {aproximado && <span className="mapa-popup-aviso">Localização aproximada (centro da cidade)</span>}
+                        {alerta.orientacao && <p className="mapa-popup-orientacao">{alerta.orientacao}</p>}
+                        {!ehVoluntario && (
+                          <button type="button" className="mapa-popup-botao" onClick={() => navigate(`/alertas/${alerta.id_alerta}`)}>
+                            Abrir alerta
+                          </button>
+                        )}
                       </div>
+                    </Popup>
+                  </Circle>
+                )
+              })}
 
-                      {/* Badge de vagas — igual ao Hub de Abrigos */}
-                      <span style={{
-                        display: 'inline-block',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        padding: '2px 8px',
-                        borderRadius: '20px',
-                        alignSelf: 'flex-start',
-                        background: abrigo.capacidadeOcupada < abrigo.capacidadeTotal ? '#dcfce7' : '#fee2e2',
-                        color:      abrigo.capacidadeOcupada < abrigo.capacidadeTotal ? '#16a34a' : '#dc2626',
-                      }}>
-                        {abrigo.capacidadeOcupada < abrigo.capacidadeTotal ? 'Com vagas' : 'Sem vagas'}
-                      </span>
+              {/* Pinos dos abrigos */}
+              {camadas.abrigos && abrigos.filter(a => a.latitude && a.longitude).map(abrigo => {
+                const pct = porcentagemOcupacao(abrigo)
+                const situacao = situacaoAbrigo(abrigo)
+                const vagas = Math.max(0, abrigo.capacidadeTotal - abrigo.capacidadeOcupada)
+                return (
+                  <Marker
+                    key={abrigo.id}
+                    ref={marcador => { if (marcador) marcadoresRef.current[abrigo.id] = marcador }}
+                    position={[abrigo.latitude, abrigo.longitude]}
+                    icon={iconeAbrigo(situacao)}
+                  >
+                    <Popup>
+                      <div className="mapa-popup">
+                        <strong className="mapa-popup-titulo">{abrigo.nome}</strong>
+                        <span className="mapa-popup-sub">
+                          {abrigo.tipoAbrigo} · {[abrigo.bairro, abrigo.cidade].filter(Boolean).join(' — ')}
+                        </span>
+                        <span className="mapa-popup-sub">{abrigo.endereco}</span>
 
-                    </div>
-                  </Popup>
-                </Marker>
-              ))
-            }
+                        <div className="mapa-popup-ocupacao">
+                          <span>{abrigo.capacidadeOcupada} / {abrigo.capacidadeTotal} pessoas</span>
+                          <span style={{ color: COR_ABRIGO[situacao] }}>{pct}%</span>
+                        </div>
+                        <div className="mapa-barra">
+                          <div style={{ width: `${pct}%`, background: COR_ABRIGO[situacao] }} />
+                        </div>
+                        <span className="mapa-popup-info">
+                          {abrigo.status !== 'ativo' ? 'Abrigo inativo' : vagas > 0 ? `${vagas} vaga(s) livre(s)` : 'Sem vagas'}
+                        </span>
+                        {abrigo.telefone && <span className="mapa-popup-info">📞 {abrigo.telefone}</span>}
+                        {abrigo.statusAlerta && <span className="mapa-popup-aviso">⚠️ Há alerta ativo neste bairro</span>}
 
-          </MapContainer>
+                        {!ehVoluntario && (
+                          <button type="button" className="mapa-popup-botao" onClick={() => navigate(`/detalhes-abrigos/${abrigo.id}`)}>
+                            Ver detalhes do abrigo
+                          </button>
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                )
+              })}
+            </MapContainer>
+
+            {/* Botões e legenda por cima do mapa */}
+            <div className="mapa-flutuante mapa-acoes">
+              <button type="button" title="Centralizar na cidade" onClick={() => enquadrar(cidadeSelecionada)}>
+                <FaCrosshairs />
+              </button>
+              <button type="button" title="Atualizar alertas" onClick={buscarAlertas}>
+                <FaSyncAlt />
+              </button>
+            </div>
+
+            <div className="mapa-flutuante mapa-legenda">
+              <strong>Abrigos</strong>
+              <span><i style={{ background: COR_ABRIGO.livre }} /> Com vagas</span>
+              <span><i style={{ background: COR_ABRIGO.atencao }} /> Acima de 70%</span>
+              <span><i style={{ background: COR_ABRIGO.lotado }} /> Lotado / inativo</span>
+              <strong>Alertas</strong>
+              {Object.entries(ESTILO_GRAVIDADE).map(([chave, e]) => (
+                <span key={chave}><i className="circulo" style={{ borderColor: e.cor, background: `${e.cor}40` }} /> {e.label}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* ─── Painel lateral ─── */}
+          <aside className="mapa-painel">
+            <div className="mapa-painel-secao">
+              <div className="mapa-painel-cabecalho">
+                <h2>Alertas ativos</h2>
+                {atualizadoEm && <small>atualizado {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</small>}
+              </div>
+              {alertasOrdenados.length === 0 ? (
+                <p className="mapa-vazio">Nenhum alerta ativo {cidadeSelecionada === 'todas' ? '' : `em ${cidadeSelecionada}`}.</p>
+              ) : alertasOrdenados.map(alerta => {
+                const estilo = ESTILO_GRAVIDADE[alerta.gravidade] ?? ESTILO_GRAVIDADE.leve
+                return (
+                  <button key={alerta.id_alerta} type="button" className="mapa-item" style={{ '--cor': estilo.cor }} onClick={() => focar('alerta', alerta)}>
+                    <span className="mapa-item-titulo">{alerta.emoji} {alerta.tipoLabel}</span>
+                    <span className="mapa-item-sub">{alerta.bairro} · {estilo.label}</span>
+                    {alerta.disparadoEm && <span className="mapa-item-sub">{formatarTempo(alerta.disparadoEm)}</span>}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="mapa-painel-secao">
+              <div className="mapa-painel-cabecalho">
+                <h2>Abrigos</h2>
+                <small>mais cheios primeiro</small>
+              </div>
+              {abrigosOrdenados.length === 0 ? (
+                <p className="mapa-vazio">Nenhum abrigo cadastrado {cidadeSelecionada === 'todas' ? '' : `em ${cidadeSelecionada}`}.</p>
+              ) : abrigosOrdenados.map(abrigo => {
+                const situacao = situacaoAbrigo(abrigo)
+                const pct = porcentagemOcupacao(abrigo)
+                return (
+                  <button
+                    key={abrigo.id}
+                    type="button"
+                    className="mapa-item"
+                    style={{ '--cor': COR_ABRIGO[situacao] }}
+                    onClick={() => focar('abrigo', abrigo)}
+                    disabled={!abrigo.latitude || !abrigo.longitude}
+                    title={!abrigo.latitude ? 'Abrigo sem localização cadastrada' : undefined}
+                  >
+                    <span className="mapa-item-titulo">{abrigo.nome}</span>
+                    <span className="mapa-item-sub">{abrigo.capacidadeOcupada}/{abrigo.capacidadeTotal} · {pct}%{abrigo.bairro ? ` · ${abrigo.bairro}` : ''}</span>
+                    <div className="mapa-barra"><div style={{ width: `${pct}%`, background: COR_ABRIGO[situacao] }} /></div>
+                  </button>
+                )
+              })}
+            </div>
+          </aside>
         </div>
 
-        <footer style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
+        <footer className="mapa-rodape">
           <p>© 2026 S.O.S Vale. Todos os direitos reservados.</p>
           <p>Versão 1.0.0</p>
         </footer>

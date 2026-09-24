@@ -127,6 +127,15 @@ Authorization: Bearer COLE_O_TOKEN_AQUI
 
 
 // --------------------------
+// Mapa (admin ou voluntário logado) — alertas ativos para os círculos do mapa
+
+GET http://localhost:3000/api/mapa/alertas
+Authorization: Bearer COLE_O_TOKEN_AQUI
+
+###
+
+
+// --------------------------
 // Alertas (painel admin — exige login de admin)
 
 GET http://localhost:3000/api/alertas/listar?status=em_verificacao

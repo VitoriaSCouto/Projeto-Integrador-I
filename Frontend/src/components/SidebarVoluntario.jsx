@@ -17,7 +17,8 @@ function SidebarVoluntario({ ativo }) {
   const sair = () => {
     localStorage.removeItem('token_voluntario')
     localStorage.removeItem('voluntario')
-    window.location.href = '/login-voluntario'
+    // Volta para a seleção de módulo (Administrador / Voluntário / Munícipe)
+    window.location.href = '/'
   }
 
   return (

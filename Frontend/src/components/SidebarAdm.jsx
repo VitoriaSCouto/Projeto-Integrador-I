@@ -24,7 +24,8 @@ function SidebarAdm({ ativo }) {
 
   const sair = () => {
     localStorage.removeItem('token_adm')
-    window.location.href = '/login-adm'
+    // Volta para a seleção de módulo (Administrador / Voluntário / Munícipe)
+    window.location.href = '/'
   }
 
   return (
