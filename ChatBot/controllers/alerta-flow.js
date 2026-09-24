@@ -352,14 +352,31 @@ ${listaNumerada(TIPOS, t => t.label)}`
   );
 };
 
+const mostrarResumoRelato = async (msg, from, tempData) => {
+  userState.set(from, { step: 'alerta_rel_confirmar', tempData });
+
+  await msg.reply(
+`📋 *Confira seu relato:*
+
+📍 Local: ${descreverBairro(tempData.bairro)}
+⚠️ Ocorrência: ${tempData.tipo.label}
+Gravidade: ${tempData.gravidade.label}
+📷 Foto: ${tempData.foto ? '✅' : 'sem foto'}
+
+1 - Enviar relato
+2 - Cancelar`
+  );
+};
+
 const enviarRelato = async (msg, from, tempData) => {
   const { ok, status, dados } = await api('POST', '/bot/alertas/relatar', {
     whatsappId: from,
     tipo: tempData.tipo.valor,
     gravidade: tempData.gravidade.valor,
     bairroId: tempData.bairro.id_bairro,
-    foto: tempData.foto.data,
-    fotoMimetype: tempData.foto.mimetype,
+    // Foto opcional: sem foto, vai null
+    foto: tempData.foto?.data ?? null,
+    fotoMimetype: tempData.foto?.mimetype ?? null,
   });
 
   userState.delete(from);
@@ -432,14 +449,19 @@ ${listaNumerada(GRAVIDADES, g => `${g.label} — ${g.descricao}`)}`
     tempData.gravidade = gravidade;
     userState.set(from, { step: 'alerta_rel_foto', tempData });
 
-    await msg.reply('📷 Agora envie uma *foto* da ocorrência.\n\nA foto é obrigatória: ela ajuda a equipe a confirmar o relato e evitar alarmes falsos.\n\n⚠️ Só tire a foto se estiver em local seguro.');
+    await msg.reply('📷 Se puder, envie uma *foto* da ocorrência — ela ajuda os vizinhos a entenderem a situação.\n\nSem foto? Digite *pular*.\n\n⚠️ Só tire a foto se estiver em local seguro.');
     return;
   }
 
-  // ── Foto ──
+  // ── Foto (opcional) ──
   if (state.step === 'alerta_rel_foto') {
+    if (text === 'pular') {
+      tempData.foto = null;
+      return mostrarResumoRelato(msg, from, tempData);
+    }
+
     if (!msg.hasMedia) {
-      await msg.reply('📷 Envie uma *foto* da ocorrência (ou digite *cancelar*).');
+      await msg.reply('📷 Envie uma *foto* da ocorrência ou digite *pular* para continuar sem foto.');
       return;
     }
 
@@ -448,30 +470,17 @@ ${listaNumerada(GRAVIDADES, g => `${g.label} — ${g.descricao}`)}`
       foto = await baixarFoto(msg, '[ALERTA]');
     } catch (erro) {
       console.error('[ALERTA] Não foi possível baixar a foto:', erro.message);
-      await msg.reply('⚠️ Não consegui baixar a imagem. Tente enviar novamente ou envie como *documento* (Clipe 📎 → Documento).');
+      await msg.reply('⚠️ Não consegui baixar a imagem. Tente enviar de novo, envie como *documento* (Clipe 📎 → Documento) ou digite *pular* para continuar sem foto.');
       return;
     }
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(foto.mimetype)) {
-      await msg.reply('⚠️ O arquivo precisa ser uma foto (JPG ou PNG). Envie novamente.');
+      await msg.reply('⚠️ O arquivo precisa ser uma foto (JPG ou PNG). Envie de novo ou digite *pular*.');
       return;
     }
 
     tempData.foto = foto;
-    userState.set(from, { step: 'alerta_rel_confirmar', tempData });
-
-    await msg.reply(
-`📋 *Confira seu relato:*
-
-📍 Local: ${descreverBairro(tempData.bairro)}
-⚠️ Ocorrência: ${tempData.tipo.label}
-Gravidade: ${tempData.gravidade.label}
-📷 Foto: ✅
-
-1 - Enviar relato
-2 - Cancelar`
-    );
-    return;
+    return mostrarResumoRelato(msg, from, tempData);
   }
 
   // ── Confirmar ──

@@ -186,11 +186,14 @@ async function gerarNotificacoesDisparo(tx, alertaId) {
     where: { id_alerta: alertaId },
     include: {
       ...includeBairroCompleto,
-      relatos: { select: { fotoRelato: true }, orderBy: { createdAt: 'asc' } },
+      // Mais recentes primeiro
+      relatos: { select: { fotoRelato: true }, orderBy: { createdAt: 'desc' } },
     }
   })
 
   const totalRelatos = alerta.relatos.length
+  // A foto é opcional: usa a foto mais recente entre TODOS os relatos do alerta
+  // (se só o 3º relato mandou foto, é ela que vai). Sem nenhuma foto, vai só o texto.
   const fotoUrl = alerta.relatos.find(r => r.fotoRelato)?.fotoRelato ?? null
 
   const destinatarios = await tx.inscritoAlerta.findMany({

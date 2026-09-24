@@ -235,8 +235,8 @@ export default async function botRoutes(app) {
 
   //----- Relatar ocorrência -----
   // URL: POST /api/bot/alertas/relatar
-  // Body: { whatsappId, tipo, gravidade, bairroId, foto (base64), fotoMimetype }
-  // A foto vem em base64, por isso o limite do corpo é maior nesta rota
+  // Body: { whatsappId, tipo, gravidade, bairroId, foto? (base64), fotoMimetype? }
+  // A foto é OPCIONAL. Quando vem, é em base64 — por isso o limite do corpo é maior nesta rota
   app.post('/alertas/relatar', { bodyLimit: 15 * 1024 * 1024 }, async (request, reply) => {
     const { whatsappId, tipo, gravidade, bairroId, foto, fotoMimetype } = request.body ?? {}
 
@@ -249,10 +249,11 @@ export default async function botRoutes(app) {
     if (!TIPOS_ALERTA[tipo])     return reply.status(400).send({ mensagem: 'Tipo de alerta inválido.' })
     if (!GRAVIDADES[gravidade])  return reply.status(400).send({ mensagem: 'Gravidade inválida.' })
     if (!bairroId)               return reply.status(400).send({ mensagem: 'Informe o bairro da ocorrência.' })
-    if (!foto)                   return reply.status(400).send({ mensagem: 'Envie uma foto da ocorrência.' })
 
-    // Se o upload falhar o relato continua valendo, só fica sem foto
-    const fotoRelato = await enviarFotoBase64('fotos-alerta', `relato-${inscrito.id_inscrito}`, foto, fotoMimetype || 'image/jpeg')
+    // Foto opcional. Se o upload falhar, o relato continua valendo, só fica sem foto
+    const fotoRelato = foto
+      ? await enviarFotoBase64('fotos-alerta', `relato-${inscrito.id_inscrito}`, foto, fotoMimetype || 'image/jpeg')
+      : null
 
     try {
       const resultado = await registrarRelato(prisma, {

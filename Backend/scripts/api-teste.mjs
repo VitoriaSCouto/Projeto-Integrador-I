@@ -19,6 +19,8 @@ Object.assign(process.env, {
   // Supabase falso: uploads de foto falham e o sistema segue sem a foto
   SUPABASE_URL: 'http://127.0.0.1:9',
   SUPABASE_KEY: 'chave-falsa',
+  // Fotos não são enviadas: viram endereços falsos (https://teste.invalido/...)
+  ARMAZENAMENTO_FALSO: '1',
   PORT: process.env.PORT || '3000',
 })
 

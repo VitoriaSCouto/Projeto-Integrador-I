@@ -51,7 +51,7 @@ Comandos especiais:
 
 | Comando | O que faz |
 |---|---|
-| `/foto` | envia uma foto falsa (use quando o bot pedir a foto) |
+| `/foto` | envia uma foto falsa (use quando o bot pedir a foto; a foto é opcional, digite `pular` para seguir sem ela) |
 | `/numero 5512999990002` | vira outro morador (cada número é uma pessoa) |
 | `/grupo <mensagem>` | envia a mensagem num grupo, como administrador do grupo |
 | `/fila` | mostra as mensagens de alerta que seriam enviadas e para quem |

@@ -17,6 +17,12 @@ export async function enviarFotoBase64(bucket, prefixo, base64, mimetype = 'imag
   const buffer = Buffer.from(base64, 'base64')
   const nomeArquivo = `${prefixo}-${Date.now()}-${Math.floor(Math.random() * 10000)}.${extensao}`
 
+  // Modo teste (npm run back:teste): não sobe nada, só devolve um endereço falso
+  // para os testes conseguirem conferir qual foto foi usada
+  if (process.env.ARMAZENAMENTO_FALSO === '1') {
+    return `https://teste.invalido/${bucket}/${nomeArquivo}`
+  }
+
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(nomeArquivo, buffer, { contentType: mimetype, upsert: false })
