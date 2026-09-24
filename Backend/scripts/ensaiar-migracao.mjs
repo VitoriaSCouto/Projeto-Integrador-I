@@ -43,6 +43,9 @@ for (const arquivo of fs.readdirSync(pastaBackup)) {
   if (tabela === '_prisma_migrations') continue
   const linhas = lerBackup(tabela)
   contagemAntes[tabela] = linhas.length
+  // Algumas migrações já inserem dados (ex: os 27 estados): limpa a tabela
+  // para ficar exatamente igual ao backup
+  await db.exec(`DELETE FROM "${tabela}"`)
   if (linhas.length === 0) continue
   await db.query(
     `INSERT INTO "${tabela}" SELECT * FROM json_populate_recordset(null::"${tabela}", $1::json)`,

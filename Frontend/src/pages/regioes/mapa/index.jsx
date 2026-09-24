@@ -106,7 +106,9 @@ function Mapa({ modulo = 'admin' }) {
   const [alertas, setAlertas] = useState([])          // alertas ativos com coordenadas
   const [cidades, setCidades] = useState([])
   const [cidadeSelecionada, setCidadeSelecionada] = useState(CIDADE_PADRAO)
-  const [camadas, setCamadas] = useState({ abrigos: true, alertas: true })
+  // O voluntário vê só os abrigos; os alertas ficam no mapa do admin
+  const mostraAlertas = !ehVoluntario
+  const [camadas, setCamadas] = useState({ abrigos: true, alertas: mostraAlertas })
   const [busca, setBusca] = useState('')
   const [sugestoes, setSugestoes] = useState([])
   const [carregando, setCarregando] = useState(true)
@@ -141,7 +143,8 @@ function Mapa({ modulo = 'admin' }) {
 
   // Alertas ativos: busca agora e a cada 1 minuto
   const buscarAlertas = useCallback(async () => {
-    const token = localStorage.getItem(ehVoluntario ? 'token_voluntario' : 'token_adm')
+    if (!mostraAlertas) return
+    const token = localStorage.getItem('token_adm')
     if (!token) {
       setAvisoAlertas('Faça login para ver os alertas ativos.')
       return
@@ -159,14 +162,14 @@ function Mapa({ modulo = 'admin' }) {
     }
     // posicionarAlertas usa os abrigos já carregados
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ehVoluntario, abrigos])
+  }, [mostraAlertas, abrigos])
 
   useEffect(() => {
-    if (carregando) return
+    if (carregando || !mostraAlertas) return
     buscarAlertas()
     const intervalo = setInterval(buscarAlertas, 60 * 1000)
     return () => clearInterval(intervalo)
-  }, [carregando, buscarAlertas])
+  }, [carregando, mostraAlertas, buscarAlertas])
 
   // Descobre onde desenhar cada alerta (o alerta é do bairro, não tem ponto exato):
   // 1) cache do navegador → 2) média dos abrigos do mesmo bairro →
@@ -345,8 +348,12 @@ function Mapa({ modulo = 'admin' }) {
         <header className="mapa-topo">
           <div>
             <p className="mapa-breadcrumb">Mapa &gt;</p>
-            <h1 className="mapa-titulo">Mapa de abrigos e alertas</h1>
-            <p className="subtitle">Abrigos cadastrados e alertas ativos nas cidades do Vale do Paraíba</p>
+            <h1 className="mapa-titulo">{mostraAlertas ? 'Mapa de abrigos e alertas' : 'Mapa de abrigos'}</h1>
+            <p className="subtitle">
+              {mostraAlertas
+                ? 'Abrigos cadastrados e alertas ativos nas cidades do Vale do Paraíba'
+                : 'Abrigos cadastrados nas cidades do Vale do Paraíba'}
+            </p>
           </div>
           {!ehVoluntario && (
             <button type="button" className="mapa-botao-primario" onClick={() => navigate('/regioes')}>
@@ -367,11 +374,13 @@ function Mapa({ modulo = 'admin' }) {
             <strong>{resumo.vagas}</strong>
             <small>nos abrigos ativos</small>
           </div>
-          <div className={`mapa-card ${resumo.alertas > 0 ? 'mapa-card-alerta' : ''}`}>
-            <span className="mapa-card-rotulo">Alertas ativos</span>
-            <strong>{resumo.alertas}</strong>
-            <small>{resumo.graves > 0 ? `${resumo.graves} grave(s)` : 'nenhum grave'}</small>
-          </div>
+          {mostraAlertas && (
+            <div className={`mapa-card ${resumo.alertas > 0 ? 'mapa-card-alerta' : ''}`}>
+              <span className="mapa-card-rotulo">Alertas ativos</span>
+              <strong>{resumo.alertas}</strong>
+              <small>{resumo.graves > 0 ? `${resumo.graves} grave(s)` : 'nenhum grave'}</small>
+            </div>
+          )}
         </section>
 
         {/* ─── Controles ─── */}
@@ -385,7 +394,7 @@ function Mapa({ modulo = 'admin' }) {
           <div className="mapa-busca">
             <FaSearch className="mapa-busca-icone" />
             <input
-              placeholder="Buscar abrigo, bairro, cidade ou tipo de alerta..."
+              placeholder={mostraAlertas ? 'Buscar abrigo, bairro, cidade ou tipo de alerta...' : 'Buscar abrigo, bairro ou cidade...'}
               value={busca}
               onChange={handleBusca}
               onBlur={() => setTimeout(() => setSugestoes([]), 200)}
@@ -403,16 +412,19 @@ function Mapa({ modulo = 'admin' }) {
             )}
           </div>
 
-          <div className="mapa-camadas">
-            <label className={camadas.abrigos ? 'ativo' : ''}>
-              <input type="checkbox" checked={camadas.abrigos} onChange={e => setCamadas(c => ({ ...c, abrigos: e.target.checked }))} />
-              Abrigos
-            </label>
-            <label className={camadas.alertas ? 'ativo' : ''}>
-              <input type="checkbox" checked={camadas.alertas} onChange={e => setCamadas(c => ({ ...c, alertas: e.target.checked }))} />
-              Alertas
-            </label>
-          </div>
+          {/* Liga/desliga camadas — só faz sentido quando há alertas */}
+          {mostraAlertas && (
+            <div className="mapa-camadas">
+              <label className={camadas.abrigos ? 'ativo' : ''}>
+                <input type="checkbox" checked={camadas.abrigos} onChange={e => setCamadas(c => ({ ...c, abrigos: e.target.checked }))} />
+                Abrigos
+              </label>
+              <label className={camadas.alertas ? 'ativo' : ''}>
+                <input type="checkbox" checked={camadas.alertas} onChange={e => setCamadas(c => ({ ...c, alertas: e.target.checked }))} />
+                Alertas
+              </label>
+            </div>
+          )}
         </div>
 
         {(avisoAlertas || semLocalizacao > 0) && (
@@ -520,7 +532,7 @@ function Mapa({ modulo = 'admin' }) {
                           {abrigo.status !== 'ativo' ? 'Abrigo inativo' : vagas > 0 ? `${vagas} vaga(s) livre(s)` : 'Sem vagas'}
                         </span>
                         {abrigo.telefone && <span className="mapa-popup-info">📞 {abrigo.telefone}</span>}
-                        {abrigo.statusAlerta && <span className="mapa-popup-aviso">⚠️ Há alerta ativo neste bairro</span>}
+                        {mostraAlertas && abrigo.statusAlerta && <span className="mapa-popup-aviso">⚠️ Há alerta ativo neste bairro</span>}
 
                         {!ehVoluntario && (
                           <button type="button" className="mapa-popup-botao" onClick={() => navigate(`/detalhes-abrigos/${abrigo.id}`)}>
@@ -539,9 +551,11 @@ function Mapa({ modulo = 'admin' }) {
               <button type="button" title="Centralizar na cidade" onClick={() => enquadrar(cidadeSelecionada)}>
                 <FaCrosshairs />
               </button>
-              <button type="button" title="Atualizar alertas" onClick={buscarAlertas}>
-                <FaSyncAlt />
-              </button>
+              {mostraAlertas && (
+                <button type="button" title="Atualizar alertas" onClick={buscarAlertas}>
+                  <FaSyncAlt />
+                </button>
+              )}
             </div>
 
             <div className="mapa-flutuante mapa-legenda">
@@ -549,16 +563,18 @@ function Mapa({ modulo = 'admin' }) {
               <span><i style={{ background: COR_ABRIGO.livre }} /> Com vagas</span>
               <span><i style={{ background: COR_ABRIGO.atencao }} /> Acima de 70%</span>
               <span><i style={{ background: COR_ABRIGO.lotado }} /> Lotado / inativo</span>
-              <strong>Alertas</strong>
-              {Object.entries(ESTILO_GRAVIDADE).map(([chave, e]) => (
-                <span key={chave}><i className="circulo" style={{ borderColor: e.cor, background: `${e.cor}40` }} /> {e.label}</span>
-              ))}
+              {mostraAlertas && <>
+                <strong>Alertas</strong>
+                {Object.entries(ESTILO_GRAVIDADE).map(([chave, e]) => (
+                  <span key={chave}><i className="circulo" style={{ borderColor: e.cor, background: `${e.cor}40` }} /> {e.label}</span>
+                ))}
+              </>}
             </div>
           </div>
 
           {/* ─── Painel lateral ─── */}
           <aside className="mapa-painel">
-            <div className="mapa-painel-secao">
+            {mostraAlertas && <div className="mapa-painel-secao">
               <div className="mapa-painel-cabecalho">
                 <h2>Alertas ativos</h2>
                 {atualizadoEm && <small>atualizado {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</small>}
@@ -575,7 +591,7 @@ function Mapa({ modulo = 'admin' }) {
                   </button>
                 )
               })}
-            </div>
+            </div>}
 
             <div className="mapa-painel-secao">
               <div className="mapa-painel-cabecalho">

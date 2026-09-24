@@ -4,7 +4,9 @@
 //   • inscrição (nome, e-mail e bairro onde mora — se o bairro não estiver
 //     na lista, a pessoa informa o CEP e o sistema cadastra o bairro);
 //   • gerenciar os bairros acompanhados;
-//   • relatar uma ocorrência com perguntas fechadas + foto.
+//   • relatar uma ocorrência com perguntas fechadas + foto (opcional);
+//   • entrar no grupo de alertas da cidade (link de convite);
+//   • ver os alertas ativos (opção 5 do menu principal).
 //
 // Todas as etapas começam com "alerta_" no state.step.
 import { userState } from "../state/state.js";
@@ -12,6 +14,9 @@ import { api } from "../services/api.js";
 import { baixarFoto } from "../services/midia.js";
 import { enviarMenuPrincipal } from "./menu.js";
 import { numeroReal } from "../services/telefone.js";
+import {
+  titulo, listaNumerada, opcao, SEPARADOR, RODAPE_OPCAO, RODAPE_MENU, RODAPE_CANCELAR, erro
+} from "../utils/formato.js";
 
 // Mesmas opções do backend (Backend/src/lib/alertas.js) — o valor precisa bater
 const TIPOS = [
@@ -25,12 +30,14 @@ const TIPOS = [
 ];
 
 const GRAVIDADES = [
-  { valor: 'grave', label: '🔴 Grave', descricao: 'risco à vida, pessoas feridas ou ilhadas' },
-  { valor: 'medio', label: '🟠 Médio', descricao: 'danos ou risco, sem pessoas em perigo imediato' },
-  { valor: 'leve',  label: '🟡 Leve',  descricao: 'transtorno, sem risco imediato' },
+  { valor: 'grave', label: '🔴 *Grave*', descricao: 'risco à vida, pessoas feridas ou ilhadas' },
+  { valor: 'medio', label: '🟠 *Médio*', descricao: 'danos ou risco, sem pessoas em perigo imediato' },
+  { valor: 'leve',  label: '🟡 *Leve*',  descricao: 'transtorno, sem risco imediato' },
 ];
 
-const ERRO_CONEXAO = '❌ Não consegui falar com o sistema agora. Tente novamente em alguns minutos.\n\nDigite *oi* para voltar ao menu.';
+const RODAPE_EMERGENCIA = '🚨 Em emergência ligue *193* (Bombeiros) ou *199* (Defesa Civil).';
+
+const ERRO_CONEXAO = `❌ Não consegui falar com o sistema agora.\nTente novamente em alguns minutos. 🙏\n\n${RODAPE_MENU}`;
 
 // ── Auxiliares ─────────────────────────────────────────────────
 
@@ -38,8 +45,6 @@ const ERRO_CONEXAO = '❌ Não consegui falar com o sistema agora. Tente novamen
 const normalizar = (texto) => String(texto ?? '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/\s+/g, ' ').trim();
-
-const listaNumerada = (itens, formatar) => itens.map((item, i) => `${i + 1} - ${formatar(item)}`).join('\n');
 
 // Converte a resposta "3" no item da lista (ou null)
 const escolherPorNumero = (text, itens) => {
@@ -69,18 +74,21 @@ const mostrarConvite = async (msg, from, inscritoInativo = false) => {
   userState.set(from, { step: 'alerta_convite', tempData: {} });
 
   await msg.reply(
-`🔔 *ALERTAS S.O.S VALE*
+`${titulo('🔔', 'ALERTAS DO MEU BAIRRO')}
 
 ${inscritoInativo
-  ? 'Sua inscrição no sistema de alertas está cancelada.'
-  : 'Receba avisos de alagamentos, deslizamentos e outras ocorrências no seu bairro — e ajude a avisar a sua vizinhança.'}
+  ? '⚠️ Sua inscrição no sistema de alertas está *cancelada*.'
+  : '📢 Receba avisos de *alagamentos*, *deslizamentos* e outras ocorrências no seu bairro — e ajude a avisar a sua vizinhança.'}
 
-Os alertas só são enviados depois que *vários moradores* relatam a mesma ocorrência, para evitar alarmes falsos.
+✅ Os alertas só são enviados depois que *vários moradores* relatam a mesma ocorrência, para evitar alarmes falsos.
 
-Para participar precisamos do seu *nome*, *e-mail* e do *bairro onde você mora*.
+📝 Para se inscrever precisamos do seu *nome*, *e-mail* e do *bairro onde você mora*.
 
-1 - Quero me inscrever
-0 - Voltar ao menu`
+${opcao(1, '✍️ Quero me inscrever')}
+${opcao(2, '👥 Entrar no grupo de alertas da cidade')}
+${opcao(0, '↩️ Voltar ao menu')}
+
+${RODAPE_OPCAO}`
   );
 };
 
@@ -89,22 +97,25 @@ const mostrarMenuInscrito = async (msg, from, inscrito) => {
 
   const acompanhados = inscrito.bairrosInteresse.length > 0
     ? inscrito.bairrosInteresse.map(b => `   • ${descreverBairro(b)}`).join('\n')
-    : '   (nenhum outro bairro)';
+    : '   _nenhum outro bairro_';
 
   await msg.reply(
-`🔔 *ALERTAS S.O.S VALE*
+`${titulo('🔔', 'ALERTAS DO MEU BAIRRO')}
 
-Olá, ${inscrito.nome}!
+Olá, *${inscrito.nome}*! 👋
 
 🏠 Você mora em: *${inscrito.bairro}* (${inscrito.cidade}/${inscrito.estado})
 👀 Também acompanha:
 ${acompanhados}
 
-1 - Relatar uma ocorrência
-2 - Acompanhar outro bairro
-3 - Parar de acompanhar um bairro
-4 - Cancelar minha inscrição
-0 - Voltar ao menu`
+${opcao(1, '📢 Relatar uma ocorrência')}
+${opcao(2, '👥 Entrar no grupo de alertas da cidade')}
+${opcao(3, '➕ Acompanhar outro bairro')}
+${opcao(4, '➖ Parar de acompanhar um bairro')}
+${opcao(5, '🚫 Cancelar minha inscrição')}
+${opcao(0, '↩️ Voltar ao menu')}
+
+${RODAPE_OPCAO}`
   );
 };
 
@@ -117,9 +128,126 @@ export const abrirMenuAlertas = async (msg, from) => {
     } else {
       await mostrarConvite(msg, from, Boolean(inscrito));
     }
-  } catch (erro) {
-    console.error('[ALERTA] Erro ao abrir menu:', erro.message);
+  } catch (erroApi) {
+    console.error('[ALERTA] Erro ao abrir menu:', erroApi.message);
     userState.delete(from);
+    await msg.reply(ERRO_CONEXAO);
+  }
+};
+
+// Volta para o menu de alertas (do inscrito ou o convite)
+const voltarAoMenuAlertas = async (msg, from, inscrito) => {
+  if (inscrito?.ativo) return mostrarMenuInscrito(msg, from, inscrito);
+  return mostrarConvite(msg, from, Boolean(inscrito));
+};
+
+
+// ── Grupo de alertas da cidade (link de convite) ───────────────
+// O link é cadastrado pelo admin no painel (Regiões → cidade).
+
+const enviarLinkGrupo = async (msg, from, cidade) => {
+  userState.delete(from);
+  await msg.reply(
+`${titulo('👥', `GRUPO DE ALERTAS — ${cidade.nome.toUpperCase()}/${cidade.estado}`)}
+
+Toque no link para entrar no grupo: 👇
+${cidade.link}
+
+📌 No grupo são publicados apenas os alertas *confirmados* por moradores ou pela equipe do S.O.S Vale.
+
+${SEPARADOR}
+🔔 Digite *1* para voltar aos alertas.
+${RODAPE_MENU}`
+  );
+};
+
+const mostrarGrupos = async (msg, from, inscrito) => {
+  const { ok, dados } = await api('GET', '/bot/cidades/grupos');
+  if (!ok) throw new Error(dados.mensagem);
+
+  // Cidades do inscrito (onde mora e bairros que acompanha) aparecem primeiro
+  const minhas = new Set(inscrito
+    ? [inscrito.cidade, ...inscrito.bairrosInteresse.map(b => b.cidade)].map(normalizar)
+    : []);
+  const cidades = [...dados.cidades]
+    .map(c => ({ ...c, minha: minhas.has(normalizar(c.nome)) }))
+    .sort((a, b) => Number(b.minha) - Number(a.minha) || a.nome.localeCompare(b.nome));
+
+  if (cidades.length === 0) {
+    await msg.reply('😕 Ainda não há grupos de alertas cadastrados.\nEm breve eles estarão disponíveis por aqui!');
+    return voltarAoMenuAlertas(msg, from, inscrito);
+  }
+
+  // Só um grupo: envia direto
+  if (cidades.length === 1) return enviarLinkGrupo(msg, from, cidades[0]);
+
+  userState.set(from, { step: 'alerta_grupo_escolha', tempData: { inscrito, cidades } });
+
+  await msg.reply(
+`${titulo('👥', 'GRUPOS DE ALERTAS')}
+
+De qual cidade você quer entrar no grupo?
+
+${listaNumerada(cidades, c => `${c.nome}/${c.estado}${c.minha ? ' 🏠' : ''}`)}
+${opcao(0, '↩️ Voltar')}
+
+${RODAPE_OPCAO}`
+  );
+};
+
+
+// ── Alertas ativos (opção 5 do menu principal) ─────────────────
+
+const MAXIMO_ALERTAS_LISTADOS = 10;
+
+export const mostrarAlertasAtivos = async (msg, from) => {
+  userState.delete(from);
+
+  try {
+    const { ok, dados } = await api('GET', '/bot/alertas/ativos');
+    if (!ok) throw new Error(dados.mensagem);
+
+    if (dados.alertas.length === 0) {
+      await msg.reply(
+`${titulo('🚨', 'ALERTAS ATIVOS')}
+
+✅ Nenhum alerta ativo no momento.
+
+🔔 Quer ser avisado quando houver? Digite *1* e inscreva-se nos alertas do seu bairro.
+${RODAPE_MENU}`
+      );
+      return;
+    }
+
+    // Mais graves primeiro, agrupados por cidade
+    const alertas = [...dados.alertas]
+      .sort((a, b) => b.pesoGravidade - a.pesoGravidade)
+      .slice(0, MAXIMO_ALERTAS_LISTADOS);
+
+    const porCidade = {};
+    for (const a of alertas) (porCidade[`${a.cidade}/${a.estado}`] ??= []).push(a);
+
+    const blocos = Object.entries(porCidade).map(([cidade, lista]) =>
+      `🌆 *${cidade}*\n` + lista.map(a =>
+        `${a.gravidadeEmoji} ${a.emoji} *${a.tipoLabel}* — ${a.bairro}\n` +
+        `      ${a.gravidadeLabel} · confirmado por ${a.totalRelatos} morador(es)`
+      ).join('\n')
+    ).join('\n\n');
+
+    const restantes = dados.alertas.length - alertas.length;
+
+    await msg.reply(
+`${titulo('🚨', 'ALERTAS ATIVOS')}
+
+${blocos}
+${restantes > 0 ? `\n➕ e mais ${restantes} alerta(s).\n` : ''}
+${SEPARADOR}
+${RODAPE_EMERGENCIA}
+🔔 Digite *1* para receber os alertas do seu bairro ou entrar no grupo da cidade.
+${RODAPE_MENU}`
+    );
+  } catch (erroApi) {
+    console.error('[ALERTA] Erro ao listar alertas ativos:', erroApi.message);
     await msg.reply(ERRO_CONEXAO);
   }
 };
@@ -130,12 +258,15 @@ export const abrirMenuAlertas = async (msg, from) => {
 // "proposito" diz o que fazer quando o bairro for escolhido.
 // A pessoa digita o CEP ou o nome do bairro — sem listas enormes.
 
-const PERGUNTA_BAIRRO = `📮 Digite o *CEP* do endereço (ex: 12070-610)
-ou o *nome do bairro* (ex: Centro).`;
+const PERGUNTA_BAIRRO =
+`📮 Digite o *CEP* do endereço _(ex: 12070-610)_
+ou o *nome do bairro* _(ex: Centro)_.
 
-const iniciarSelecaoBairro = async (msg, from, tempData, proposito, titulo) => {
+${RODAPE_CANCELAR}`;
+
+const iniciarSelecaoBairro = async (msg, from, tempData, proposito, cabecalho) => {
   userState.set(from, { step: 'alerta_sel_busca', tempData, selecao: { proposito } });
-  await msg.reply(`${titulo}\n\n${PERGUNTA_BAIRRO}`);
+  await msg.reply(`${cabecalho}\n\n${PERGUNTA_BAIRRO}`);
 };
 
 const voltarParaBusca = async (msg, from, state, aviso) => {
@@ -150,9 +281,10 @@ const mostrarOpcoes = async (msg, from, state, opcoes, cabecalho) => {
   await msg.reply(
 `${cabecalho}
 
-${listaNumerada(opcoes, descreverBairro)}
+${listaNumerada(opcoes, b => `🏘️ ${descreverBairro(b)}`)}
+${opcao(0, '📮 Nenhum desses (digitar o CEP)')}
 
-0 - Nenhum desses (digitar o CEP)`
+${RODAPE_OPCAO}`
   );
 };
 
@@ -172,11 +304,11 @@ const concluirSelecao = async (msg, from, state, bairro) => {
 
     if (!ok) {
       userState.delete(from);
-      await msg.reply(`❌ Não foi possível concluir a inscrição: ${dados.mensagem}\n\nDigite *oi* para recomeçar.`);
+      await msg.reply(erro(`Não foi possível concluir a inscrição: ${dados.mensagem}`, 'Digite *oi* para recomeçar.'));
       return;
     }
 
-    await msg.reply(`✅ Inscrição realizada! Você vai receber os alertas confirmados do bairro *${descreverBairro(bairro)}*.`);
+    await msg.reply(`🎉 *Inscrição realizada!*\n\nVocê vai receber os alertas confirmados do bairro *${descreverBairro(bairro)}*. 🔔`);
     await mostrarMenuInscrito(msg, from, dados.inscrito);
     return;
   }
@@ -211,19 +343,19 @@ const buscarPorCep = async (msg, from, state, cepDigitado) => {
   if (!ok) throw new Error(dados.mensagem);
 
   if (!dados.bairro) {
-    return voltarParaBusca(msg, from, state, '⚠️ Este CEP não informa o bairro (comum em cidades pequenas). Digite o CEP de uma rua próxima ou o nome do bairro.');
+    return voltarParaBusca(msg, from, state, '⚠️ Este CEP não informa o bairro (comum em cidades pequenas).\n💡 Digite o CEP de uma rua próxima ou o nome do bairro.');
   }
 
   userState.set(from, { ...state, step: 'alerta_sel_cep_confirmar', selecao: { ...state.selecao, cep } });
 
   await msg.reply(
-`📍 Encontrei este endereço:
+`📍 *Encontrei este endereço:*
 
 🏘️ Bairro: *${dados.bairro}*
 🌆 Cidade: *${dados.cidade}/${dados.uf}*
 
-1 - Sim, é esse
-2 - Não, digitar de novo`
+${opcao(1, '✅ Sim, é esse')}
+${opcao(2, '✏️ Não, digitar de novo')}`
   );
 };
 
@@ -250,15 +382,15 @@ const buscarPorNome = async (msg, from, state, nomeDigitado) => {
   if (parecidos.length > 1 && parecidos.length <= 10) {
     const cabecalho = exatos.length > 1
       ? `🔎 Existe *${nomeDigitado.trim()}* em mais de uma cidade. Qual é o seu?`
-      : `🔎 Encontrei estes bairros com "${nomeDigitado.trim()}":`;
+      : `🔎 Encontrei estes bairros com "*${nomeDigitado.trim()}*":`;
     return mostrarOpcoes(msg, from, state, parecidos, cabecalho);
   }
 
   if (parecidos.length > 10) {
-    return voltarParaBusca(msg, from, state, `🔎 Muitos bairros com "${nomeDigitado.trim()}". Digite o nome mais completo ou o CEP.`);
+    return voltarParaBusca(msg, from, state, `🔎 Muitos bairros com "${nomeDigitado.trim()}".\n💡 Digite o nome mais completo ou o CEP.`);
   }
 
-  return voltarParaBusca(msg, from, state, `❌ Não encontrei o bairro "${nomeDigitado.trim()}". Confira o nome ou digite o *CEP* — se o bairro ainda não estiver cadastrado, cadastramos pelo CEP.`);
+  return voltarParaBusca(msg, from, state, `❌ Não encontrei o bairro "${nomeDigitado.trim()}".\n💡 Confira o nome ou digite o *CEP* — se o bairro ainda não estiver cadastrado, cadastramos pelo CEP.`);
 };
 
 const processarSelecao = async (msg, from, text, state) => {
@@ -283,7 +415,7 @@ const processarSelecao = async (msg, from, text, state) => {
       return pareceCep(digitado) ? buscarPorCep(msg, from, state, digitado) : buscarPorNome(msg, from, state, digitado);
     }
 
-    await msg.reply(`❌ Digite um número de 1 a ${selecao.opcoes.length}, ou 0 para digitar o CEP.`);
+    await msg.reply(`❌ Digite um número de *1 a ${selecao.opcoes.length}*, ou *0* para digitar o CEP.`);
     return;
   }
 
@@ -292,7 +424,7 @@ const processarSelecao = async (msg, from, text, state) => {
     if (text === '2') return voltarParaBusca(msg, from, state);
 
     if (text !== '1') {
-      await msg.reply('Digite *1* para confirmar ou *2* para digitar de novo.');
+      await msg.reply('💬 Digite *1* para confirmar ou *2* para digitar de novo.');
       return;
     }
 
@@ -307,13 +439,13 @@ const processarSelecao = async (msg, from, text, state) => {
 
 // ── Relato de ocorrência ───────────────────────────────────────
 
-// Opção 5 do menu principal e opção 1 do menu de alertas
+// Opção 1 do menu de alertas
 export const iniciarRelato = async (msg, from) => {
   try {
     const inscrito = await buscarInscrito(from);
 
     if (!inscrito?.ativo) {
-      await msg.reply('📍 Para relatar ocorrências você precisa estar inscrito no sistema de alertas — assim conseguimos confirmar os relatos e avisar a vizinhança.');
+      await msg.reply('📍 Para relatar ocorrências você precisa estar *inscrito* no sistema de alertas — assim conseguimos confirmar os relatos e avisar a vizinhança.');
       await mostrarConvite(msg, from, Boolean(inscrito));
       return;
     }
@@ -326,17 +458,17 @@ export const iniciarRelato = async (msg, from) => {
     userState.set(from, { step: 'alerta_rel_local', tempData: { inscrito, locais } });
 
     await msg.reply(
-`📍 *RELATAR OCORRÊNCIA*
+`${titulo('📢', 'RELATAR OCORRÊNCIA')}
 
-Onde está acontecendo?
+📍 *Passo 1 de 4* — Onde está acontecendo?
 
-${listaNumerada(locais, b => `${descreverBairro(b)}${b.residencia ? ' — onde você mora' : ''}`)}
-${locais.length + 1} - Outro bairro
+${listaNumerada(locais, b => `${b.residencia ? '🏠' : '👀'} ${descreverBairro(b)}${b.residencia ? ' — _onde você mora_' : ''}`)}
+${opcao(locais.length + 1, '🔎 Outro bairro')}
 
-Digite *cancelar* a qualquer momento para desistir.`
+${RODAPE_CANCELAR}`
     );
-  } catch (erro) {
-    console.error('[ALERTA] Erro ao iniciar relato:', erro.message);
+  } catch (erroApi) {
+    console.error('[ALERTA] Erro ao iniciar relato:', erroApi.message);
     userState.delete(from);
     await msg.reply(ERRO_CONEXAO);
   }
@@ -346,9 +478,11 @@ const perguntarTipo = async (msg, from, tempData) => {
   userState.set(from, { step: 'alerta_rel_tipo', tempData });
 
   await msg.reply(
-`⚠️ O que está acontecendo em *${tempData.bairro.nome}*?
+`⚠️ *Passo 2 de 4* — O que está acontecendo em *${tempData.bairro.nome}*?
 
-${listaNumerada(TIPOS, t => t.label)}`
+${listaNumerada(TIPOS, t => t.label)}
+
+${RODAPE_OPCAO}`
   );
 };
 
@@ -356,15 +490,15 @@ const mostrarResumoRelato = async (msg, from, tempData) => {
   userState.set(from, { step: 'alerta_rel_confirmar', tempData });
 
   await msg.reply(
-`📋 *Confira seu relato:*
+`${titulo('📋', 'CONFIRA SEU RELATO')}
 
 📍 Local: ${descreverBairro(tempData.bairro)}
 ⚠️ Ocorrência: ${tempData.tipo.label}
-Gravidade: ${tempData.gravidade.label}
-📷 Foto: ${tempData.foto ? '✅' : 'sem foto'}
+🎚️ Gravidade: ${tempData.gravidade.label}
+📷 Foto: ${tempData.foto ? '✅ enviada' : '➖ sem foto'}
 
-1 - Enviar relato
-2 - Cancelar`
+${opcao(1, '📤 Enviar relato')}
+${opcao(2, '❌ Cancelar')}`
   );
 };
 
@@ -382,19 +516,38 @@ const enviarRelato = async (msg, from, tempData) => {
   userState.delete(from);
 
   if (!ok) {
-    await msg.reply(`${status === 409 ? 'ℹ️' : '❌'} ${dados.mensagem}\n\nDigite *oi* para voltar ao menu.`);
+    await msg.reply(`${status === 409 ? 'ℹ️' : '❌'} ${dados.mensagem}\n\n${RODAPE_MENU}`);
     return;
   }
 
   const protocolo = `#A${dados.alerta.id_alerta}`;
-  const rodape = '\n\nEm emergência ligue 193 (Bombeiros) ou 199 (Defesa Civil).\n\nDigite *oi* para voltar ao menu.';
+  const rodape = `\n\n${SEPARADOR}\n${RODAPE_EMERGENCIA}\n${RODAPE_MENU}`;
 
   if (dados.situacao === 'disparado') {
-    await msg.reply(`✅ Relato recebido e ocorrência *confirmada* por ${dados.totalRelatos} moradores!\n\nO alerta ${protocolo} está sendo enviado para quem mora ou acompanha o bairro ${tempData.bairro.nome}.${rodape}`);
+    await msg.reply(
+`${titulo('🚨', 'OCORRÊNCIA CONFIRMADA')}
+
+✅ Relato recebido e confirmado por *${dados.totalRelatos} moradores*!
+
+📣 O alerta *${protocolo}* está sendo enviado para quem mora ou acompanha o bairro *${tempData.bairro.nome}*.
+
+🙏 Obrigado por ajudar a sua vizinhança!${rodape}`);
   } else if (dados.situacao === 'ja_ativo') {
-    await msg.reply(`✅ Relato recebido. Esta ocorrência (${protocolo}) já estava confirmada e os moradores já foram avisados. Obrigado por reforçar!${rodape}`);
+    await msg.reply(
+`${titulo('✅', 'RELATO RECEBIDO')}
+
+ℹ️ Esta ocorrência (*${protocolo}*) já estava confirmada e os moradores já foram avisados.
+
+🙏 Obrigado por reforçar!${rodape}`);
   } else {
-    await msg.reply(`✅ Relato recebido! Protocolo: ${protocolo}\n\nPara evitar alarmes falsos, o alerta só é enviado aos moradores quando *${dados.confirmacoesNecessarias} pessoas diferentes* relatam a mesma ocorrência.\n\nRelatos até agora: *${dados.totalRelatos}/${dados.confirmacoesNecessarias}*${rodape}`);
+    await msg.reply(
+`${titulo('✅', 'RELATO RECEBIDO')}
+
+🔖 Protocolo: *${protocolo}*
+
+🛡️ Para evitar alarmes falsos, o alerta só é enviado quando *${dados.confirmacoesNecessarias} pessoas diferentes* relatam a mesma ocorrência.
+
+📊 Relatos até agora: *${dados.totalRelatos}/${dados.confirmacoesNecessarias}*${rodape}`);
   }
 };
 
@@ -406,12 +559,12 @@ const processarRelato = async (msg, from, text, state) => {
     const outro = String(tempData.locais.length + 1);
 
     if (text === outro) {
-      return iniciarSelecaoBairro(msg, from, tempData, 'relato', '📍 *OUTRO BAIRRO*');
+      return iniciarSelecaoBairro(msg, from, tempData, 'relato', '🔎 *OUTRO BAIRRO*');
     }
 
     const local = escolherPorNumero(text, tempData.locais);
     if (!local) {
-      await msg.reply(`❌ Digite um número de 1 a ${outro}.`);
+      await msg.reply(`❌ Digite um número de *1 a ${outro}*.`);
       return;
     }
 
@@ -423,7 +576,7 @@ const processarRelato = async (msg, from, text, state) => {
   if (state.step === 'alerta_rel_tipo') {
     const tipo = escolherPorNumero(text, TIPOS);
     if (!tipo) {
-      await msg.reply(`❌ Digite um número de 1 a ${TIPOS.length}.`);
+      await msg.reply(`❌ Digite um número de *1 a ${TIPOS.length}*.`);
       return;
     }
 
@@ -431,9 +584,11 @@ const processarRelato = async (msg, from, text, state) => {
     userState.set(from, { step: 'alerta_rel_gravidade', tempData });
 
     await msg.reply(
-`Qual a gravidade?
+`🎚️ *Passo 3 de 4* — Qual a gravidade?
 
-${listaNumerada(GRAVIDADES, g => `${g.label} — ${g.descricao}`)}`
+${listaNumerada(GRAVIDADES, g => `${g.label}\n      _${g.descricao}_`)}
+
+${RODAPE_OPCAO}`
     );
     return;
   }
@@ -442,14 +597,21 @@ ${listaNumerada(GRAVIDADES, g => `${g.label} — ${g.descricao}`)}`
   if (state.step === 'alerta_rel_gravidade') {
     const gravidade = escolherPorNumero(text, GRAVIDADES);
     if (!gravidade) {
-      await msg.reply(`❌ Digite um número de 1 a ${GRAVIDADES.length}.`);
+      await msg.reply(`❌ Digite um número de *1 a ${GRAVIDADES.length}*.`);
       return;
     }
 
     tempData.gravidade = gravidade;
     userState.set(from, { step: 'alerta_rel_foto', tempData });
 
-    await msg.reply('📷 Se puder, envie uma *foto* da ocorrência — ela ajuda os vizinhos a entenderem a situação.\n\nSem foto? Digite *pular*.\n\n⚠️ Só tire a foto se estiver em local seguro.');
+    await msg.reply(
+`📷 *Passo 4 de 4* — Se puder, envie uma *foto* da ocorrência.
+Ela ajuda os vizinhos a entenderem a situação.
+
+➡️ Sem foto? Digite *pular*.
+
+⚠️ _Só tire a foto se estiver em local seguro._`
+    );
     return;
   }
 
@@ -468,14 +630,14 @@ ${listaNumerada(GRAVIDADES, g => `${g.label} — ${g.descricao}`)}`
     let foto;
     try {
       foto = await baixarFoto(msg, '[ALERTA]');
-    } catch (erro) {
-      console.error('[ALERTA] Não foi possível baixar a foto:', erro.message);
-      await msg.reply('⚠️ Não consegui baixar a imagem. Tente enviar de novo, envie como *documento* (Clipe 📎 → Documento) ou digite *pular* para continuar sem foto.');
+    } catch (erroFoto) {
+      console.error('[ALERTA] Não foi possível baixar a foto:', erroFoto.message);
+      await msg.reply('⚠️ Não consegui baixar a imagem.\n\n💡 Tente enviar de novo, envie como *documento* (Clipe 📎 → Documento) ou digite *pular* para continuar sem foto.');
       return;
     }
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(foto.mimetype)) {
-      await msg.reply('⚠️ O arquivo precisa ser uma foto (JPG ou PNG). Envie de novo ou digite *pular*.');
+      await msg.reply('⚠️ O arquivo precisa ser uma *foto* (JPG ou PNG).\n\n💡 Envie de novo ou digite *pular*.');
       return;
     }
 
@@ -487,12 +649,12 @@ ${listaNumerada(GRAVIDADES, g => `${g.label} — ${g.descricao}`)}`
   if (state.step === 'alerta_rel_confirmar') {
     if (text === '2') {
       userState.delete(from);
-      await msg.reply('❌ Relato cancelado.\n\nDigite *oi* para voltar ao menu.');
+      await msg.reply(`❌ *Relato cancelado.*\n\n${RODAPE_MENU}`);
       return;
     }
 
     if (text !== '1') {
-      await msg.reply('Digite *1* para enviar ou *2* para cancelar.');
+      await msg.reply('💬 Digite *1* para enviar ou *2* para cancelar.');
       return;
     }
 
@@ -511,7 +673,7 @@ export const alertaFlow = async (msg, from, text, state) => {
     // "cancelar" funciona em qualquer etapa
     if (text === 'cancelar') {
       userState.delete(from);
-      await msg.reply('❌ Operação cancelada.\n\nDigite *oi* para voltar ao menu.');
+      await msg.reply(`✋ *Operação cancelada.*\n\n${RODAPE_MENU}`);
       return true;
     }
 
@@ -519,13 +681,34 @@ export const alertaFlow = async (msg, from, text, state) => {
     if (state.step === 'alerta_convite') {
       if (text === '1') {
         userState.set(from, { step: 'alerta_insc_nome', tempData: {} });
-        await msg.reply('👤 Qual o seu *nome*?');
+        await msg.reply(`${titulo('✍️', 'INSCRIÇÃO NOS ALERTAS')}\n\n👤 *Passo 1 de 3* — Qual o seu *nome*?\n\n${RODAPE_CANCELAR}`);
+      } else if (text === '2') {
+        await mostrarGrupos(msg, from, await buscarInscrito(from));
       } else if (text === '0') {
         userState.delete(from);
         await enviarMenuPrincipal(msg);
       } else {
-        await msg.reply('Digite *1* para se inscrever ou *0* para voltar ao menu.');
+        await msg.reply('💬 Digite *1* para se inscrever, *2* para entrar no grupo da cidade ou *0* para voltar.');
       }
+      return true;
+    }
+
+    // ── Escolha do grupo da cidade ──
+    if (state.step === 'alerta_grupo_escolha') {
+      const { inscrito, cidades } = state.tempData;
+
+      if (text === '0') {
+        await voltarAoMenuAlertas(msg, from, inscrito);
+        return true;
+      }
+
+      const cidade = escolherPorNumero(text, cidades);
+      if (!cidade) {
+        await msg.reply(`❌ Digite um número de *1 a ${cidades.length}*, ou *0* para voltar.`);
+        return true;
+      }
+
+      await enviarLinkGrupo(msg, from, cidade);
       return true;
     }
 
@@ -533,23 +716,23 @@ export const alertaFlow = async (msg, from, text, state) => {
     if (state.step === 'alerta_insc_nome') {
       const nome = msg.body.trim();
       if (nome.length < 2 || msg.hasMedia) {
-        await msg.reply('❌ Digite o seu nome.');
+        await msg.reply('❌ Digite o seu *nome*.');
         return true;
       }
       state.tempData.nome = nome;
       userState.set(from, { ...state, step: 'alerta_insc_email' });
-      await msg.reply('📧 Qual o seu *e-mail*?');
+      await msg.reply(`📧 *Passo 2 de 3* — Prazer, ${nome.split(' ')[0]}! 😊\nQual o seu *e-mail*?`);
       return true;
     }
 
     if (state.step === 'alerta_insc_email') {
       const email = msg.body.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        await msg.reply('❌ E-mail inválido. Ex: maria@email.com');
+        await msg.reply(erro('E-mail inválido.', 'Exemplo: maria@email.com'));
         return true;
       }
       state.tempData.email = email;
-      await iniciarSelecaoBairro(msg, from, state.tempData, 'inscricao', '🏠 *ONDE VOCÊ MORA?*');
+      await iniciarSelecaoBairro(msg, from, state.tempData, 'inscricao', '🏠 *Passo 3 de 3* — Onde você *mora*?');
       return true;
     }
 
@@ -563,20 +746,37 @@ export const alertaFlow = async (msg, from, text, state) => {
       } else if (text === '1') {
         await iniciarRelato(msg, from);
       } else if (text === '2') {
-        await iniciarSelecaoBairro(msg, from, {}, 'acompanhar', '👀 *ACOMPANHAR OUTRO BAIRRO*');
+        await mostrarGrupos(msg, from, inscrito);
       } else if (text === '3') {
+        await iniciarSelecaoBairro(msg, from, {}, 'acompanhar', `${titulo('➕', 'ACOMPANHAR OUTRO BAIRRO')}\n\nVocê vai receber também os alertas desse bairro. 👀`);
+      } else if (text === '4') {
         if (inscrito.bairrosInteresse.length === 0) {
-          await msg.reply('Você não acompanha outros bairros além do bairro onde mora.');
+          await msg.reply('ℹ️ Você não acompanha outros bairros além do bairro onde mora.');
           await mostrarMenuInscrito(msg, from, inscrito);
         } else {
           userState.set(from, { step: 'alerta_remover', tempData: { inscrito } });
-          await msg.reply(`Qual bairro você quer parar de acompanhar?\n\n${listaNumerada(inscrito.bairrosInteresse, descreverBairro)}\n\n0 - Voltar`);
+          await msg.reply(
+`${titulo('➖', 'PARAR DE ACOMPANHAR')}
+
+Qual bairro você quer deixar de acompanhar?
+
+${listaNumerada(inscrito.bairrosInteresse, b => `🏘️ ${descreverBairro(b)}`)}
+${opcao(0, '↩️ Voltar')}
+
+${RODAPE_OPCAO}`
+          );
         }
-      } else if (text === '4') {
+      } else if (text === '5') {
         userState.set(from, { step: 'alerta_cancelar_inscricao', tempData: { inscrito } });
-        await msg.reply('Tem certeza que quer cancelar a inscrição? Você deixará de receber os alertas.\n\n1 - Sim, cancelar\n2 - Não');
+        await msg.reply(
+`⚠️ *Tem certeza que quer cancelar a inscrição?*
+Você deixará de receber os alertas. 🔕
+
+${opcao(1, '🚫 Sim, cancelar')}
+${opcao(2, '↩️ Não, voltar')}`
+        );
       } else {
-        await msg.reply('❌ Digite um número de 0 a 4.');
+        await msg.reply('❌ Digite um número de *0 a 5*.');
       }
       return true;
     }
@@ -592,12 +792,12 @@ export const alertaFlow = async (msg, from, text, state) => {
 
       const bairro = escolherPorNumero(text, inscrito.bairrosInteresse);
       if (!bairro) {
-        await msg.reply(`❌ Digite um número de 1 a ${inscrito.bairrosInteresse.length}, ou 0 para voltar.`);
+        await msg.reply(`❌ Digite um número de *1 a ${inscrito.bairrosInteresse.length}*, ou *0* para voltar.`);
         return true;
       }
 
       const { ok, dados } = await api('DELETE', `/bot/inscritos/${encodeURIComponent(from)}/bairros/${bairro.id_bairro}`);
-      await msg.reply(ok ? `✅ Você não receberá mais os alertas de ${bairro.nome}.` : `❌ ${dados.mensagem}`);
+      await msg.reply(ok ? `✅ Você não receberá mais os alertas de *${bairro.nome}*.` : `❌ ${dados.mensagem}`);
       await mostrarMenuInscrito(msg, from, ok ? dados.inscrito : inscrito);
       return true;
     }
@@ -608,8 +808,8 @@ export const alertaFlow = async (msg, from, text, state) => {
         const { ok, dados } = await api('PATCH', `/bot/inscritos/${encodeURIComponent(from)}/cancelar`);
         userState.delete(from);
         await msg.reply(ok
-          ? '✅ Inscrição cancelada. Você não receberá mais alertas.\n\nPara voltar, digite *oi* e escolha a opção 1.'
-          : `❌ ${dados.mensagem}\n\nDigite *oi* para voltar ao menu.`);
+          ? `✅ *Inscrição cancelada.* Você não receberá mais alertas. 🔕\n\n🔔 Para voltar, digite *oi* e escolha a opção *1*.`
+          : `❌ ${dados.mensagem}\n\n${RODAPE_MENU}`);
       } else {
         await mostrarMenuInscrito(msg, from, state.tempData.inscrito);
       }
@@ -627,8 +827,8 @@ export const alertaFlow = async (msg, from, text, state) => {
       return true;
     }
 
-  } catch (erro) {
-    console.error('[ALERTA] Erro no fluxo:', erro);
+  } catch (erroFluxo) {
+    console.error('[ALERTA] Erro no fluxo:', erroFluxo);
     userState.delete(from);
     await msg.reply(ERRO_CONEXAO);
     return true;

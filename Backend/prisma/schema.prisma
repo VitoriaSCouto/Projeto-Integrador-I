@@ -55,6 +55,9 @@ model Cidade {
   // ID do grupo de WhatsApp que recebe os alertas da cidade (ex: 1203630@g.us)
   // Pode ser preenchido pelo painel ou pelo comando "!alertas vincular" no grupo
   grupoWhatsappId String?
+  // Link de convite do grupo (https://chat.whatsapp.com/...) — o bot envia
+  // para quem quiser entrar no grupo de alertas da cidade
+  grupoWhatsappLink String?
 
   createdAt DateTime @default(now()) @map("created_at")
 

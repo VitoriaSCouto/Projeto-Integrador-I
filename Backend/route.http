@@ -127,6 +127,20 @@ Authorization: Bearer COLE_O_TOKEN_AQUI
 
 
 // --------------------------
+// Voluntário logado se vincula a um abrigo (abrigoId: null para se desvincular)
+
+PATCH http://localhost:3000/api/voluntarios/me/abrigo
+Authorization: Bearer COLE_O_TOKEN_DO_VOLUNTARIO_AQUI
+Content-Type: application/json
+
+{
+  "abrigoId": 1
+}
+
+###
+
+
+// --------------------------
 // Mapa (admin ou voluntário logado) — alertas ativos para os círculos do mapa
 
 GET http://localhost:3000/api/mapa/alertas

@@ -4,12 +4,10 @@ import { api } from "../services/api.js";
 import { apoioFlow } from "./apoio-flow.js";
 import { psicologicoFlow } from "./psicologico-flow.js";
 import { solicitacaoFlow } from "./solicitacao-flow.js";
-import { alertaFlow, abrirMenuAlertas, iniciarRelato } from "./alerta-flow.js";
+import { alertaFlow, abrirMenuAlertas, mostrarAlertasAtivos } from "./alerta-flow.js";
 import { handleGrupo } from "./grupo-controller.js";
-import { enviarMenuPrincipal } from "./menu.js";
-
-// Palavras que sempre voltam ao menu, em qualquer etapa de qualquer fluxo
-const COMANDOS_MENU = ['oi', 'menu', 'ola', 'inicio'];
+import { enviarMenuPrincipal, MENSAGEM_MENU } from "./menu.js";
+import { titulo, listaNumerada, SEPARADOR, RODAPE_MENU, RODAPE_CANCELAR, ehSaudacao } from "../utils/formato.js";
 
 export const handleMessage = async (msg, client) => {
 
@@ -34,10 +32,11 @@ export const handleMessage = async (msg, client) => {
     // ============================================
     // MENU PRINCIPAL
     // Vem antes dos fluxos para que "menu" nunca seja
-    // interpretado como resposta de uma pergunta
+    // interpretado como resposta de uma pergunta.
+    // Aceita "oi", "Oiii!", "olá", "OLAA", "bom dia", "menu"...
     // ============================================
 
-    if (COMANDOS_MENU.includes(text)) {
+    if (ehSaudacao(text)) {
         userState.delete(from);
         await enviarMenuPrincipal(msg);
         return;
@@ -50,6 +49,13 @@ export const handleMessage = async (msg, client) => {
     // ============================================
 
     if (state) {
+        // "cancelar" desiste de qualquer fluxo em andamento
+        if (text === 'cancelar') {
+            userState.delete(from);
+            await msg.reply(`✋ *Operação cancelada.*\n\n${RODAPE_MENU}`);
+            return;
+        }
+
         if (await alertaFlow(msg, from, text, state)) return;
         if (await apoioFlow(msg, from, text, state)) return;
         if (await psicologicoFlow(msg, from, text, state)) return;
@@ -68,11 +74,15 @@ export const handleMessage = async (msg, client) => {
 
         case "2":
             await msg.reply(
-`SOLICITAR APOIO
+`${titulo('🆘', 'SOLICITAR APOIO')}
 
-Informe seu endereco completo:
+Vou registrar o seu pedido em 4 passos rápidos. 📝
 
-Ex: Rua das Flores, 123 - Centro`
+📍 *Passo 1 de 4* — Qual o seu *endereço completo*?
+
+_Ex: Rua das Flores, 123 - Centro_
+
+${RODAPE_MENU}`
             );
             userState.set(from, { step: 'help_address', tempData: {} });
             break;
@@ -89,38 +99,47 @@ Ex: Rua das Flores, 123 - Centro`
 
                 if (abrigos.length === 0) {
                     await msg.reply(
-`Nenhum abrigo disponivel no momento.
+`${titulo('🏠', 'ABRIGOS DISPONÍVEIS')}
 
-Entre em contato com a Defesa Civil: 199
+😕 Nenhum abrigo disponível no momento.
 
-Digite *oi* para voltar ao menu.`
+☎️ Ligue para a *Defesa Civil: 199*
+
+${RODAPE_MENU}`
                     );
                     break;
                 }
 
                 const lista = abrigos.map(a => {
                     const vagas = a.capacidadeTotal - a.capacidadeOcupada;
-                    const vagasTexto = vagas > 0 ? `${vagas} vagas disponiveis` : `Sem vagas`;
+                    const vagasTexto = vagas > 0 ? `🟢 *${vagas}* vaga(s) disponível(is)` : `🔴 Sem vagas`;
                     const local = a.bairro ? `${a.bairro}, ${a.cidade}` : a.cidade;
-                    return `*${a.nome}*\n${a.endereco}, ${local}\n${vagasTexto}${a.telefone ? `\nTel: ${a.telefone}` : ""}`;
-                }).join("\n\n");
+                    return [
+                        `🏠 *${a.nome}*`,
+                        `📍 ${a.endereco} — ${local}`,
+                        vagasTexto,
+                        a.telefone ? `📞 ${a.telefone}` : null,
+                    ].filter(Boolean).join('\n');
+                }).join(`\n\n`);
 
                 await msg.reply(
-`ABRIGOS DISPONIVEIS
+`${titulo('🏠', 'ABRIGOS DISPONÍVEIS')}
 
 ${lista}
 
-Digite *oi* para voltar ao menu.`
+${SEPARADOR}
+🚨 Em emergência ligue *193* (Bombeiros) ou *199* (Defesa Civil).
+${RODAPE_MENU}`
                 );
 
             } catch (err) {
                 console.error("[API] Erro ao buscar abrigos:", err);
                 await msg.reply(
-`Nao foi possivel carregar os abrigos agora.
+`❌ Não foi possível carregar os abrigos agora.
 
-Ligue para a Defesa Civil: 199
+☎️ Ligue para a *Defesa Civil: 199*
 
-Digite *oi* para voltar ao menu.`
+${RODAPE_MENU}`
                 );
             }
             break;
@@ -128,58 +147,75 @@ Digite *oi* para voltar ao menu.`
 
         case "4":
             await msg.reply(
-`APOIO PSICOLOGICO
+`${titulo('💙', 'APOIO PSICOLÓGICO')}
 
-1 - Quero conversar com alguem
-2 - Ansiedade
-3 - Apoio familiar
-4 - Crise emocional
-5 - Desabafar
-6 - Outro motivo`
+Você não está sozinho(a). 🤝
+Conte pra gente o que você precisa:
+
+${listaNumerada([
+    '🗣️ Quero conversar com alguém',
+    '😰 Ansiedade',
+    '👨‍👩‍👧 Apoio familiar',
+    '💔 Crise emocional',
+    '💭 Desabafar',
+    '📝 Outro motivo',
+])}
+
+📞 Precisa falar agora? *CVV — 188* (24h, gratuito)
+
+${RODAPE_MENU}`
             );
             userState.set(from, { step: 'psycho_need', tempData: {} });
             break;
 
         case "5":
-            await iniciarRelato(msg, from);
+            await mostrarAlertasAtivos(msg, from);
             break;
 
         case "6":
             await msg.reply(
-`EMERGENCIA
+`${titulo('☎️', 'TELEFONES DE EMERGÊNCIA')}
 
-193 - Bombeiros
-192 - SAMU
-190 - Policia
-199 - Defesa Civil`
+🚒 *193* — Bombeiros
+🚑 *192* — SAMU
+🚓 *190* — Polícia Militar
+🏛️ *199* — Defesa Civil
+💙 *188* — CVV (apoio emocional)
+
+📲 As ligações são *gratuitas* e funcionam 24h.
+
+${RODAPE_MENU}`
             );
             break;
 
         case "7":
             await msg.reply(
-`SOLICITAR CADASTRO DE ABRIGO
+`${titulo('🏫', 'INDICAR LOCAL PARA ABRIGO')}
 
-Vou coletar os dados de um local que pode servir como abrigo em emergencias.
+Conhece um local que pode servir de abrigo em emergências? 🙌
+Vou coletar os dados e a equipe do S.O.S Vale vai analisar.
 
-Qual o nome do abrigo?`
+🏷️ Qual o *nome* do local?
+
+${RODAPE_CANCELAR}`
             );
             userState.set(from, { step: 'sol_nome', tempData: {} });
             break;
 
         case "8":
             await msg.reply(
-`Atendimento encerrado.
+`👋 *Atendimento encerrado.*
 
-Digite *oi* para reabrir o menu.`
+Obrigado por usar o S.O.S Vale! 💙
+Cuide-se e fique em segurança.
+
+💬 Mande um *oi* quando precisar.`
             );
             userState.delete(from);
             break;
 
         default:
-            await msg.reply(
-`Nao entendi.
-
-Digite *oi* para ver o menu ou escolha uma opcao valida.`
-            );
+            // Mensagem que não é opção do menu: mostra o menu de novo
+            await msg.reply(`🤔 Não entendi.\n\n${MENSAGEM_MENU}`);
     }
 };

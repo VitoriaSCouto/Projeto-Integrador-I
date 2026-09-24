@@ -1,4 +1,4 @@
-import { FaHome, FaUser, FaMap, FaHandHoldingHeart } from 'react-icons/fa';
+import { FaHome, FaUser, FaMap, FaHandHoldingHeart, FaBoxOpen } from 'react-icons/fa';
 import { FiLogOut } from 'react-icons/fi';
 import logo from '../assets/logo.png';
 
@@ -8,6 +8,7 @@ import logo from '../assets/logo.png';
 const itens = [
   { id: 'home',   href: '/painel-voluntario',             label: 'Home',                  icone: <FaHome className="icon" /> },
   { id: 'ajuda',  href: '/solicitacoes-ajuda-voluntario', label: 'Solicitações de ajuda', icone: <FaHandHoldingHeart className="icon" /> },
+  { id: 'abrigos', href: '/voluntario/abrigos',           label: 'Abrigos',               icone: <FaBoxOpen className="icon" /> },
   { id: 'mapa',   href: '/voluntario/mapa',               label: 'Mapa de abrigos',       icone: <FaMap className="icon" /> },
   { id: 'perfil', href: '/painel-voluntario?aba=perfil',  label: 'Meu perfil',            icone: <FaUser className="icon" /> },
 ]

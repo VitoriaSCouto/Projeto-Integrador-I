@@ -1,11 +1,16 @@
+import '../pg_adm/style.css'
 import './style.css'
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaHome, FaHeart, FaDonate, FaMap, FaUser, FaRegBell, FaEnvelope, FaPhoneAlt, FaIdCard, FaBirthdayCake } from 'react-icons/fa';
+import {
+  FaHome, FaHeart, FaHandHoldingHeart, FaRegBell,
+  FaPhoneAlt, FaIdCard, FaBirthdayCake, FaVenusMars
+} from 'react-icons/fa';
 import { FaChevronRight, FaLocationDot } from 'react-icons/fa6';
 import SidebarVoluntario from '../../components/SidebarVoluntario';
+import { API_URL, formatarTempo } from '../../services/api';
 
-// ─── Labels e cores de status/categoria ─────────────────────────
+// ─── Labels e cores de status/categoria/urgência ────────────────
 // Mesmo padrão usado nas outras telas de Solicitação de Ajuda
 const badgeStatus = {
   aberto:       { label: 'Aberto',       bg: '#dbeafe', cor: '#1e40af' },
@@ -22,19 +27,30 @@ const categoriaLabel = {
   outro:          'Outro',
 }
 
+// peso: ordena da mais urgente para a menos urgente
+const URGENCIA = {
+  critica: { label: 'Crítica', bg: '#fee2e2', cor: '#b91c1c', peso: 4 },
+  alta:    { label: 'Alta',    bg: '#ffedd5', cor: '#c2410c', peso: 3 },
+  media:   { label: 'Média',   bg: '#fef9c3', cor: '#a16207', peso: 2 },
+  baixa:   { label: 'Baixa',   bg: '#f1f5f9', cor: '#475569', peso: 1 },
+}
+
+const MAXIMO_SOLICITACOES = 6
+const MAXIMO_CONTRIBUICOES = 6
+
 const PainelVoluntario = () => {
   const navigate = useNavigate();
 
   // ─── DADOS DO VOLUNTÁRIO LOGADO ──────────────────────────────
-  // Recupera do localStorage o que foi salvo no login — evita requisição extra
+  // Recupera do localStorage o que foi salvo no login — mostra o nome na hora
   const voluntarioSalvo = JSON.parse(localStorage.getItem('voluntario') || '{}');
 
   // ─── ESTADOS ─────────────────────────────────────────────────
-  const [voluntario,          setVoluntario]          = useState(voluntarioSalvo);
-  const [abrigos,              setAbrigos]              = useState([]);
-  const [minhasSolicitacoes,   setMinhasSolicitacoes]   = useState([]);
-  const [carregando,           setCarregando]           = useState(true);
-  const [erro,                 setErro]                 = useState(null);
+  const [voluntario,         setVoluntario]         = useState(voluntarioSalvo);
+  const [solicitacoes,       setSolicitacoes]       = useState([]);
+  const [minhasSolicitacoes, setMinhasSolicitacoes] = useState([]);
+  const [carregando,         setCarregando]         = useState(true);
+  const [erro,               setErro]               = useState(null);
 
   // Aba exibida: /painel-voluntario (home) ou /painel-voluntario?aba=perfil
   const [parametros] = useSearchParams();
@@ -50,37 +66,36 @@ const PainelVoluntario = () => {
       return;
     }
     buscarDados();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── BUSCA DE DADOS ──────────────────────────────────────────
-  // Busca em paralelo: abrigos em alerta + dados completos do voluntário + solicitações que ele atendeu
+  // Em paralelo: solicitações de ajuda abertas + dados do voluntário
   async function buscarDados() {
     try {
-      const [resAbrigos, resVoluntario] = await Promise.all([
-        fetch('http://localhost:3000/api/abrigos/listar'),
-        fetch('http://localhost:3000/api/voluntarios/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
+      const [resSolicitacoes, resVoluntario] = await Promise.all([
+        fetch(`${API_URL}/api/solicitacoes-ajuda/publico`),
+        fetch(`${API_URL}/api/voluntarios/me`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      if (!resAbrigos.ok)    throw new Error('Erro ao buscar abrigos');
-      if (!resVoluntario.ok) throw new Error('Erro ao buscar dados do voluntário');
+      if (resVoluntario.status === 401) {
+        navigate('/login-voluntario');
+        return;
+      }
+      if (!resSolicitacoes.ok) throw new Error('Erro ao buscar solicitações de ajuda');
+      if (!resVoluntario.ok)   throw new Error('Erro ao buscar dados do voluntário');
 
-      const dadosAbrigos    = await resAbrigos.json();
-      const dadosVoluntario = await resVoluntario.json();
+      const dadosSolicitacoes = await resSolicitacoes.json();
+      const dadosVoluntario   = await resVoluntario.json();
 
-      // Filtra abrigos que precisam de ajuda:
-      // statusAlerta: true OU ocupação acima de 80% da capacidade total
-      const abrigosNecessitando = dadosAbrigos.abrigos.filter(a =>
-        a.statusAlerta ||
-        (a.capacidadeTotal > 0 && (a.capacidadeOcupada / a.capacidadeTotal) >= 0.8)
+      // Só as que ainda aceitam ajuda, as mais urgentes primeiro
+      setSolicitacoes(
+        dadosSolicitacoes.solicitacoes
+          .filter(s => s.status === 'aberto')
+          .sort((a, b) => (URGENCIA[b.urgencia]?.peso ?? 0) - (URGENCIA[a.urgencia]?.peso ?? 0))
       );
-
-      setAbrigos(abrigosNecessitando);
       setVoluntario(dadosVoluntario.voluntario);
-      // Antes era "doacoes" (model removido do schema). Agora é
-      // "solicitacoesAjudaAtendidas" — solicitações de ajuda que este
-      // voluntário atendeu de fato (atribuídas pelo ADM ao concluir).
+      // Solicitações de ajuda que este voluntário atendeu (atribuídas pelo ADM)
       setMinhasSolicitacoes(dadosVoluntario.voluntario.solicitacoesAjudaAtendidas || []);
 
     } catch (err) {
@@ -94,38 +109,57 @@ const PainelVoluntario = () => {
   const totalSolicitacoes = minhasSolicitacoes.length;
   const emAndamento       = minhasSolicitacoes.filter(s => s.status === 'em_andamento').length;
   const concluidas        = minhasSolicitacoes.filter(s => s.status === 'concluido').length;
-  const vinculado         = voluntario?.abrigo?.nome ?? null;
+  const abrigoVinculado   = voluntario?.abrigo ?? null;
+  const primeiroNome      = voluntario?.nome?.split(' ')[0] ?? 'Voluntário';
+  const urgentes          = solicitacoes.filter(s => ['critica', 'alta'].includes(s.urgencia)).length;
+
+  // "quinta-feira, 24 de setembro" → "Quinta-feira, 24 de setembro"
+  const dataPorExtenso = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const hoje = dataPorExtenso.charAt(0).toUpperCase() + dataPorExtenso.slice(1);
 
   const statCards = [
     {
-      id:     'abrigos',
-      label:  'Abrigos precisando de ajuda',
-      value:  abrigos.length,
-      sub:    'com alerta ou lotação alta',
-      icon:   <FaHome />,
+      id:     'solicitacoes',
+      label:  'Solicitações de ajuda abertas',
+      value:  solicitacoes.length,
+      sub:    urgentes > 0 ? `${urgentes} com urgência alta ou crítica` : 'nenhuma urgente',
+      icon:   <FaHandHoldingHeart />,
       accent: 'red',
+      acao:   () => navigate('/solicitacoes-ajuda-voluntario'),
     },
     {
-      id:     'solicitacoes',
+      id:     'contribuicoes',
       label:  'Minhas contribuições',
       value:  totalSolicitacoes,
-      sub:    `${concluidas} concluída${concluidas !== 1 ? 's' : ''}`,
+      sub:    `${concluidas} concluída${concluidas !== 1 ? 's' : ''} · ${emAndamento} em andamento`,
       icon:   <FaHeart />,
       accent: 'cyan',
     },
     {
       id:     'vinculo',
-      label:  'Meu vínculo',
-      value:  vinculado ? '✓' : '—',
-      sub:    vinculado ?? 'Sem abrigo vinculado',
+      label:  'Meu abrigo',
+      value:  abrigoVinculado ? abrigoVinculado.nome : 'Nenhum',
+      sub:    abrigoVinculado ? `${abrigoVinculado.cidade} · trocar de abrigo` : 'clique para escolher um abrigo',
       icon:   <FaLocationDot />,
-      accent: vinculado ? 'blue' : 'orange',
+      accent: abrigoVinculado ? 'blue' : 'teal',
+      texto:  true, // valor em texto: fonte menor
+      acao:   () => navigate('/voluntario/abrigos'),
     },
   ];
 
   // ─── TELA DE CARREGANDO / ERRO ───────────────────────────────
-  if (carregando) return <div className="dashboard">Carregando...</div>;
-  if (erro)       return <div className="dashboard">Erro: {erro}</div>;
+  if (carregando || erro) {
+    return (
+      <div className="dashboard">
+        <SidebarVoluntario ativo={aba} />
+        <main className="main home-vol">
+          <p className={erro ? 'hv-estado hv-estado--erro' : 'hv-estado'}>
+            {erro ? `Não foi possível carregar o painel: ${erro}` : 'Carregando...'}
+          </p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard">
@@ -134,33 +168,34 @@ const PainelVoluntario = () => {
       <SidebarVoluntario ativo={aba} />
 
       {/* ── MAIN ── */}
-      <main className="main">
+      <main className="main home-vol">
 
-        {/* ── HEADER ── */}
-        <header className="top">
+        {/* ── CABEÇALHO ── */}
+        <header className="hv-topo">
           <div>
-            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-              Home &gt; {aba === 'perfil' && <span>Meu perfil</span>}
+            <p className="hv-breadcrumb">
+              Home{aba === 'perfil' && <> &gt; <span>Meu perfil</span></>}
             </p>
-            <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
-              {aba === 'perfil' ? 'Meu perfil' : <>Olá, {voluntario?.nome?.split(' ')[0] ?? 'Voluntário'} 👋</>}
+            <h1 className="hv-titulo">
+              {aba === 'perfil' ? 'Meu perfil' : <>Olá, {primeiroNome} 👋</>}
             </h1>
-            <p className="subtitle">
-              {aba === 'perfil' ? 'Seus dados de cadastro' : 'Veja onde você pode ajudar hoje'}
+            <p className="hv-subtitulo">
+              {aba === 'perfil' ? 'Seus dados de cadastro' : <>Veja onde você pode ajudar hoje · {hoje}</>}
             </p>
           </div>
 
-          <div className="top-controls">
-            {/* Badge com solicitações em andamento — leva para as solicitações */}
+          <div className="hv-topo-acoes">
+            {/* Sino com as solicitações em andamento */}
             <button
-              className="notif-btn"
-              title="Solicitações de ajuda"
+              className="hv-sino"
+              title="Solicitações em andamento"
               onClick={() => navigate('/solicitacoes-ajuda-voluntario')}
             >
               <FaRegBell />
-              {emAndamento > 0 && (
-                <span className="notif-badge">{emAndamento}</span>
-              )}
+              {emAndamento > 0 && <span className="hv-sino-badge">{emAndamento}</span>}
+            </button>
+            <button className="hv-botao-primario" onClick={() => navigate('/solicitacoes-ajuda-voluntario')}>
+              <FaHandHoldingHeart /> Quero ajudar
             </button>
           </div>
         </header>
@@ -168,196 +203,179 @@ const PainelVoluntario = () => {
         {aba === 'perfil' ? (
 
           /* ── ABA MEU PERFIL ── */
-          <section className="panel" style={{ maxWidth: '640px' }}>
-            {[
-              { icone: <FaUser />,         rotulo: 'Nome',            valor: voluntario?.nome },
-              { icone: <FaEnvelope />,     rotulo: 'E-mail',          valor: voluntario?.email },
-              { icone: <FaPhoneAlt />,     rotulo: 'Telefone',        valor: voluntario?.telefone },
-              { icone: <FaIdCard />,       rotulo: 'CPF',             valor: voluntario?.cpf },
-              { icone: <FaBirthdayCake />, rotulo: 'Data de nascimento',
-                valor: voluntario?.dataNascimento
-                  // A data vem como "2000-01-31T00:00:00.000Z" — UTC evita mostrar o dia anterior
-                  ? new Date(voluntario.dataNascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
-                  : null },
-              { icone: <FaUser />,         rotulo: 'Gênero',          valor: voluntario?.genero },
-              { icone: <FaLocationDot />,  rotulo: 'Abrigo vinculado',
-                valor: voluntario?.abrigo ? `${voluntario.abrigo.nome} — ${voluntario.abrigo.cidade}` : 'Sem abrigo vinculado' },
-              { icone: <FaHeart />,        rotulo: 'Solicitações atendidas', valor: `${totalSolicitacoes} (${concluidas} concluída${concluidas !== 1 ? 's' : ''})` },
-            ].map(campo => (
-              <div
-                key={campo.rotulo}
-                style={{ display: 'flex', gap: '12px', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}
-              >
-                <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', minWidth: '200px' }}>
-                  {campo.icone} {campo.rotulo}
-                </span>
-                <span style={{ color: '#0f172a', fontWeight: '500' }}>{campo.valor || '—'}</span>
+          <section className="hv-painel hv-perfil">
+            <div className="hv-perfil-topo">
+              <div className="hv-avatar">{primeiroNome.charAt(0).toUpperCase()}</div>
+              <div className="hv-perfil-nome">
+                <h2>{voluntario?.nome}</h2>
+                <p>{voluntario?.email}</p>
               </div>
-            ))}
+              <span className={`hv-status ${voluntario?.status === 'ativo' ? 'hv-status--ativo' : ''}`}>
+                {voluntario?.status === 'ativo' ? 'Ativo' : (voluntario?.status ?? '—')}
+              </span>
+            </div>
+
+            <dl className="hv-perfil-campos">
+              {[
+                { icone: <FaPhoneAlt />,     rotulo: 'Telefone',        valor: voluntario?.telefone },
+                { icone: <FaIdCard />,       rotulo: 'CPF',             valor: voluntario?.cpf },
+                { icone: <FaBirthdayCake />, rotulo: 'Data de nascimento',
+                  valor: voluntario?.dataNascimento
+                    // A data vem como "2000-01-31T00:00:00.000Z" — UTC evita mostrar o dia anterior
+                    ? new Date(voluntario.dataNascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+                    : null },
+                { icone: <FaVenusMars />,    rotulo: 'Gênero',
+                  valor: voluntario?.genero ? voluntario.genero.charAt(0).toUpperCase() + voluntario.genero.slice(1) : null },
+                { icone: <FaLocationDot />,  rotulo: 'Abrigo vinculado',
+                  valor: abrigoVinculado ? `${abrigoVinculado.nome} — ${abrigoVinculado.cidade}` : 'Sem abrigo vinculado' },
+                { icone: <FaHeart />,        rotulo: 'Solicitações atendidas',
+                  valor: `${totalSolicitacoes} (${concluidas} concluída${concluidas !== 1 ? 's' : ''})` },
+              ].map(campo => (
+                <div className="hv-campo" key={campo.rotulo}>
+                  <dt>{campo.icone} {campo.rotulo}</dt>
+                  <dd>{campo.valor || '—'}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
 
         ) : (
         <>
-        {/* ── CARDS DE TOPO ── */}
-        <section className="stat-grid">
-          {statCards.map(card => (
-            <div className={`stat-card stat-card--${card.accent}`} key={card.id}>
-              <div className="stat-card-icon">{card.icon}</div>
-              <div className="stat-card-value">{card.value}</div>
-              <div className="stat-card-label">{card.label}</div>
-              <div className="stat-card-unread">
-                <span className="dot" /> {card.sub}
-              </div>
-            </div>
-          ))}
+        {/* ── CARDS DE RESUMO ── */}
+        <section className="hv-cards">
+          {statCards.map(card => {
+            const Tag = card.acao ? 'button' : 'div';
+            return (
+              <Tag
+                key={card.id}
+                className={`hv-card hv-card--${card.accent}${card.acao ? ' hv-card--clicavel' : ''}`}
+                onClick={card.acao}
+                type={card.acao ? 'button' : undefined}
+              >
+                <div className="hv-card-cabecalho">
+                  <span className="hv-card-rotulo">{card.label}</span>
+                  <span className="hv-card-icone">{card.icon}</span>
+                </div>
+                <div className={`hv-card-valor${card.texto ? ' hv-card-valor--texto' : ''}`} title={card.texto ? String(card.value) : undefined}>
+                  {card.value}
+                </div>
+                <div className="hv-card-sub">{card.sub}</div>
+              </Tag>
+            );
+          })}
         </section>
 
         {/* ── CONTEÚDO PRINCIPAL ── */}
-        <section className="content-grid">
+        <section className="hv-grade">
 
-          {/* ── LISTA DE ABRIGOS QUE PRECISAM DE AJUDA ── */}
-          <div className="panel activities-panel">
-            <div className="panel-header">
-              <h3>Abrigos que precisam de ajuda</h3>
-            </div>
+          {/* ── COLUNA PRINCIPAL ── */}
+          <div className="hv-coluna">
 
-            <div className="activities-list">
-              {abrigos.length === 0 ? (
-                <p style={{ color: '#64748b', padding: '16px 0' }}>
-                  Nenhum abrigo em alerta no momento.
-                </p>
-              ) : (
-                abrigos.slice(0, 6).map(abrigo => {
-                  // Calcula o percentual de ocupação para exibir na linha
-                  const ocupacao = abrigo.capacidadeTotal > 0
-                    ? Math.round((abrigo.capacidadeOcupada / abrigo.capacidadeTotal) * 100)
-                    : 0;
-
-                  return (
-                    <div className="activity-row" key={abrigo.id}>
-                      <div className="activity-icon"><FaHome /></div>
-                      <div className="activity-info">
-                        <p className="activity-title">{abrigo.nome}</p>
-                        <div className="activity-meta">
-                          <span><FaLocationDot /> {abrigo.bairro ? `${abrigo.bairro}, ` : ''}{abrigo.cidade}</span>
-                          {/* Ocupação como barra visual simples */}
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <div style={{
-                              width: '80px', height: '6px',
-                              background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden'
-                            }}>
-                              <div style={{
-                                width: `${ocupacao}%`, height: '100%',
-                                background: ocupacao >= 90 ? '#ef4444' : '#f59e0b',
-                                borderRadius: '4px'
-                              }} />
-                            </div>
-                            {ocupacao}% ocupado
-                          </span>
-                          {/* Badge de alerta se statusAlerta for true */}
-                          {abrigo.statusAlerta && (
-                            <span style={{
-                              background: '#fee2e2', color: '#dc2626',
-                              fontSize: '11px', padding: '2px 8px', borderRadius: '99px'
-                            }}>
-                              Em alerta
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {/* Leva para as solicitações de ajuda abertas desse abrigo */}
-                      <button
-                        className="activity-btn"
-                        onClick={() => navigate(`/solicitacoes-ajuda-voluntario?abrigo=${abrigo.id}`)}
-                      >
-                        Quero ajudar
-                      </button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <button className="see-all-btn" onClick={() => navigate('/voluntario/mapa')}>
-              Ver todos os abrigos <FaChevronRight />
-            </button>
-          </div>
-
-          {/* ── LATERAL ── */}
-          <div className="side-column">
-
-            {/* ── MINHAS CONTRIBUIÇÕES RECENTES ── */}
-            <div className="panel chart-panel">
-              <h3>Minhas contribuições recentes</h3>
-
-              {minhasSolicitacoes.length === 0 ? (
-                <p style={{ color: '#64748b', fontSize: '14px', marginTop: '8px' }}>
-                  Você ainda não atendeu nenhuma solicitação.
-                </p>
-              ) : (
-                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {minhasSolicitacoes.slice(0, 5).map((solicitacao, index) => {
-                    const badge = badgeStatus[solicitacao.status] ?? { label: solicitacao.status, bg: '#f1f5f9', cor: '#64748b' }
-                    return (
-                      <div key={index} style={{
-                        display: 'flex', justifyContent: 'space-between',
-                        alignItems: 'center', fontSize: '13px', gap: '8px',
-                        borderBottom: '1px solid #f1f5f9', paddingBottom: '8px'
-                      }}>
-                        <span style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {solicitacao.titulo}
-                        </span>
-                        <span style={{ color: '#64748b', flexShrink: 0 }}>
-                          {categoriaLabel[solicitacao.categoria] ?? solicitacao.categoria}
-                        </span>
-                        {/* Badge de status com cor por estado */}
-                        <span style={{
-                          fontSize: '11px', padding: '2px 8px', borderRadius: '99px',
-                          background: badge.bg, color: badge.cor, flexShrink: 0
-                        }}>
-                          {badge.label}
-                        </span>
-                      </div>
-                    )
-                  })}
+            {/* ── SOLICITAÇÕES DE AJUDA ABERTAS ── */}
+            <div className="hv-painel">
+              <div className="hv-painel-cabecalho">
+                <div>
+                  <h3>Solicitações de ajuda</h3>
+                  <p>O que os abrigos estão precisando agora — as mais urgentes primeiro</p>
                 </div>
-              )}
-            </div>
-
-            {/* ── AÇÕES RÁPIDAS ── */}
-            <div className="panel quick-actions-panel">
-              <h3>Ações Rápidas</h3>
-              <div className="quick-actions-grid">
-                <button
-                  className="quick-action"
-                  onClick={() => navigate('/solicitacoes-ajuda-voluntario')}
-                >
-                  <span className="quick-action-icon"><FaDonate /></span>
-                  Ver solicitações
-                </button>
-
-                <button
-                  className="quick-action"
-                  onClick={() => navigate('/voluntario/mapa')}
-                >
-                  <span className="quick-action-icon"><FaMap /></span>
-                  Ver mapa
-                </button>
-
-                <button
-                  className="quick-action"
-                  onClick={() => navigate('/painel-voluntario?aba=perfil')}
-                >
-                  <span className="quick-action-icon"><FaUser /></span>
-                  Meu perfil
+                <button className="hv-link" onClick={() => navigate('/solicitacoes-ajuda-voluntario')}>
+                  Ver todas <FaChevronRight />
                 </button>
               </div>
+
+              {solicitacoes.length === 0 ? (
+                <p className="hv-vazio">🎉 Nenhuma solicitação de ajuda aberta no momento.</p>
+              ) : (
+                <ul className="hv-solicitacoes">
+                  {solicitacoes.slice(0, MAXIMO_SOLICITACOES).map(s => {
+                    const urgencia = URGENCIA[s.urgencia] ?? URGENCIA.baixa;
+                    return (
+                      <li key={s.id_solicitacao} className="hv-solicitacao" style={{ '--cor-urgencia': urgencia.cor }}>
+                        <div className="hv-solicitacao-info">
+                          <p className="hv-solicitacao-titulo" title={s.titulo}>{s.titulo}</p>
+                          <p className="hv-solicitacao-meta">
+                            {categoriaLabel[s.categoria] ?? s.categoria}
+                            {' · '}<FaHome /> {s.abrigo?.nome ?? 'Abrigo'}{s.abrigo?.cidade ? ` — ${s.abrigo.cidade}` : ''}
+                            {s.createdAt && <> · {formatarTempo(s.createdAt)}</>}
+                          </p>
+                        </div>
+                        <span className="hv-badge" style={{ background: urgencia.bg, color: urgencia.cor }}>
+                          {urgencia.label}
+                        </span>
+                        <button
+                          className="hv-botao-ajudar"
+                          onClick={() => navigate(`/solicitacoes-ajuda-voluntario?abrigo=${s.abrigoId}`)}
+                        >
+                          Quero ajudar
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              {solicitacoes.length > MAXIMO_SOLICITACOES && (
+                <button className="hv-link hv-link--centro" onClick={() => navigate('/solicitacoes-ajuda-voluntario')}>
+                  Ver as outras {solicitacoes.length - MAXIMO_SOLICITACOES} solicitações <FaChevronRight />
+                </button>
+              )}
             </div>
 
+          </div>
+
+          {/* ── COLUNA LATERAL: MINHAS ÚLTIMAS CONTRIBUIÇÕES ── */}
+          <div className="hv-lateral">
+            <div className="hv-painel">
+              <div className="hv-painel-cabecalho">
+                <div>
+                  <h3>Minhas últimas contribuições</h3>
+                  <p>Solicitações que você atendeu</p>
+                </div>
+              </div>
+
+              {minhasSolicitacoes.length === 0 ? (
+                <div className="hv-vazio">
+                  <p>Você ainda não atendeu nenhuma solicitação.</p>
+                  <button className="hv-link hv-link--centro" onClick={() => navigate('/solicitacoes-ajuda-voluntario')}>
+                    Ver onde ajudar <FaChevronRight />
+                  </button>
+                </div>
+              ) : (
+                <ul className="hv-contribuicoes">
+                  {minhasSolicitacoes.slice(0, MAXIMO_CONTRIBUICOES).map((solicitacao, index) => {
+                    const badge = badgeStatus[solicitacao.status] ?? { label: solicitacao.status, bg: '#f1f5f9', cor: '#64748b' };
+                    return (
+                      <li key={solicitacao.id_solicitacao ?? index} className="hv-contribuicao">
+                        <div className="hv-contribuicao-info">
+                          <p className="hv-contribuicao-titulo" title={solicitacao.titulo}>{solicitacao.titulo}</p>
+                          <p className="hv-contribuicao-meta">
+                            {categoriaLabel[solicitacao.categoria] ?? solicitacao.categoria}
+                            {solicitacao.abrigo?.nome && <> · {solicitacao.abrigo.nome}</>}
+                            {solicitacao.createdAt && <> · {formatarTempo(solicitacao.createdAt)}</>}
+                          </p>
+                        </div>
+                        <span className="hv-badge" style={{ background: badge.bg, color: badge.cor }}>
+                          {badge.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              {minhasSolicitacoes.length > MAXIMO_CONTRIBUICOES && (
+                <p className="hv-mais">+ {minhasSolicitacoes.length - MAXIMO_CONTRIBUICOES} contribuição(ões) anteriores</p>
+              )}
+            </div>
           </div>
         </section>
         </>
         )}
+
+        <footer className="hv-rodape">
+          <p>© 2026 S.O.S Vale. Todos os direitos reservados.</p>
+          <p>Versão 1.0.0</p>
+        </footer>
       </main>
     </div>
   );

@@ -70,6 +70,12 @@ r = await req('POST', '/cidades/cadastrar', { nome: 'taubate', estadoId: sp.id_e
 checar('cidade duplicada (sem acento) → 400', r.status === 400, r)
 r = await req('PUT', `/cidades/atualizar/${taubate.id_cidade}`, { grupoWhatsappId: 'grupo-invalido' })
 checar('grupo inválido → 400', r.status === 400, r)
+r = await req('PUT', `/cidades/atualizar/${taubate.id_cidade}`, { grupoWhatsappLink: 'https://exemplo.com/grupo' })
+checar('link do grupo inválido → 400', r.status === 400, r)
+r = await req('PUT', `/cidades/atualizar/${taubate.id_cidade}`, { grupoWhatsappLink: ' chat.whatsapp.com/AbCdEf1234567890 ' })
+checar('link do grupo salvo (normalizado)', r.status === 200 && r.dados.cidade.grupoWhatsappLink === 'https://chat.whatsapp.com/AbCdEf1234567890', r)
+r = await req('GET', '/bot/cidades/grupos', undefined, BOT)
+checar('bot lista links dos grupos', r.status === 200 && r.dados.cidades.length === 1 && r.dados.cidades[0].link.endsWith('AbCdEf1234567890'), r)
 
 r = await req('POST', '/bairros/cadastrar', { nome: 'Centro', cidadeId: taubate.id_cidade, nivelRisco: 'alto', populacaoEstimada: '5000' })
 checar('cadastrar bairro', r.status === 201 && r.dados.bairro.nivelRisco === 'alto', r)
@@ -151,6 +157,8 @@ checar('3º relato (com foto): disparado', r.dados.situacao === 'disparado' && r
 checar('gravidade = mais relatada (médio)', r.dados.alerta.gravidade === 'medio', r.dados.alerta)
 r = await relatar('551100000004@c.us')
 checar('4º relato: já ativo', r.dados.situacao === 'ja_ativo', r)
+r = await req('GET', `/bot/alertas/ativos?cidadeId=${taubate.id_cidade}`, undefined, BOT)
+checar('bot lista alertas ativos', r.status === 200 && r.dados.alertas.some(a => a.id_alerta === alertaId && a.emoji && a.bairro === 'Centro'), r)
 r = await relatar('551100000005@c.us', { tipo: 'incendio' })
 checar('tipo diferente abre outro alerta', r.dados.alerta.id_alerta !== alertaId, r)
 
@@ -231,6 +239,21 @@ r = await req('POST', '/voluntarios/login', { email: 'vol@x.com', senha: '123456
 token = r.dados.token
 r = await req('GET', '/alertas/listar')
 checar('token de voluntário em rota admin → 403', r.status === 403, r)
+
+// ── Voluntário se vincula a um abrigo pela Home
+r = await req('GET', '/abrigos/listar')
+const abrigoParaVincular = r.dados.abrigos[0]
+r = await req('PATCH', '/voluntarios/me/abrigo', { abrigoId: abrigoParaVincular.id })
+checar('voluntário se vincula a um abrigo', r.status === 200 && r.dados.abrigo?.nome === abrigoParaVincular.nome, r)
+r = await req('GET', '/voluntarios/me')
+checar('/me mostra o abrigo vinculado', r.dados.voluntario.abrigo?.id_abrigo === abrigoParaVincular.id, r)
+r = await req('PATCH', '/voluntarios/me/abrigo', { abrigoId: 999999 })
+checar('vincular a abrigo inexistente → 404', r.status === 404, r)
+r = await req('PATCH', '/voluntarios/me/abrigo', { abrigoId: null })
+checar('voluntário se desvincula', r.status === 200 && r.dados.abrigo === null, r)
+token = tokenAdmin
+r = await req('PATCH', '/voluntarios/me/abrigo', { abrigoId: abrigoParaVincular.id })
+checar('admin não usa a rota do voluntário → 403', r.status === 403, r)
 
 console.log(falhas === 0 ? '\nTODOS OS TESTES PASSARAM' : `\n${falhas} TESTE(S) FALHARAM`)
 process.exit(falhas ? 1 : 0)

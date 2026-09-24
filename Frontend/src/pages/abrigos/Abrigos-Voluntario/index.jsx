@@ -1,48 +1,45 @@
-// Hub de Abrigos (admin) — /abrigos
-// Lista todos os abrigos com busca, filtros e ordenação (mesmo padrão da tela
-// de Abrigos do voluntário — estilos em styles/listagem.css).
-import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { FaSearch, FaPlus, FaPhoneAlt, FaHandHoldingHeart, FaTimes, FaUsers, FaUser, FaClipboardList } from "react-icons/fa";
-import { FaLocationDot } from "react-icons/fa6";
-import { GoAlertFill } from "react-icons/go";
-
-import "../../pg_adm/style.css";
-import "../../../styles/listagem.css";
-import SidebarAdm from '../../../components/SidebarAdm';
-import { API_URL } from '../../../services/api';
+// Abrigos (módulo Voluntário) — /voluntario/abrigos
+// O voluntário encontra um abrigo (busca, filtros e ordenação) e se vincula
+// a ele para ajudar. Só aparecem abrigos ativos.
+import '../../pg_adm/style.css'
+import '../../../styles/listagem.css'
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  ESTRUTURAS, SITUACOES, ocupacaoDe, vagasDe, corOcupacao, passaSituacao, normalizar, plural
+  FaSearch, FaCheck, FaPhoneAlt, FaHandHoldingHeart, FaTimes, FaHome
+} from 'react-icons/fa';
+import { FaLocationDot } from 'react-icons/fa6';
+import SidebarVoluntario from '../../../components/SidebarVoluntario';
+import { API_URL } from '../../../services/api';
+import { alterarVinculoAbrigo } from '../../../services/voluntario';
+import {
+  ESTRUTURAS, SITUACOES, ocupacaoDe, vagasDe, corOcupacao, passaSituacao, normalizar
 } from '../../../utils/listagem';
 
-// Status cadastrado no abrigo → rótulo e cor do selo
-const STATUS_ABRIGO = {
-  ativo:      { label: 'Ativo',      classe: 'lg-selo--verde' },
-  manutencao: { label: 'Manutenção', classe: 'lg-selo--amarelo' },
-  desativado: { label: 'Desativado', classe: 'lg-selo--vermelho' },
-}
-
 const ORDENACOES = [
-  { valor: 'nome',    label: 'Nome (A–Z)' },
-  { valor: 'vagas',   label: 'Mais vagas' },
-  { valor: 'cheios',  label: 'Mais cheios' },
+  { valor: 'nome',   label: 'Nome (A–Z)' },
+  { valor: 'vagas',  label: 'Mais vagas' },
+  { valor: 'cheios', label: 'Mais cheios' },
   { valor: 'pedidos', label: 'Mais pedidos de ajuda' },
 ]
 
 const FILTROS_INICIAIS = {
-  busca: '', cidade: '', tipo: '', status: '', situacao: 'todas',
-  estruturas: [], comPedidos: false, emAlerta: false, ordem: 'nome',
+  busca: '', cidade: '', tipo: '', situacao: 'todas', estruturas: [], comPedidos: false, ordem: 'nome',
 }
 
-const ListarAbrigos = () => {
+function AbrigosVoluntario() {
   const navigate = useNavigate()
+  const token = localStorage.getItem('token_voluntario')
 
   // ─── ESTADOS ─────────────────────────────────────────────────
   const [abrigos,        setAbrigos]        = useState([])
   const [pedidosAbertos, setPedidosAbertos] = useState({})   // abrigoId → nº de solicitações abertas
+  const [meuAbrigoId,    setMeuAbrigoId]    = useState(null)
   const [filtros,        setFiltros]        = useState(FILTROS_INICIAIS)
   const [carregando,     setCarregando]     = useState(true)
   const [erro,           setErro]           = useState(null)
+  const [vinculando,     setVinculando]     = useState(null)  // id do abrigo sendo salvo ('sair' = desvinculando)
+  const [aviso,          setAviso]          = useState(null)  // { texto, erro }
 
   const mudarFiltro = (campo, valor) => setFiltros(f => ({ ...f, [campo]: valor }))
 
@@ -53,12 +50,23 @@ const ListarAbrigos = () => {
 
   // ─── BUSCA DE DADOS ──────────────────────────────────────────
   useEffect(() => {
+    if (!token) {
+      navigate('/login-voluntario')
+      return
+    }
+
     const carregar = async () => {
       try {
-        const [resAbrigos, resSolicitacoes] = await Promise.all([
-          fetch(`${API_URL}/api/abrigos/listar`),
+        const [resAbrigos, resSolicitacoes, resVoluntario] = await Promise.all([
+          fetch(`${API_URL}/api/abrigos/listar?status=ativo`),
           fetch(`${API_URL}/api/solicitacoes-ajuda/publico`),
+          fetch(`${API_URL}/api/voluntarios/me`, { headers: { Authorization: `Bearer ${token}` } }),
         ])
+
+        if (resVoluntario.status === 401) {
+          navigate('/login-voluntario')
+          return
+        }
         if (!resAbrigos.ok) throw new Error('Erro ao buscar abrigos')
 
         const dadosAbrigos = await resAbrigos.json()
@@ -73,6 +81,11 @@ const ListarAbrigos = () => {
           }
           setPedidosAbertos(contagem)
         }
+
+        if (resVoluntario.ok) {
+          const { voluntario } = await resVoluntario.json()
+          setMeuAbrigoId(voluntario.abrigo?.id_abrigo ?? null)
+        }
       } catch (err) {
         setErro(err.message)
       } finally {
@@ -80,9 +93,24 @@ const ListarAbrigos = () => {
       }
     }
     carregar()
-  }, [])
+  }, [navigate, token])
 
-  // ─── OPÇÕES DOS SELECTS ──────────────────────────────────────
+  // ─── VINCULAR / DESVINCULAR ──────────────────────────────────
+  async function alterarVinculo(abrigoId) {
+    setVinculando(abrigoId ?? 'sair')
+    setAviso(null)
+    try {
+      const dados = await alterarVinculoAbrigo(abrigoId)
+      setMeuAbrigoId(dados.abrigo?.id_abrigo ?? null)
+      setAviso({ texto: dados.mensagem })
+    } catch (err) {
+      setAviso({ texto: err.message, erro: true })
+    } finally {
+      setVinculando(null)
+    }
+  }
+
+  // ─── OPÇÕES DOS SELECTS (a partir dos abrigos carregados) ────
   const cidades = useMemo(() => [...new Set(abrigos.map(a => a.cidade))].sort(), [abrigos])
   const tipos   = useMemo(() => [...new Set(abrigos.map(a => a.tipoAbrigo).filter(Boolean))].sort(), [abrigos])
 
@@ -91,14 +119,12 @@ const ListarAbrigos = () => {
     const termo = normalizar(filtros.busca.trim())
 
     const lista = abrigos.filter(a => {
-      if (termo && ![a.nome, a.bairro, a.endereco, a.cidade, a.responsavel].some(t => normalizar(t).includes(termo))) return false
+      if (termo && ![a.nome, a.bairro, a.endereco, a.cidade].some(t => normalizar(t).includes(termo))) return false
       if (filtros.cidade && a.cidade !== filtros.cidade) return false
       if (filtros.tipo && a.tipoAbrigo !== filtros.tipo) return false
-      if (filtros.status && a.status !== filtros.status) return false
       if (!passaSituacao(a, filtros.situacao)) return false
       if (filtros.estruturas.some(campo => !a[campo])) return false
       if (filtros.comPedidos && !pedidosAbertos[a.id]) return false
-      if (filtros.emAlerta && !a.statusAlerta) return false
       return true
     })
 
@@ -112,19 +138,17 @@ const ListarAbrigos = () => {
     return lista.sort(ordenar)
   }, [abrigos, filtros, pedidosAbertos])
 
-  const filtrosAtivos =
-    Boolean(filtros.busca || filtros.cidade || filtros.tipo || filtros.status || filtros.comPedidos || filtros.emAlerta) ||
-    filtros.situacao !== 'todas' || filtros.estruturas.length > 0
+  const meuAbrigo = abrigos.find(a => a.id === meuAbrigoId) ?? null
 
-  // Números do topo da lista (sobre todos os abrigos, sem filtro)
-  const totalPessoas = abrigos.reduce((soma, a) => soma + a.capacidadeOcupada, 0)
-  const totalVagas   = abrigos.filter(a => a.status === 'ativo').reduce((soma, a) => soma + vagasDe(a), 0)
+  const filtrosAtivos =
+    Boolean(filtros.busca || filtros.cidade || filtros.tipo || filtros.comPedidos) ||
+    filtros.situacao !== 'todas' || filtros.estruturas.length > 0
 
   // ─── TELA DE CARREGANDO / ERRO ───────────────────────────────
   if (carregando || erro) {
     return (
       <div className="dashboard">
-        <SidebarAdm ativo="abrigos" />
+        <SidebarVoluntario ativo="abrigos" />
         <main className="main pagina-listagem">
           <p className={erro ? 'lg-estado lg-estado--erro' : 'lg-estado'}>
             {erro ? `Não foi possível carregar os abrigos: ${erro}` : 'Carregando abrigos...'}
@@ -136,28 +160,50 @@ const ListarAbrigos = () => {
 
   return (
     <div className="dashboard">
-      <SidebarAdm ativo="abrigos" />
+      <SidebarVoluntario ativo="abrigos" />
 
       <main className="main pagina-listagem">
 
         {/* ── CABEÇALHO ── */}
-        <header className="lg-topo-linha">
-          <div>
-            <p className="lg-breadcrumb">Abrigos &gt;</p>
-            <h1 className="lg-titulo">Hub de Abrigos</h1>
-            <p className="lg-subtitulo">
-              {plural(abrigos.length, 'abrigo cadastrado', 'abrigos cadastrados')} · {plural(totalPessoas, 'pessoa acolhida', 'pessoas acolhidas')} · {plural(totalVagas, 'vaga livre', 'vagas livres')}
-            </p>
-          </div>
-          <div className="lg-topo-acoes">
-            <button className="lg-botao-secundario" onClick={() => navigate('/listar-solicitação-abrigo')}>
-              <FaClipboardList /> Solicitações de abrigo
-            </button>
-            <button className="lg-botao-primario" onClick={() => navigate('/cadastrar-abrigos')}>
-              <FaPlus /> Novo abrigo
-            </button>
-          </div>
+        <header className="lg-topo">
+          <p className="lg-breadcrumb">Abrigos &gt;</p>
+          <h1 className="lg-titulo">Abrigos</h1>
+          <p className="lg-subtitulo">Encontre um abrigo e vincule-se a ele para ajudar</p>
         </header>
+
+        {/* ── MEU ABRIGO ── */}
+        <section className={`lg-meu${meuAbrigo ? '' : ' lg-meu--vazio'}`}>
+          {meuAbrigo ? (
+            <>
+              <div className="lg-meu-icone"><FaHome /></div>
+              <div className="lg-meu-info">
+                <span className="lg-meu-rotulo">Meu abrigo</span>
+                <strong>{meuAbrigo.nome}</strong>
+                <span>
+                  <FaLocationDot /> {[meuAbrigo.endereco, meuAbrigo.bairro, meuAbrigo.cidade].filter(Boolean).join(' — ')}
+                  {meuAbrigo.telefone && <> · <FaPhoneAlt /> {meuAbrigo.telefone}</>}
+                </span>
+              </div>
+              <div className="lg-meu-acoes">
+                <button className="lg-botao-secundario" onClick={() => navigate(`/solicitacoes-ajuda-voluntario?abrigo=${meuAbrigo.id}`)}>
+                  <FaHandHoldingHeart /> Ver solicitações
+                </button>
+                <button className="lg-botao-sair" disabled={vinculando !== null} onClick={() => alterarVinculo(null)}>
+                  {vinculando === 'sair' ? 'Saindo...' : 'Sair do abrigo'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p>🏠 Você ainda não está vinculado a nenhum abrigo. Escolha um abaixo e clique em <strong>Vincular</strong>.</p>
+          )}
+        </section>
+
+        {aviso && (
+          <p className={`lg-aviso${aviso.erro ? ' lg-aviso--erro' : ''}`}>
+            {aviso.texto}
+            <button aria-label="Fechar aviso" onClick={() => setAviso(null)}><FaTimes /></button>
+          </p>
+        )}
 
         {/* ── FILTROS ── */}
         <section className="lg-filtros">
@@ -165,7 +211,7 @@ const ListarAbrigos = () => {
             <div className="lg-busca">
               <FaSearch className="lg-busca-icone" />
               <input
-                placeholder="Buscar nome, bairro, responsável..."
+                placeholder="Buscar por nome, bairro ou endereço..."
                 value={filtros.busca}
                 onChange={e => mudarFiltro('busca', e.target.value)}
               />
@@ -179,11 +225,6 @@ const ListarAbrigos = () => {
             <select value={filtros.tipo} onChange={e => mudarFiltro('tipo', e.target.value)} aria-label="Tipo de abrigo">
               <option value="">Todos os tipos</option>
               {tipos.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-
-            <select value={filtros.status} onChange={e => mudarFiltro('status', e.target.value)} aria-label="Status do abrigo">
-              <option value="">Todos os status</option>
-              {Object.entries(STATUS_ABRIGO).map(([valor, s]) => <option key={valor} value={valor}>{s.label}</option>)}
             </select>
 
             <select value={filtros.ordem} onChange={e => mudarFiltro('ordem', e.target.value)} aria-label="Ordenar por">
@@ -203,18 +244,6 @@ const ListarAbrigos = () => {
                   {s.label}
                 </button>
               ))}
-              <button
-                className={`lg-chip${filtros.emAlerta ? ' lg-chip--ativo' : ''}`}
-                onClick={() => mudarFiltro('emAlerta', !filtros.emAlerta)}
-              >
-                <GoAlertFill /> Em alerta
-              </button>
-              <button
-                className={`lg-chip${filtros.comPedidos ? ' lg-chip--ativo' : ''}`}
-                onClick={() => mudarFiltro('comPedidos', !filtros.comPedidos)}
-              >
-                <FaHandHoldingHeart /> Com pedidos de ajuda
-              </button>
             </div>
           </div>
 
@@ -230,6 +259,12 @@ const ListarAbrigos = () => {
                   {e.icone} {e.label}
                 </button>
               ))}
+              <button
+                className={`lg-chip${filtros.comPedidos ? ' lg-chip--ativo' : ''}`}
+                onClick={() => mudarFiltro('comPedidos', !filtros.comPedidos)}
+              >
+                <FaHandHoldingHeart /> Com pedidos de ajuda
+              </button>
             </div>
           </div>
         </section>
@@ -248,25 +283,22 @@ const ListarAbrigos = () => {
         {/* ── LISTA DE ABRIGOS ── */}
         {abrigosFiltrados.length === 0 ? (
           <p className="lg-vazio">
-            {abrigos.length === 0 ? 'Nenhum abrigo cadastrado ainda.' : 'Nenhum abrigo encontrado com esses filtros.'}
+            {abrigos.length === 0 ? 'Nenhum abrigo ativo cadastrado.' : 'Nenhum abrigo encontrado com esses filtros.'}
           </p>
         ) : (
           <section className="lg-grade">
             {abrigosFiltrados.map(abrigo => {
               const pct = ocupacaoDe(abrigo)
               const vagas = vagasDe(abrigo)
+              const meu = abrigo.id === meuAbrigoId
               const pedidos = pedidosAbertos[abrigo.id] ?? 0
               const estruturas = ESTRUTURAS.filter(e => abrigo[e.campo])
-              const status = STATUS_ABRIGO[abrigo.status] ?? { label: abrigo.status, classe: 'lg-selo--cinza' }
 
               return (
-                <article key={abrigo.id} className="lg-card">
+                <article key={abrigo.id} className={`lg-card${meu ? ' lg-card--meu' : ''}`}>
                   <div className="lg-card-topo">
                     <span className="lg-tipo">{abrigo.tipoAbrigo}</span>
-                    <div className="lg-selos">
-                      {abrigo.statusAlerta && <span className="lg-selo lg-selo--vermelho"><GoAlertFill /> Em alerta</span>}
-                      <span className={`lg-selo ${status.classe}`}>{status.label}</span>
-                    </div>
+                    {meu && <span className="lg-selo-meu"><FaCheck /> Meu abrigo</span>}
                   </div>
 
                   <h3 className="lg-card-nome" title={abrigo.nome}>{abrigo.nome}</h3>
@@ -290,28 +322,32 @@ const ListarAbrigos = () => {
                         : estruturas.map(e => <span key={e.campo} title={e.label}>{e.icone}</span>)}
                     </div>
                     {pedidos > 0 && (
-                      <button
-                        className="lg-pedidos"
-                        title="Ver as solicitações de ajuda deste abrigo"
-                        onClick={() => navigate(`/abrigos/${abrigo.id}/solicitacoes-ajuda`)}
-                      >
-                        <FaHandHoldingHeart /> {pedidos} pedido{pedidos !== 1 ? 's' : ''}
-                      </button>
+                      <span className="lg-pedidos"><FaHandHoldingHeart /> {pedidos} pedido{pedidos !== 1 ? 's' : ''}</span>
                     )}
                   </div>
 
-                  <p className="lg-card-telefone">
-                    <FaUser /> {abrigo.responsavel || 'Responsável não informado'}
-                    {abrigo.telefone && <> · <FaPhoneAlt /> {abrigo.telefone}</>}
-                  </p>
+                  {abrigo.telefone && <p className="lg-card-telefone"><FaPhoneAlt /> {abrigo.telefone}</p>}
 
                   <div className="lg-card-acoes">
-                    <button className="lg-botao-secundario" onClick={() => navigate(`/abrigos/${abrigo.id}/vitimas`)}>
-                      <FaUsers /> Vítimas
+                    <button
+                      className="lg-botao-secundario"
+                      onClick={() => navigate(`/solicitacoes-ajuda-voluntario?abrigo=${abrigo.id}`)}
+                    >
+                      Ver solicitações
                     </button>
-                    <button className="lg-botao-card" onClick={() => navigate(`/detalhes-abrigos/${abrigo.id}`)}>
-                      Ver detalhes
-                    </button>
+                    {meu ? (
+                      <button className="lg-botao-vinculado" disabled>
+                        <FaCheck /> Vinculado
+                      </button>
+                    ) : (
+                      <button
+                        className="lg-botao-vincular"
+                        disabled={vinculando !== null}
+                        onClick={() => alterarVinculo(abrigo.id)}
+                      >
+                        {vinculando === abrigo.id ? 'Salvando...' : meuAbrigoId ? 'Trocar para este' : 'Vincular'}
+                      </button>
+                    )}
                   </div>
                 </article>
               )
@@ -328,4 +364,4 @@ const ListarAbrigos = () => {
   )
 }
 
-export default ListarAbrigos;
+export default AbrigosVoluntario

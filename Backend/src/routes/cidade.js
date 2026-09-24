@@ -27,6 +27,19 @@ function validarGrupo(grupoWhatsappId) {
   return null
 }
 
+// Link de convite do grupo: "https://chat.whatsapp.com/<código>" (ou vazio para remover).
+// Devolve { link } já limpo ou { erro }.
+export function validarLinkGrupo(link) {
+  if (link === undefined) return { link: undefined }
+  const texto = String(link ?? '').trim()
+  if (!texto) return { link: null }
+  const achado = texto.match(/^(?:https?:\/\/)?chat\.whatsapp\.com\/(?:invite\/)?([A-Za-z0-9]{10,})/)
+  if (!achado) {
+    return { erro: 'Link do grupo inválido. Use o link de convite do WhatsApp, ex: https://chat.whatsapp.com/AbCdEf123456' }
+  }
+  return { link: `https://chat.whatsapp.com/${achado[1]}` }
+}
+
 export default async function cidadeRoutes(app) {
 
   //----- Listar -----
@@ -69,15 +82,18 @@ export default async function cidadeRoutes(app) {
 
   //----- Cadastrar (ADM) -----
   // URL: POST http://localhost:3000/api/cidades/cadastrar
-  // Body: { nome, estadoId, grupoWhatsappId? }
+  // Body: { nome, estadoId, grupoWhatsappId?, grupoWhatsappLink? }
   app.post('/cadastrar', { onRequest: [app.authenticateAdmin] }, async (request, reply) => {
-    const { nome, estadoId, grupoWhatsappId } = request.body ?? {}
+    const { nome, estadoId, grupoWhatsappId, grupoWhatsappLink } = request.body ?? {}
 
     if (!nome?.trim()) return reply.status(400).send({ mensagem: 'Informe o nome da cidade.' })
     if (!estadoId)     return reply.status(400).send({ mensagem: 'Selecione o estado.' })
 
     const erroGrupo = validarGrupo(grupoWhatsappId)
     if (erroGrupo) return reply.status(400).send({ mensagem: erroGrupo })
+
+    const linkGrupo = validarLinkGrupo(grupoWhatsappLink)
+    if (linkGrupo.erro) return reply.status(400).send({ mensagem: linkGrupo.erro })
 
     const estado = await prisma.estado.findUnique({ where: { id_estado: Number(estadoId) } })
     if (!estado) return reply.status(404).send({ mensagem: 'Estado não encontrado.' })
@@ -93,6 +109,7 @@ export default async function cidadeRoutes(app) {
         nome: nome.trim(),
         estadoId: estado.id_estado,
         grupoWhatsappId: grupoWhatsappId?.trim() || null,
+        grupoWhatsappLink: linkGrupo.link ?? null,
       },
       include: includeCidade
     })
@@ -106,10 +123,10 @@ export default async function cidadeRoutes(app) {
 
   //----- Atualizar (ADM) -----
   // URL: PUT http://localhost:3000/api/cidades/atualizar/:id
-  // Body: { nome?, grupoWhatsappId? }  (grupoWhatsappId: null ou "" remove o grupo)
+  // Body: { nome?, grupoWhatsappId?, grupoWhatsappLink? }  (null ou "" remove o grupo / o link)
   app.put('/atualizar/:id', { onRequest: [app.authenticateAdmin] }, async (request, reply) => {
     const id = Number(request.params.id)
-    const { nome, grupoWhatsappId } = request.body ?? {}
+    const { nome, grupoWhatsappId, grupoWhatsappLink } = request.body ?? {}
 
     const cidade = await prisma.cidade.findUnique({ where: { id_cidade: id } })
     if (!cidade) return reply.status(404).send({ mensagem: 'Cidade não encontrada.' })
@@ -128,12 +145,16 @@ export default async function cidadeRoutes(app) {
     const erroGrupo = validarGrupo(grupoWhatsappId)
     if (erroGrupo) return reply.status(400).send({ mensagem: erroGrupo })
 
+    const linkGrupo = validarLinkGrupo(grupoWhatsappLink)
+    if (linkGrupo.erro) return reply.status(400).send({ mensagem: linkGrupo.erro })
+
     const cidadeAtualizada = await prisma.cidade.update({
       where: { id_cidade: id },
       data: {
         nome: nome !== undefined ? nome.trim() : undefined,
         // undefined = não veio no body (mantém) | null/"" = remove o grupo
         grupoWhatsappId: grupoWhatsappId !== undefined ? (grupoWhatsappId?.trim() || null) : undefined,
+        grupoWhatsappLink: linkGrupo.link,
       },
       include: includeCidade
     })

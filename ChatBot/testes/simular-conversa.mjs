@@ -44,19 +44,22 @@ async function diz(from, body, extra) {
 }
 
 const eu = '5512988887777@c.us'
-await diz(eu, 'Oi')
-await diz(eu, '5')            // relatar sem inscrição → convite
+await diz(eu, 'Oiii!')        // saudação com letras repetidas → menu
+await diz(eu, 'OLAA')         // maiúsculas → menu
+await diz(eu, '5')            // alertas ativos
+await diz(eu, '1')            // alertas → convite (não inscrito)
+await diz(eu, '2')            // entrar no grupo da cidade → link
+await diz(eu, '1')            // volta aos alertas
 await diz(eu, '1')            // quero me inscrever
 await diz(eu, 'Maria Teste')
 await diz(eu, 'email-errado')
 await diz(eu, 'maria@teste.com')
-await diz(eu, '1')            // cidade
 await diz(eu, 'indep')        // bairro por parte do nome
-await diz(eu, '2')            // acompanhar outro bairro
-await diz(eu, '1')            // cidade
-await diz(eu, '0')            // não achei → CEP
-await diz(eu, '12070-610')
+await diz(eu, '3')            // acompanhar outro bairro
+await diz(eu, '12070-610')    // pelo CEP
 await diz(eu, '1')            // confirma bairro do CEP
+await diz(eu, '2')            // grupo da cidade (inscrito)
+await diz(eu, '1')            // volta aos alertas
 await diz(eu, '1')            // relatar
 await diz(eu, '2')            // local: bairro acompanhado
 await diz(eu, '1')            // alagamento
@@ -64,8 +67,22 @@ await diz(eu, '1')            // grave
 await diz(eu, 'olha lá')      // texto em vez de foto
 await diz(eu, '', { hasMedia: true })
 await diz(eu, '1')            // enviar
-await diz(eu, 'menu')         // comando global
+await diz(eu, 'bom dia')      // saudação → menu
+await diz(eu, '2')            // solicitar apoio
+await diz(eu, 'Rua das Flores, 10 - Centro')
+await diz(eu, '3')
+await diz(eu, '2')            // alimentação
+await diz(eu, 'não')
+await diz(eu, '4')            // apoio psicológico
+await diz(eu, '2')
+await diz(eu, 'nao')
+await diz(eu, '3')
+await diz(eu, '6')            // telefones
+await diz(eu, '7')            // indicar abrigo
+await diz(eu, 'cancelar')     // cancela qualquer fluxo
+await diz(eu, 'xyz')          // não entendi → menu
 await diz(eu, '3')            // abrigos via API
+await diz(eu, '8')            // encerrar
 
 // Grupo
 await diz('120363999@g.us', 'bom dia pessoal')   // ignorado

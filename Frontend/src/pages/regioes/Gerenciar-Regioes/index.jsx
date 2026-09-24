@@ -30,6 +30,7 @@ function GerenciarRegioes() {
   // Edição da cidade selecionada
   const [nomeCidade, setNomeCidade] = useState('')
   const [grupoCidade, setGrupoCidade] = useState('')
+  const [linkGrupoCidade, setLinkGrupoCidade] = useState('')
 
   // Formulário de novo bairro + busca por CEP
   const [novoBairro, setNovoBairro] = useState(bairroVazio)
@@ -72,6 +73,7 @@ function GerenciarRegioes() {
     setCidadeSelecionadaId(cidade.id_cidade)
     setNomeCidade(cidade.nome)
     setGrupoCidade(cidade.grupoWhatsappId ?? '')
+    setLinkGrupoCidade(cidade.grupoWhatsappLink ?? '')
     setEditandoBairroId(null)
     setNovoBairro(bairroVazio)
     setResultadoCep(null)
@@ -97,9 +99,15 @@ function GerenciarRegioes() {
     try {
       const dados = await apiAdmin(`/cidades/atualizar/${cidadeSelecionadaId}`, {
         metodo: 'PUT',
-        corpo: { nome: nomeCidade, grupoWhatsappId: grupoCidade.trim() || null }
+        corpo: {
+          nome: nomeCidade,
+          grupoWhatsappId: grupoCidade.trim() || null,
+          grupoWhatsappLink: linkGrupoCidade.trim() || null,
+        }
       })
       avisar(dados.mensagem)
+      // O link volta normalizado pela API (ex: sem espaços, com https://)
+      setLinkGrupoCidade(dados.cidade.grupoWhatsappLink ?? '')
       await buscarCidades()
     } catch (e) {
       avisar(e.message, true)
@@ -297,6 +305,18 @@ function GerenciarRegioes() {
                   </label>
                   <button type="button" className="botao-primario" onClick={handleSalvarCidade}><FaSave /> Salvar</button>
                   <button type="button" className="botao-icone perigo" title="Excluir cidade" onClick={handleExcluirCidade}><FaTrash /></button>
+                </div>
+
+                {/* Link de convite: o bot envia para quem quiser entrar no grupo (menu Alertas) */}
+                <div className="formulario-linha" style={{ gridTemplateColumns: '1fr' }}>
+                  <label>
+                    <span><FaWhatsapp /> Link de convite do grupo (enviado pelo bot a quem quiser entrar)</span>
+                    <input
+                      value={linkGrupoCidade}
+                      onChange={e => setLinkGrupoCidade(e.target.value)}
+                      placeholder="Ex: https://chat.whatsapp.com/AbCdEf123456"
+                    />
+                  </label>
                 </div>
 
                 <p className="aviso">

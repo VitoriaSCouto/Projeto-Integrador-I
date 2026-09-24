@@ -9,7 +9,8 @@ import { consultarCep, obterOuCriarBairroPorCep } from '../lib/localizacao.js'
 import { includeInscrito, formatarInscrito, emailValido } from '../lib/inscritos.js'
 import { enviarFotoBase64, removerFotos } from '../lib/armazenamento.js'
 import {
-  registrarRelato, ErroAlerta, TIPOS_ALERTA, GRAVIDADES, MAX_TENTATIVAS_NOTIFICACAO
+  registrarRelato, ErroAlerta, TIPOS_ALERTA, GRAVIDADES, MAX_TENTATIVAS_NOTIFICACAO,
+  formatarAlerta, includeListagemAlerta
 } from '../lib/alertas.js'
 
 
@@ -233,6 +234,33 @@ export default async function botRoutes(app) {
 
   // ═══════════════════════ ALERTAS ═══════════════════════
 
+  //----- Alertas ativos -----
+  // Alertas já confirmados, para a opção "Alertas ativos" do menu do bot.
+  // Filtro opcional: ?cidadeId=1
+  // URL: GET /api/bot/alertas/ativos
+  app.get('/alertas/ativos', async (request, reply) => {
+    const { cidadeId } = request.query
+
+    const alertas = await prisma.alerta.findMany({
+      where: {
+        status: 'ativo',
+        bairro: cidadeId ? { cidadeId: Number(cidadeId) } : undefined,
+      },
+      orderBy: { disparadoEm: 'desc' },
+      include: includeListagemAlerta
+    })
+
+    return reply.status(200).send({
+      total: alertas.length,
+      alertas: alertas.map(alerta => ({
+        ...formatarAlerta(alerta),
+        emoji:          TIPOS_ALERTA[alerta.tipo]?.emoji ?? '⚠️',
+        gravidadeEmoji: GRAVIDADES[alerta.gravidade]?.emoji ?? '',
+        pesoGravidade:  GRAVIDADES[alerta.gravidade]?.peso ?? 1,
+      }))
+    })
+  })
+
   //----- Relatar ocorrência -----
   // URL: POST /api/bot/alertas/relatar
   // Body: { whatsappId, tipo, gravidade, bairroId, foto? (base64), fotoMimetype? }
@@ -348,6 +376,22 @@ export default async function botRoutes(app) {
 
 
   // ═══════════════════════ GRUPOS DAS CIDADES ═══════════════════════
+
+  //----- Links de convite dos grupos de alertas -----
+  // Cidades que têm link cadastrado no painel (Regiões), para o bot enviar
+  // a quem quiser entrar no grupo da cidade
+  // URL: GET /api/bot/cidades/grupos
+  app.get('/cidades/grupos', async (request, reply) => {
+    const cidades = await prisma.cidade.findMany({
+      where: { grupoWhatsappLink: { not: null } },
+      orderBy: { nome: 'asc' },
+      select: { id_cidade: true, nome: true, grupoWhatsappLink: true, estado: { select: { sigla: true } } }
+    })
+
+    return reply.status(200).send({
+      cidades: cidades.map(c => ({ id_cidade: c.id_cidade, nome: c.nome, estado: c.estado.sigla, link: c.grupoWhatsappLink }))
+    })
+  })
 
   //----- Vincular / desvincular o grupo de alertas de uma cidade -----
   // Chamado pelo comando "!alertas vincular <cidade>" enviado em um grupo

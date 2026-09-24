@@ -1,0 +1,692 @@
+/* ─── Telas de listagem com filtros e cards ───────────────────────────────────
+   Usado em: Abrigos do voluntário, Abrigos do admin (Hub) e Vítimas do admin.
+   A base (dashboard, sidebar, main) vem de pg_adm/style.css.
+   Tudo fica dentro de .pagina-listagem para não afetar as outras telas.
+   Auxiliares em JS (estruturas, ocupação, busca sem acento): utils/listagem.jsx
+────────────────────────────────────────────────────────────────────────────── */
+
+.pagina-listagem {
+    gap: 20px;
+    min-width: 0;
+}
+
+.pagina-listagem .lg-estado {
+    padding: 40px 0;
+    color: #64748b;
+}
+
+.pagina-listagem .lg-estado--erro {
+    color: #dc2626;
+}
+
+/* ---------- Cabeçalho ---------- */
+
+.pagina-listagem .lg-breadcrumb {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.pagina-listagem .lg-titulo {
+    font-size: 26px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 4px;
+}
+
+.pagina-listagem .lg-subtitulo {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* ---------- Meu abrigo ---------- */
+
+.pagina-listagem .lg-meu {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+}
+
+.pagina-listagem .lg-meu--vazio {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    font-size: 14px;
+    color: #475569;
+}
+
+.pagina-listagem .lg-meu-icone {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #1e3a5f;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.pagina-listagem .lg-meu-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pagina-listagem .lg-meu-rotulo {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #1d4ed8;
+}
+
+.pagina-listagem .lg-meu-info strong {
+    font-size: 16px;
+    color: #0f172a;
+}
+
+.pagina-listagem .lg-meu-info span:last-child {
+    font-size: 13px;
+    color: #475569;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pagina-listagem .lg-meu-info svg {
+    vertical-align: -1px;
+}
+
+.pagina-listagem .lg-meu-acoes {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ---------- Aviso ---------- */
+
+.pagina-listagem .lg-aviso {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: #166534;
+    background: #dcfce7;
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.pagina-listagem .lg-aviso--erro {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.pagina-listagem .lg-aviso button {
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+}
+
+/* ---------- Filtros ---------- */
+
+.pagina-listagem .lg-filtros {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+}
+
+.pagina-listagem .lg-filtros-linha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.pagina-listagem .lg-busca {
+    position: relative;
+    flex: 1;
+    min-width: 240px;
+}
+
+.pagina-listagem .lg-busca input,
+.pagina-listagem .lg-filtros select {
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    font-size: 14px;
+    color: #0f172a;
+}
+
+.pagina-listagem .lg-busca input {
+    width: 100%;
+    padding: 0 14px 0 36px;
+}
+
+.pagina-listagem .lg-busca-icone {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+.pagina-listagem .lg-filtros select {
+    padding: 0 12px;
+    min-width: 170px;
+    cursor: pointer;
+}
+
+.pagina-listagem .lg-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pagina-listagem .lg-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 99px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.pagina-listagem .lg-chip:hover {
+    border-color: #94a3b8;
+}
+
+.pagina-listagem .lg-chip--ativo {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #ffffff;
+}
+
+.pagina-listagem .lg-chip--ativo:hover {
+    border-color: #0f172a;
+}
+
+/* Rótulo das linhas de chips — largura fixa para os chips começarem alinhados */
+.pagina-listagem .lg-filtro-rotulo {
+    width: 72px;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+}
+
+.pagina-listagem .lg-resultado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #64748b;
+    min-height: 28px;
+}
+
+.pagina-listagem .lg-resultado strong {
+    color: #0f172a;
+}
+
+.pagina-listagem .lg-limpar {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: transparent;
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pagina-listagem .lg-vazio {
+    font-size: 14px;
+    color: #64748b;
+    text-align: center;
+    padding: 40px 12px;
+    background: #ffffff;
+    border: 1px dashed #e2e8f0;
+    border-radius: 14px;
+}
+
+/* ---------- Cards dos abrigos ---------- */
+
+.pagina-listagem .lg-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.pagina-listagem .lg-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    min-width: 0;
+}
+
+.pagina-listagem .lg-card--meu {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.pagina-listagem .lg-card-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 22px;
+}
+
+.pagina-listagem .lg-tipo {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.pagina-listagem .lg-selo-meu {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1d4ed8;
+}
+
+.pagina-listagem .lg-card-nome {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pagina-listagem .lg-card-local,
+.pagina-listagem .lg-card-telefone {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #475569;
+}
+
+.pagina-listagem .lg-card-endereco {
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: -4px;
+}
+
+.pagina-listagem .lg-ocupacao {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 4px;
+}
+
+.pagina-listagem .lg-ocupacao-texto {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #475569;
+}
+
+.pagina-listagem .lg-barra {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.pagina-listagem .lg-barra div {
+    height: 100%;
+    border-radius: 99px;
+}
+
+.pagina-listagem .lg-card-infos {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 28px;
+}
+
+.pagina-listagem .lg-estruturas {
+    display: flex;
+    gap: 6px;
+}
+
+.pagina-listagem .lg-estruturas span {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+
+.pagina-listagem .lg-estruturas .lg-sem-estrutura {
+    width: auto;
+    background: transparent;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.pagina-listagem .lg-pedidos {
+    border: none;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #c2410c;
+    background: #ffedd5;
+    padding: 4px 10px;
+    border-radius: 99px;
+}
+
+/* Botões sempre no fim do card → alinhados entre cards da mesma linha */
+.pagina-listagem .lg-card-acoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.pagina-listagem .lg-botao-secundario,
+.pagina-listagem .lg-botao-vincular,
+.pagina-listagem .lg-botao-vinculado,
+.pagina-listagem .lg-botao-sair {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pagina-listagem .lg-botao-secundario {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #1e293b;
+}
+
+.pagina-listagem .lg-botao-secundario:hover {
+    background: #f8fafc;
+}
+
+.pagina-listagem .lg-botao-vincular {
+    border: 1px solid #1e3a5f;
+    background: #1e3a5f;
+    color: #ffffff;
+}
+
+.pagina-listagem .lg-botao-vincular:hover:not(:disabled) {
+    background: #16304f;
+}
+
+.pagina-listagem .lg-botao-vinculado {
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    cursor: default;
+}
+
+.pagina-listagem .lg-botao-sair {
+    border: 1px solid #fecaca;
+    background: #ffffff;
+    color: #dc2626;
+}
+
+.pagina-listagem .lg-botao-sair:hover:not(:disabled) {
+    background: #fef2f2;
+}
+
+.pagina-listagem .lg-botao-vincular:disabled,
+.pagina-listagem .lg-botao-sair:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+/* ---------- Cabeçalho com botões (telas do admin) ---------- */
+
+.pagina-listagem .lg-topo-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.pagina-listagem .lg-topo-acoes {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pagina-listagem .lg-botao-primario {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 18px;
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    background: #1e3a5f;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pagina-listagem .lg-botao-primario:hover {
+    background: #16304f;
+}
+
+.pagina-listagem .lg-topo-acoes .lg-botao-secundario {
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Botão de ação principal dentro do card (Ver detalhes) */
+.pagina-listagem .lg-botao-card {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    background: #1e3a5f;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pagina-listagem .lg-botao-card:hover {
+    background: #16304f;
+}
+
+/* ---------- Selos (status, alerta, sem abrigo...) ---------- */
+
+.pagina-listagem .lg-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 99px;
+    white-space: nowrap;
+}
+
+.pagina-listagem .lg-selo--verde    { background: #dcfce7; color: #166534; }
+.pagina-listagem .lg-selo--amarelo  { background: #fef9c3; color: #854d0e; }
+.pagina-listagem .lg-selo--vermelho { background: #fee2e2; color: #b91c1c; }
+.pagina-listagem .lg-selo--cinza    { background: #f1f5f9; color: #475569; }
+.pagina-listagem .lg-selo--azul     { background: #dbeafe; color: #1d4ed8; }
+
+.pagina-listagem .lg-selos {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* ---------- Cards de pessoas (Vítimas) ---------- */
+
+.pagina-listagem .lg-pessoa {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.pagina-listagem .lg-avatar {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #1e3a5f;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pagina-listagem .lg-pessoa-info {
+    min-width: 0;
+}
+
+.pagina-listagem .lg-pessoa-sub {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.pagina-listagem .lg-dados {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+    padding: 10px 0;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pagina-listagem .lg-dado {
+    min-width: 0;
+}
+
+.pagina-listagem .lg-dado span {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.pagina-listagem .lg-dado strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pagina-listagem .lg-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 24px;
+}
+
+.pagina-listagem .lg-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #f3e8ff;
+    color: #6b21a8;
+}
+
+.pagina-listagem .lg-sem-tags {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* ---------- Rodapé ---------- */
+
+.pagina-listagem .lg-rodape {
+    margin-top: auto;
+    padding-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* ---------- Telas menores ---------- */
+
+@media (max-width: 900px) {
+    .pagina-listagem .lg-meu {
+        flex-wrap: wrap;
+    }
+
+    .pagina-listagem .lg-meu-acoes {
+        width: 100%;
+    }
+}

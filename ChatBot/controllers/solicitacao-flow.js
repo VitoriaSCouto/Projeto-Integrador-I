@@ -2,6 +2,7 @@
 import { userState } from "../state/state.js";
 import { api } from "../services/api.js";
 import { baixarFoto } from "../services/midia.js";
+import { titulo, listaNumerada, opcao, SEPARADOR, RODAPE_OPCAO, RODAPE_MENU, RODAPE_CANCELAR } from "../utils/formato.js";
 
 // ── Busca as cidades cadastradas na API ────────────────────────
 const buscarCidades = async () => {
@@ -27,23 +28,23 @@ const buscarBairros = async (cidadeId) => {
   }
 };
 
+// valor = o que é salvo no banco (não mudar) | label = o que aparece para a pessoa
 const TIPOS_ABRIGO = [
-  'Escola',
-  'Ginásio',
-  'Igreja',
-  'Hotel',
-  'Pousada',
-  'CentroCultural',
-  'CentroComunitário',
-  'Campo',
+  { valor: 'Escola',            label: '🏫 Escola' },
+  { valor: 'Ginásio',           label: '🏟️ Ginásio' },
+  { valor: 'Igreja',            label: '⛪ Igreja' },
+  { valor: 'Hotel',             label: '🏨 Hotel' },
+  { valor: 'Pousada',           label: '🛏️ Pousada' },
+  { valor: 'CentroCultural',    label: '🎭 Centro cultural' },
+  { valor: 'CentroComunitário', label: '🏘️ Centro comunitário' },
+  { valor: 'Campo',             label: '⛺ Campo' },
 ];
 
 // ── Pergunta o tipo do abrigo (depois da cidade/bairro) ────────
 const perguntarTipo = async (msg, from, state) => {
   userState.set(from, { ...state, step: 'sol_tipo' });
 
-  const lista = TIPOS_ABRIGO.map((t, i) => `${i + 1} - ${t}`).join('\n');
-  await msg.reply(`🏷️ Qual o tipo do abrigo?\n\n${lista}`);
+  await msg.reply(`🏷️ Qual o *tipo* do local?\n\n${listaNumerada(TIPOS_ABRIGO, t => t.label)}\n\n${RODAPE_OPCAO}`);
   return true;
 };
 
@@ -56,7 +57,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
   if (state.step === 'sol_nome') {
     state.tempData.nome = msg.body.trim();
     userState.set(from, { ...state, step: 'sol_cep' });
-    await msg.reply('📍 Qual o CEP do abrigo?\n\nEx: 12030-000');
+    await msg.reply(`📮 Qual o *CEP* do local?\n\n_Ex: 12030-000_\n\n${RODAPE_CANCELAR}`);
     return true;
   }
 
@@ -66,7 +67,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     const cep = msg.body.replace(/\D/g, '');
 
     if (cep.length !== 8) {
-      await msg.reply('❌ O CEP deve ter 8 números. Ex: 12030-000');
+      await msg.reply('❌ O CEP deve ter *8 números*.\n\n💡 Ex: 12030-000');
       return true;
     }
 
@@ -76,7 +77,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
       const consulta = await api('GET', `/bairros/cep/${cep}`);
 
       if (consulta.status === 404) {
-        await msg.reply('❌ CEP não encontrado. Confira e digite novamente.');
+        await msg.reply('❌ CEP não encontrado.\n\n💡 Confira e digite novamente.');
         return true;
       }
 
@@ -113,7 +114,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
       ? `📍 ${[d.bairro, `${d.cidade}/${d.estado}`].filter(Boolean).join(' — ')}\n\n`
       : '';
     const exemplo = d._logradouro ? `${d._logradouro}, 123` : 'Rua das Flores, 123';
-    await msg.reply(`${local}🏠 Qual o endereço, com o número?\n\nEx: ${exemplo}`);
+    await msg.reply(`${local}🏠 Qual o *endereço*, com o número?\n\n_Ex: ${exemplo}_`);
     return true;
   }
 
@@ -130,7 +131,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     // CEP de cidade ainda não cadastrada: escolhe a cidade na lista
     const cidades = await buscarCidades();
     if (cidades.length === 0) {
-      await msg.reply('❌ Não consegui carregar as cidades. Tente novamente mais tarde.\n\nDigite *oi* para voltar ao menu.');
+      await msg.reply(`❌ Não consegui carregar as cidades. Tente novamente mais tarde.\n\n${RODAPE_MENU}`);
       userState.delete(from);
       return true;
     }
@@ -138,8 +139,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     state.tempData._cidades = cidades;
     userState.set(from, { ...state, step: 'sol_cidade' });
 
-    const lista = cidades.map((c, i) => `${i + 1} - ${c.nome}/${c.estado}`).join('\n');
-    await msg.reply(`🌆 Qual a cidade?\n\n${lista}`);
+    await msg.reply(`🌆 Qual a *cidade*?\n\n${listaNumerada(cidades, c => `${c.nome}/${c.estado}`)}\n\n${RODAPE_OPCAO}`);
     return true;
   }
 
@@ -149,7 +149,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     const indice = parseInt(text) - 1;
 
     if (isNaN(indice) || !cidades[indice]) {
-      await msg.reply(`❌ Digite um número de 1 a ${cidades.length}.`);
+      await msg.reply(`❌ Digite um número de *1 a ${cidades.length}*.`);
       return true;
     }
 
@@ -171,8 +171,14 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     state.tempData._bairros = bairros;
     userState.set(from, { ...state, step: 'sol_bairro' });
 
-    const lista = bairros.map((b, i) => `${i + 1} - ${b.nome}`).join('\n');
-    await msg.reply(`🏘️ Qual o bairro?\n\n${lista}\n\n0 - Não sei / não está na lista`);
+    await msg.reply(
+`🏘️ Qual o *bairro*?
+
+${listaNumerada(bairros, b => b.nome)}
+${opcao(0, '🤷 Não sei / não está na lista')}
+
+${RODAPE_OPCAO}`
+    );
     return true;
   }
 
@@ -182,7 +188,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     const indice = parseInt(text) - 1;
 
     if (text !== '0' && (isNaN(indice) || !bairros[indice])) {
-      await msg.reply(`❌ Digite um número de 1 a ${bairros.length}, ou 0 para pular.`);
+      await msg.reply(`❌ Digite um número de *1 a ${bairros.length}*, ou *0* para pular.`);
       return true;
     }
 
@@ -197,16 +203,16 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
 
   // ── ETAPA 5: Tipo ─────────────────────────────────────────────
   if (state.step === 'sol_tipo') {
-    const indice = parseInt(text) - 1;
+    const tipo = TIPOS_ABRIGO[parseInt(text) - 1];
 
-    if (isNaN(indice) || !TIPOS_ABRIGO[indice]) {
-      await msg.reply(`❌ Digite um número de 1 a ${TIPOS_ABRIGO.length}.`);
+    if (!tipo) {
+      await msg.reply(`❌ Digite um número de *1 a ${TIPOS_ABRIGO.length}*.`);
       return true;
     }
 
-    state.tempData.tipoAbrigo = TIPOS_ABRIGO[indice];
+    state.tempData.tipoAbrigo = tipo.valor;
     userState.set(from, { ...state, step: 'sol_capacidade' });
-    await msg.reply('👥 Qual a capacidade total de pessoas?');
+    await msg.reply('👥 Quantas *pessoas* o local comporta?\n\n_Digite apenas o número. Ex: 100_');
     return true;
   }
 
@@ -215,13 +221,13 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     const capacidade = parseInt(msg.body.trim());
 
     if (isNaN(capacidade) || capacidade <= 0) {
-      await msg.reply('❌ Digite um número válido. Ex: 100');
+      await msg.reply('❌ Digite um número válido.\n\n💡 Ex: 100');
       return true;
     }
 
     state.tempData.capacidadeTotal = capacidade;
     userState.set(from, { ...state, step: 'sol_responsavel' });
-    await msg.reply('👤 Qual o nome do responsável pelo abrigo?');
+    await msg.reply('👤 Qual o nome do *responsável* pelo local?');
     return true;
   }
 
@@ -229,7 +235,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
   if (state.step === 'sol_responsavel') {
     state.tempData.responsavel = msg.body.trim();
     userState.set(from, { ...state, step: 'sol_telefone' });
-    await msg.reply('📞 Qual o telefone do abrigo? (ou digite - para pular)');
+    await msg.reply('📞 Qual o *telefone* do local?\n\n➡️ Não tem? Digite *-* para pular.');
     return true;
   }
 
@@ -238,7 +244,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     const tel = msg.body.trim();
     state.tempData.telefone = tel === '-' ? null : tel;
     userState.set(from, { ...state, step: 'sol_sol_nome' });
-    await msg.reply('🙋 Agora seus dados como *solicitante*.\n\nQual seu nome completo?');
+    await msg.reply(`${titulo('🙋', 'SEUS DADOS')}\n\nAgora preciso dos seus dados como *solicitante*.\n\n👤 Qual o seu *nome completo*?`);
     return true;
   }
 
@@ -246,7 +252,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
   if (state.step === 'sol_sol_nome') {
     state.tempData.solicitanteNome = msg.body.trim();
     userState.set(from, { ...state, step: 'sol_sol_email' });
-    await msg.reply('📧 Qual seu e-mail?');
+    await msg.reply('📧 Qual o seu *e-mail*?');
     return true;
   }
 
@@ -254,7 +260,7 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
   if (state.step === 'sol_sol_email') {
     state.tempData.solicitanteEmail = msg.body.trim();
     userState.set(from, { ...state, step: 'sol_sol_telefone' });
-    await msg.reply('📱 Qual seu telefone? (ou - para pular)');
+    await msg.reply('📱 Qual o seu *telefone*?\n\n➡️ Prefere não informar? Digite *-* para pular.');
     return true;
   }
 
@@ -265,11 +271,12 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
     userState.set(from, { ...state, step: 'sol_foto' });
 
     await msg.reply(
-`📷 Deseja enviar uma foto do abrigo?
+`📷 Quer enviar uma *foto* do local?
 
-Envie a imagem normalmente pelo WhatsApp, ou:
-• Como *documento* (mais confiável)
-• Digite *pular* para continuar sem foto`
+• Envie a imagem normalmente pelo WhatsApp
+• Ou como *documento* (mais confiável)
+
+➡️ Sem foto? Digite *pular*.`
     );
     return true;
   }
@@ -292,16 +299,16 @@ Envie a imagem normalmente pelo WhatsApp, ou:
         await msg.reply(
 `⚠️ Não consegui baixar a imagem.
 
-Tente enviar como *documento*:
+💡 Tente enviar como *documento*:
 Clipe 📎 → Documento → selecione a foto
 
-Ou digite *pular* para continuar sem foto.`
+➡️ Ou digite *pular* para continuar sem foto.`
         );
         return true;
       }
 
     } else {
-      await msg.reply('Envie uma imagem, um documento ou digite *pular* para continuar sem foto.');
+      await msg.reply('📷 Envie uma imagem, um documento ou digite *pular* para continuar sem foto.');
       return true;
     }
 
@@ -309,24 +316,30 @@ Ou digite *pular* para continuar sem foto.`
     userState.set(from, { ...state, step: 'sol_confirmar' });
 
     const d = state.tempData;
+    const tipo = TIPOS_ABRIGO.find(t => t.valor === d.tipoAbrigo)?.label ?? d.tipoAbrigo;
     await msg.reply(
-`📋 *Resumo da solicitação:*
+`${titulo('📋', 'CONFIRA A SOLICITAÇÃO')}
 
-🏠 Nome: ${d.nome}
-📍 CEP: ${d.cep}
-🏘️ Endereço: ${d.endereco}
-🌆 Cidade: ${d.cidade} - ${d.estado}
+*🏠 Local*
+🏷️ Nome: ${d.nome}
+${tipo}
+👥 Capacidade: ${d.capacidadeTotal} pessoas
+📮 CEP: ${d.cep}
+📍 Endereço: ${d.endereco}
+🌆 Cidade: ${d.cidade}/${d.estado}
 🏘️ Bairro: ${d.bairro ?? '-'}
-🏷️ Tipo: ${d.tipoAbrigo}
-👥 Capacidade: ${d.capacidadeTotal}
 👤 Responsável: ${d.responsavel}
 📞 Telefone: ${d.telefone ?? '-'}
-🙋 Solicitante: ${d.solicitanteNome}
-📧 Email: ${d.solicitanteEmail}
-📱 Tel. Solicitante: ${d.solicitanteTelefone ?? '-'}
-📷 Foto: ${fotoBase64 ? 'Sim ✅' : 'Não'}
+📷 Foto: ${fotoBase64 ? '✅ enviada' : '➖ sem foto'}
 
-Digite *confirmar* para enviar ou *cancelar* para desistir.`
+*🙋 Solicitante*
+👤 ${d.solicitanteNome}
+📧 ${d.solicitanteEmail}
+📱 ${d.solicitanteTelefone ?? '-'}
+
+${SEPARADOR}
+✅ Digite *confirmar* para enviar
+❌ ou *cancelar* para desistir.`
     );
     return true;
   }
@@ -336,12 +349,12 @@ Digite *confirmar* para enviar ou *cancelar* para desistir.`
 
     if (text === 'cancelar') {
       userState.delete(from);
-      await msg.reply('❌ Solicitação cancelada.\n\nDigite *oi* para voltar ao menu.');
+      await msg.reply(`❌ *Solicitação cancelada.*\n\n${RODAPE_MENU}`);
       return true;
     }
 
     if (text !== 'confirmar') {
-      await msg.reply('Digite *confirmar* para enviar ou *cancelar* para desistir.');
+      await msg.reply('💬 Digite *confirmar* para enviar ou *cancelar* para desistir.');
       return true;
     }
 
@@ -350,19 +363,20 @@ Digite *confirmar* para enviar ou *cancelar* para desistir.`
 
       if (ok) {
         await msg.reply(
-`✅ Solicitação enviada com sucesso!
+`${titulo('✅', 'SOLICITAÇÃO ENVIADA')}
 
-Seu pedido foi registrado e será analisado pela equipe. Aguarde o contato.
+📨 Seu pedido foi registrado e será analisado pela equipe do S.O.S Vale.
+Aguarde o nosso contato. 🙏
 
-Digite *oi* para voltar ao menu.`
+${RODAPE_MENU}`
         );
       } else {
-        await msg.reply(`❌ Erro ao enviar: ${resultado.mensagem}\n\nDigite *oi* para recomeçar.`);
+        await msg.reply(`❌ Erro ao enviar: ${resultado.mensagem}\n\n💡 Digite *oi* para recomeçar.`);
       }
 
     } catch (erro) {
       console.error('[SOL] Erro ao enviar solicitação:', erro);
-      await msg.reply('❌ Falha na conexão com o servidor. Tente novamente mais tarde.\n\nDigite *oi* para voltar ao menu.');
+      await msg.reply(`❌ Falha na conexão com o servidor. Tente novamente mais tarde.\n\n${RODAPE_MENU}`);
     }
 
     userState.delete(from);

@@ -38,6 +38,51 @@ const SOBRENOMES = [
   'Silva', 'Santos', 'Oliveira', 'Souza', 'Pereira', 'Lima', 'Carvalho', 'Ferreira',
   'Rodrigues', 'Almeida', 'Costa', 'Gomes', 'Ribeiro', 'Martins', 'Rocha', 'Barbosa',
 ]
+// Perfil de cada vítima de exemplo, sempre igual para o mesmo número "n"
+// (rodar o script de novo não embaralha os dados).
+//   • Idades: 50% adultos, 20% idosos, 20% crianças, 10% adolescentes
+//   • Deficiência: 4 em cada 10, em todas as faixas e coerente com a idade
+//     (idosos com deficiência têm duas, ex: mobilidade reduzida + visual)
+const FAIXAS_ETARIAS = ['adultos', 'crianças', 'idosos', 'adultos', 'adolescentes', 'adultos', 'idosos', 'crianças', 'adultos', 'adultos']
+
+const IDADE_POR_FAIXA = {
+  'crianças':     (n) => 1  + (n * 7)  % 11,  // 1 a 11
+  'adolescentes': (n) => 12 + (n * 3)  % 6,   // 12 a 17
+  'adultos':      (n) => 18 + (n * 13) % 42,  // 18 a 59
+  'idosos':       (n) => 60 + (n * 11) % 31,  // 60 a 90
+}
+
+const DEFICIENCIAS_POR_FAIXA = {
+  'crianças':     ['TEA', 'Síndrome de Down', 'Deficiência de Fala', 'Transtorno de Aprendizagem', 'Paralisia Cerebral'],
+  'adolescentes': ['TEA', 'Transtorno de Aprendizagem', 'Visual', 'Epilepsia'],
+  'adultos':      ['Física', 'Visual', 'Auditiva', 'Epilepsia', 'Psicossocial', 'Intelectual'],
+  'idosos':       ['Mobilidade Reduzida', 'Visual', 'Auditiva', 'Física'],
+}
+
+function perfilDaVitima(n) {
+  const [primeiroNome, genero] = NOMES[n % NOMES.length]
+  const sobrenome = `${SOBRENOMES[n % SOBRENOMES.length]} ${SOBRENOMES[(n * 7 + 3) % SOBRENOMES.length]}`
+
+  const faixa = FAIXAS_ETARIAS[n % FAIXAS_ETARIAS.length]
+  const idade = IDADE_POR_FAIXA[faixa](n)
+  // Aniversários entre janeiro e junho: do meio do ano em diante a idade mostrada é exatamente "idade"
+  const nascimento = new Date(Date.UTC(new Date().getUTCFullYear() - idade, (n * 5) % 6, 1 + (n * 11) % 28))
+
+  // Entrada no abrigo nos últimos 10 dias
+  const entrada = new Date(Date.now() - ((n * 13) % 10) * 24 * 60 * 60 * 1000)
+
+  // Quem tem deficiência depende da mesma posição (n % 10) que define a faixa
+  // etária, então as posições são escolhidas para cobrir todas as faixas:
+  // 0 = adulto, 1 = criança, 2 = idoso (com duas), 4 = adolescente
+  const opcoes = DEFICIENCIAS_POR_FAIXA[faixa]
+  const posicao = n % 10
+  const deficiencias = []
+  if ([0, 1, 2, 4].includes(posicao)) deficiencias.push(opcoes[Math.floor(n / 10) % opcoes.length])
+  if (posicao === 2) deficiencias.push(opcoes[(Math.floor(n / 10) + 1) % opcoes.length])
+
+  return { nome: `${primeiroNome} ${sobrenome}`, genero, faixa, idade, nascimento, entrada, deficiencias }
+}
+
 const DEFICIENCIAS = [
   'Física', 'Visual', 'Auditiva', 'Intelectual', 'TEA', 'Múltipla', 'Psicossocial', 'Surdocegueira',
   'Nanismo', 'Paralisia Cerebral', 'Mobilidade Reduzida', 'Deficiência de Fala',
@@ -166,43 +211,63 @@ async function criar() {
   console.log('Vítimas acolhidas')
   // Tipos de deficiência (os mesmos do "npm run seed"; não duplica)
   await prisma.deficiencia.createMany({ data: DEFICIENCIAS.map(nome => ({ nome })), skipDuplicates: true })
-  const deficiencias = await prisma.deficiencia.findMany({ where: { nome: { in: ['Física', 'Visual', 'Auditiva', 'Mobilidade Reduzida', 'TEA'] } } })
+  const idDeficiencia = Object.fromEntries(
+    (await prisma.deficiencia.findMany()).map(d => [d.nome, d.id_deficiencia])
+  )
 
   // [abrigo, quantas vítimas, número inicial]: os números iniciais separam as
   // vítimas de cada abrigo e formam o telefone fictício de cada uma
   const lotes = [[escola, 12, 1], [ginasio, 18, 101], [comunitario, 9, 201]]
+  const resumo = { criadas: 0, atualizadas: 0, comDeficiencia: 0, faixas: {} }
+
   for (const [abrigoDoLote, quantidade, inicio] of lotes) {
-    let criadas = 0
+    let criadasNoAbrigo = 0
     for (let n = inicio; n < inicio + quantidade; n++) {
       const telefone = `${PREFIXO_TELEFONE_VITIMA}${String(n).padStart(4, '0')}-0000`
+      const perfil = perfilDaVitima(n)
+      const ligacoes = perfil.deficiencias
+        .filter(nome => idDeficiencia[nome])
+        .map(nome => ({ id_deficiencia: idDeficiencia[nome] }))
+
+      resumo.faixas[perfil.faixa] = (resumo.faixas[perfil.faixa] ?? 0) + 1
+      if (ligacoes.length) resumo.comDeficiencia++
+
       const existente = await prisma.vitima.findUnique({ where: { telefone } })
       if (existente) {
-        // Garante que continua no abrigo certo
-        if (existente.abrigoId !== abrigoDoLote.id_abrigo) {
-          await prisma.vitima.update({ where: { id_vitima: existente.id_vitima }, data: { abrigoId: abrigoDoLote.id_abrigo } })
-        }
+        // Já existe: atualiza idade, deficiências e abrigo (o nome e a data de
+        // entrada ficam como estão). Assim rodar de novo sempre deixa os dados em dia.
+        await prisma.$transaction([
+          prisma.vitimaDeficiencia.deleteMany({ where: { id_vitima: existente.id_vitima } }),
+          prisma.vitima.update({
+            where: { id_vitima: existente.id_vitima },
+            data: {
+              dataNascimento: perfil.nascimento,
+              abrigoId: abrigoDoLote.id_abrigo,
+              deficiencias: ligacoes.length ? { create: ligacoes } : undefined,
+            }
+          }),
+        ])
+        resumo.atualizadas++
         continue
       }
-      const [primeiroNome, genero] = NOMES[n % NOMES.length]
-      const sobrenome = `${SOBRENOMES[n % SOBRENOMES.length]} ${SOBRENOMES[(n * 7 + 3) % SOBRENOMES.length]}`
-      // Idades variadas (de 2 a 88 anos) e entrada nos últimos 10 dias
-      const idade = 2 + ((n * 37) % 87)
-      const nascimento = new Date(Date.UTC(new Date().getFullYear() - idade, (n * 5) % 12, 1 + (n * 11) % 28))
-      const entrada = new Date(Date.now() - ((n * 13) % 10) * 24 * 60 * 60 * 1000)
-      // 1 em cada 5 tem alguma deficiência
-      const deficiencia = n % 5 === 0 && deficiencias.length ? deficiencias[n % deficiencias.length] : null
 
       await prisma.vitima.create({
         data: {
-          nome: `${primeiroNome} ${sobrenome}`, telefone, genero,
-          dataNascimento: nascimento, dataEntrada: entrada, abrigoId: abrigoDoLote.id_abrigo,
-          deficiencias: deficiencia ? { create: [{ id_deficiencia: deficiencia.id_deficiencia }] } : undefined,
+          nome: perfil.nome, telefone, genero: perfil.genero,
+          dataNascimento: perfil.nascimento, dataEntrada: perfil.entrada, abrigoId: abrigoDoLote.id_abrigo,
+          deficiencias: ligacoes.length ? { create: ligacoes } : undefined,
         }
       })
-      criadas++
+      criadasNoAbrigo++
+      resumo.criadas++
     }
-    if (criadas) console.log(`  + ${criadas} vítima(s) em ${abrigoDoLote.nome}`)
+    if (criadasNoAbrigo) console.log(`  + ${criadasNoAbrigo} vítima(s) em ${abrigoDoLote.nome}`)
   }
+
+  const total = resumo.criadas + resumo.atualizadas
+  if (resumo.atualizadas) console.log(`  ~ ${resumo.atualizadas} vítima(s) já existentes com idade e deficiências atualizadas`)
+  console.log(`  = idades: ${Object.entries(resumo.faixas).map(([faixa, qtd]) => `${qtd} ${faixa}`).join(', ')}`)
+  console.log(`  = ${resumo.comDeficiencia} de ${total} com deficiência`)
 
   // Ocupação = vítimas vinculadas (só nos abrigos da demonstração)
   for (const nome of ABRIGOS) {

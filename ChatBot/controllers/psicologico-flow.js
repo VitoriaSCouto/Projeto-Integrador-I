@@ -1,5 +1,11 @@
 import { userState } from "../state/state.js";
 import { salvarRegistro } from "../services/registroService.js";
+import { titulo, listaNumerada, SEPARADOR, RODAPE_MENU, RODAPE_CANCELAR } from "../utils/formato.js";
+
+const PREFERENCIAS = {
+    telefone: '📞 Ligação',
+    whatsapp: '💬 WhatsApp',
+};
 
 export async function psicologicoFlow(msg, from, text, state) {
 
@@ -19,14 +25,16 @@ export async function psicologicoFlow(msg, from, text, state) {
         state.step = 'psycho_description';
 
         await msg.reply(
-`Se quiser, descreva como está se sentindo ou o que está passando.
+`💭 Se quiser, conte como você está se sentindo ou o que está passando.
 
-Isso ajuda o psicólogo voluntário a te entender melhor antes do contato.
+Isso ajuda o psicólogo voluntário a te entender melhor antes do contato. 🤝
 
-Exemplo: "Perdi minha casa na enchente e estou me sentindo perdido"
-ou "Não consigo dormir desde que aconteceu"
+_Ex: "Perdi minha casa na enchente e estou me sentindo perdido"_
+_ou "Não consigo dormir desde que aconteceu"_
 
-Você pode digitar apenas "NAO" se não quiser descrever agora.`
+Prefere não descrever agora? Digite *não*.
+
+${RODAPE_CANCELAR}`
         );
 
         return true;
@@ -42,13 +50,16 @@ Você pode digitar apenas "NAO" se não quiser descrever agora.`
         state.step = 'psycho_contact';
 
         await msg.reply(
-`Como você prefere ser contatado?
+`📲 Como você prefere ser contatado?
 
-1 - Telefone (ligação)
-2 - WhatsApp (mensagem)
-3 - Não quero contato agora, só registrar meu relato
+${listaNumerada([
+    '📞 Telefone (ligação)',
+    '💬 WhatsApp (mensagem)',
+    '📝 Não quero contato agora, só registrar meu relato',
+])}
 
-Digite o número da opção.`
+${SEPARADOR}
+💬 Digite o *número* da opção.`
         );
 
         return true;
@@ -56,29 +67,15 @@ Digite o número da opção.`
 
     if (state.step === 'psycho_contact') {
 
-        if (text === '1') {
+        if (text === '1' || text === '2') {
 
-            state.tempData.contato_preferencia = 'telefone';
+            state.tempData.contato_preferencia = text === '1' ? 'telefone' : 'whatsapp';
             state.step = 'psycho_phone';
 
             await msg.reply(
-`Informe seu telefone com DDD para contato:
+`📞 Informe seu telefone com DDD${text === '2' ? ' (o mesmo do WhatsApp)' : ''}:
 
-Exemplo: 11999999999`
-            );
-
-            return true;
-        }
-
-        if (text === '2') {
-
-            state.tempData.contato_preferencia = 'whatsapp';
-            state.step = 'psycho_phone';
-
-            await msg.reply(
-`Informe seu telefone com DDD (o mesmo do WhatsApp):
-
-Exemplo: 11999999999`
+_Ex: 12999999999_`
             );
 
             return true;
@@ -98,15 +95,16 @@ Exemplo: 11999999999`
             );
 
             await msg.reply(
-` RELATO REGISTRADO COM SUCESSO
+`${titulo('✅', 'RELATO REGISTRADO')}
 
-Protocolo: ${registro.id}
+🔖 Protocolo: *${registro.id}*
 
-Seu relato foi salvo e será encaminhado para a equipe de apoio psicológico.
+Seu relato foi salvo e será encaminhado à equipe de apoio psicológico.
 
- Lembre-se: Você não está sozinho.
+💙 Lembre-se: você não está sozinho(a).
+📞 *CVV — 188* (24h, gratuito)
 
-Digite *oi* para voltar ao menu principal.`
+${RODAPE_MENU}`
             );
 
             userState.delete(from);
@@ -114,9 +112,7 @@ Digite *oi* para voltar ao menu principal.`
             return true;
         }
 
-        await msg.reply(
-`Opção inválida. Digite 1, 2 ou 3.`
-        );
+        await msg.reply('❌ Opção inválida. Digite *1*, *2* ou *3*.');
 
         return true;
     }
@@ -135,17 +131,17 @@ Digite *oi* para voltar ao menu principal.`
         );
 
         await msg.reply(
-` PEDIDO DE APOIO PSICOLÓGICO REGISTRADO
+`${titulo('✅', 'PEDIDO DE APOIO PSICOLÓGICO REGISTRADO')}
 
- Protocolo: ${registro.id}
- Preferência: ${state.tempData.contato_preferencia}
- Telefone: ${state.tempData.telefone}
+🔖 Protocolo: *${registro.id}*
+📲 Preferência: ${PREFERENCIAS[state.tempData.contato_preferencia] ?? state.tempData.contato_preferencia}
+📞 Telefone: ${state.tempData.telefone}
 
- Em breve um psicólogo voluntário entrará em contato com você.
+🤝 Em breve um psicólogo voluntário entrará em contato com você.
 
- CVV - 188 (24h, gratuito)
+💙 Enquanto isso: *CVV — 188* (24h, gratuito)
 
-Digite *oi* para voltar ao menu principal.`
+${RODAPE_MENU}`
         );
 
         userState.delete(from);

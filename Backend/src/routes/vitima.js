@@ -134,8 +134,10 @@ export default async function vitimaRoutes(app) {
         abrigoId: abrigoId ? Number(abrigoId)                       : undefined,
       },
       include: {
-        abrigo: { select: { nome: true, ...selectLocalizacao } }
-      }
+        abrigo: { select: { nome: true, ...selectLocalizacao } },
+        deficiencias: { select: { deficiencia: { select: { nome: true } } } },
+      },
+      orderBy: { nome: 'asc' }
     })
 
     // Retorna apenas os campos necessários
@@ -146,6 +148,10 @@ export default async function vitimaRoutes(app) {
       telefone:  vitima.telefone,
       genero:    vitima.genero,
       fotoVitima: vitima.fotoVitima,
+      // Usados nos filtros da tela de Vítimas (faixa etária, entrada, deficiência)
+      dataNascimento: vitima.dataNascimento,
+      dataEntrada:    vitima.dataEntrada,
+      deficiencias:   vitima.deficiencias.map(d => d.deficiencia.nome),
       // Inclui o abrigo vinculado para exibir na listagem
       abrigoId:  vitima.abrigoId,
       abrigo:    achatarLocalizacao(vitima.abrigo) ?? null,

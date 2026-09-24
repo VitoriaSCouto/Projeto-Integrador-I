@@ -123,13 +123,17 @@ export default async function voluntarioRoutes(app) {
         dataNascimento: true,
         status:         true,
         abrigo: {
-          select: { nome: true, ...selectLocalizacao }
+          select: { id_abrigo: true, nome: true, ...selectLocalizacao }
         },
         // Antes era "doacoes" (model removido do schema).
         // Agora é "solicitacoesAjudaAtendidas" — solicitações de ajuda que este
         // voluntário atendeu (campo voluntarioId em SolicitacaoAjuda).
         solicitacoesAjudaAtendidas: {
-          select: { titulo: true, categoria: true, status: true, createdAt: true }
+          select: {
+            id_solicitacao: true, titulo: true, categoria: true, status: true, createdAt: true,
+            abrigo: { select: { nome: true } }
+          },
+          orderBy: { createdAt: 'desc' }
         }
       }
     })
@@ -140,6 +144,39 @@ export default async function voluntarioRoutes(app) {
 
     return reply.status(200).send({
       voluntario: { ...voluntario, abrigo: achatarLocalizacao(voluntario.abrigo) }
+    })
+  })
+
+
+  //----- Vincular-se a um abrigo (voluntário logado) -----
+  // O próprio voluntário escolhe o abrigo onde vai ajudar, pela Home.
+  // O id vem do token — um voluntário não consegue mudar o vínculo de outro.
+  // URL: PATCH http://localhost:3000/api/voluntarios/me/abrigo
+  // Body: { abrigoId }  (null para se desvincular)
+  app.patch('/me/abrigo', { onRequest: [app.authenticate] }, async (request, reply) => {
+    if (request.user?.tipo !== 'voluntario') {
+      return reply.status(403).send({ mensagem: 'Apenas voluntários podem se vincular a um abrigo.' })
+    }
+
+    const { abrigoId } = request.body ?? {}
+
+    if (abrigoId !== null && abrigoId !== undefined) {
+      const abrigo = await prisma.abrigo.findUnique({ where: { id_abrigo: Number(abrigoId) } })
+      if (!abrigo) return reply.status(404).send({ mensagem: 'Abrigo não encontrado.' })
+      if (abrigo.status !== 'ativo') return reply.status(400).send({ mensagem: 'Este abrigo não está ativo.' })
+    }
+
+    const voluntario = await prisma.voluntario.update({
+      where: { id_voluntario: request.user.id },
+      data: { abrigoId: abrigoId ? Number(abrigoId) : null },
+      select: { abrigo: { select: { id_abrigo: true, nome: true, ...selectLocalizacao } } }
+    })
+
+    return reply.status(200).send({
+      mensagem: voluntario.abrigo
+        ? `Pronto! Agora você está vinculado ao abrigo ${voluntario.abrigo.nome}.`
+        : 'Você não está mais vinculado a nenhum abrigo.',
+      abrigo: achatarLocalizacao(voluntario.abrigo),
     })
   })
 
