@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FaIdCard, FaEnvelope, FaPhoneAlt, FaWhatsapp, FaPlus, FaClock } from 'react-icons/fa';
 import SidebarAdm from '../../../components/SidebarAdm';
 import SeletorLocalidade from '../../../components/SeletorLocalidade';
-import { apiAdmin, formatarDataHora, formatarTempo } from '../../../services/api';
+import { apiAdmin, formatarDataHora, formatarTempo, formatarTelefone } from '../../../services/api';
 import { STATUS_ALERTA } from '../../alertas/constantes';
 import '../../pg_adm/style.css';
 import '../../Solicitacoes-Abrigo/Detalhes-solicitacao/DetalhesSolicitacao.css';
@@ -22,10 +22,9 @@ function DetalhesInscrito() {
   const [erro, setErro] = useState('')
   const [mensagem, setMensagem] = useState('')
 
-  // Campos editáveis
+  // Campos editáveis (o telefone NÃO é editável — vem do WhatsApp da pessoa)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
-  const [telefone, setTelefone] = useState('')
   const [ativo, setAtivo] = useState(true)
   const [residencia, setResidencia] = useState({ cidadeId: null, bairroId: null })
   const [interesses, setInteresses] = useState([])
@@ -38,7 +37,6 @@ function DetalhesInscrito() {
     setInscrito(dados)
     setNome(dados.nome)
     setEmail(dados.email)
-    setTelefone(dados.telefone ?? '')
     setAtivo(dados.ativo)
     setResidencia({ cidadeId: dados.cidadeId, bairroId: dados.bairroId })
     setInteresses(dados.bairrosInteresse)
@@ -92,7 +90,7 @@ function DetalhesInscrito() {
       const dados = await apiAdmin(`/inscritos/atualizar/${id}`, {
         metodo: 'PUT',
         corpo: {
-          nome, email, telefone, ativo,
+          nome, email, ativo,
           bairroId: residencia.bairroId,
           bairrosInteresse: interesses.map(b => b.id_bairro),
         }
@@ -137,6 +135,12 @@ function DetalhesInscrito() {
     )
   }
 
+  // Contatos no formato "@lid" chegavam com o código interno do WhatsApp salvo no
+  // lugar do telefone; o bot corrige ao ser reiniciado
+  // (em "@c.us" o próprio ID é o telefone, então está certo)
+  const telefoneIdentificado = Boolean(inscrito.telefone) &&
+    !(inscrito.whatsappId.endsWith('@lid') && inscrito.telefone === inscrito.whatsappId.split('@')[0])
+
   // ─── TELA PRINCIPAL ─────────────────────────────────────────
   return (
     <div className="dashboard">
@@ -170,14 +174,26 @@ function DetalhesInscrito() {
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
             </div>
 
+            {/* Telefone e WhatsApp só leitura: vêm do WhatsApp da pessoa e são o que
+                identifica quem recebe os alertas — trocar por engano mandaria os avisos
+                para outra pessoa */}
             <div className="form-group">
               <label><FaPhoneAlt /> Telefone</label>
-              <input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="Opcional" />
+              <p style={{ fontSize: '15px', color: '#0f172a', fontWeight: 600 }}>
+                {telefoneIdentificado
+                  ? formatarTelefone(inscrito.telefone)
+                  : <span style={{ color: '#94a3b8', fontWeight: 400 }}>
+                      Ainda não identificado — o bot descobre o número quando for reiniciado
+                    </span>}
+              </p>
             </div>
 
             <div className="form-group">
-              <label><FaWhatsapp /> WhatsApp (usado para enviar os alertas)</label>
-              <p style={{ fontSize: '14px', color: '#64748b' }}>{inscrito.whatsappId}</p>
+              <label><FaWhatsapp /> Código do WhatsApp (usado para enviar os alertas)</label>
+              <p style={{ fontSize: '13px', color: '#64748b', fontFamily: 'monospace' }}>{inscrito.whatsappId}</p>
+              <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                Telefone e WhatsApp não podem ser alterados. Se a pessoa trocou de número, ela deve se inscrever de novo pelo bot.
+              </span>
             </div>
 
             <label className="checkbox-card">
@@ -220,10 +236,13 @@ function DetalhesInscrito() {
               </div>
             )}
 
+            {/* obrigatorio={false}: escolher um bairro para adicionar é opcional —
+                sem isso o navegador bloqueava o "Salvar" ao editar só o nome */}
             <SeletorLocalidade
               cidadeId={novoInteresse.cidadeId}
               bairroId={novoInteresse.bairroId}
               bairroObrigatorio
+              obrigatorio={false}
               onChange={setNovoInteresse}
             />
             <button

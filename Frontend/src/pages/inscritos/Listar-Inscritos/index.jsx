@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaUsers, FaEnvelope, FaPhoneAlt, FaHome, FaEye } from 'react-icons/fa';
 import { GoAlertFill } from 'react-icons/go';
 import SidebarAdm from '../../../components/SidebarAdm';
-import { apiAdmin } from '../../../services/api';
+import { apiAdmin, formatarTelefone } from '../../../services/api';
 import '../../pg_adm/style.css';
 import '../../alertas/alertas.css';
 
@@ -123,7 +123,7 @@ function ListarInscritos() {
                   <p className="linha-titulo">{i.nome}</p>
                   <p className="linha-subtitulo">
                     <span><FaEnvelope /> {i.email}</span>
-                    {i.telefone && <span><FaPhoneAlt /> {i.telefone}</span>}
+                    {i.telefone && !(i.whatsappId.endsWith('@lid') && i.telefone === i.whatsappId.split('@')[0]) && <span><FaPhoneAlt /> {formatarTelefone(i.telefone)}</span>}
                     <span><FaHome /> {i.bairro} — {i.cidade}/{i.estado}</span>
                     {i.bairrosInteresse.length > 0 && (
                       <span><FaEye /> +{i.bairrosInteresse.length} bairro{i.bairrosInteresse.length !== 1 ? 's' : ''}</span>

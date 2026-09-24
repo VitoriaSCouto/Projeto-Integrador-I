@@ -10,6 +10,8 @@ import {
 import { FaGear } from "react-icons/fa6";
 import { GoAlertFill } from "react-icons/go";
 import SeletorLocalidade from '../../../components/SeletorLocalidade';
+import MensagemFeedback from '../../../components/MensagemFeedback';
+import { preencherPorCep, geocodificar } from '../../../services/localizacao';
 import "../../pg_adm/style.css";
 import './DetalhesAbrigo.css';
 import SidebarAdm from '../../../components/SidebarAdm';
@@ -199,35 +201,79 @@ function DetalhesAbrigo() {
       if (!confirmar) return
     }
 
-    if (!endereco.trim() || !cidade) {
-      setFeedbackGeo({ tipo: 'erro', mensagem: 'Preencha pelo menos o endereço e a cidade antes de buscar.' })
+    await buscarLocalizacao()
+  }
+
+  // Busca as coordenadas tentando do mais preciso ao mais geral
+  // (endereço → rua → CEP → bairro → cidade), veja services/localizacao.js.
+  // Sem coordenadas o abrigo NÃO aparece no mapa.
+  const buscarLocalizacao = async (loc = { estado, cidade, bairro }, end = endereco, cepAtual = cep) => {
+    if (!loc.cidade) {
+      setFeedbackGeo({ tipo: 'erro', mensagem: 'Informe o CEP ou escolha a cidade antes de buscar.' })
       return
     }
 
-    setFeedbackGeo({ tipo: 'buscando', mensagem: 'Buscando localização...' })
+    setFeedbackGeo({ tipo: 'buscando', mensagem: 'Buscando localização no mapa...' })
+    const resultado = await geocodificar({
+      endereco: end.trim().replace(/,\s*$/, ''),
+      bairro: loc.bairro, cidade: loc.cidade, estado: loc.estado, cep: cepAtual,
+    })
 
+    if (!resultado) {
+      setFeedbackGeo({ tipo: 'erro', mensagem: 'Localização não encontrada — o abrigo não aparecerá no mapa. Confira o endereço.' })
+      return
+    }
+
+    setLatitude(resultado.latitude)
+    setLongitude(resultado.longitude)
+    const exata = ['endereco', 'rua'].includes(resultado.precisao)
+    setFeedbackGeo({
+      tipo: exata ? 'sucesso' : 'aviso',
+      mensagem: `📍 Localização encontrada ${resultado.descricao} (${resultado.latitude.toFixed(5)}, ${resultado.longitude.toFixed(5)})`
+        + (exata ? '' : ' — o marcador ficará próximo, não no ponto exato.')
+        + ' Clique em Salvar para gravar.',
+    })
+  }
+
+  // No modo edição, ao completar os 8 números do CEP, preenche o resto sozinho
+  const [feedbackCep, setFeedbackCep] = useState(null)
+
+  const handleCep = async (valor) => {
+    setCep(valor)
+    const digitos = valor.replace(/\D/g, '')
+    if (digitos.length !== 8) {
+      setFeedbackCep(null)
+      return
+    }
+
+    setFeedbackCep({ tipo: 'buscando', mensagem: 'Buscando endereço pelo CEP...' })
     try {
-      const query = encodeURIComponent(`${endereco.trim()}, ${bairro}, ${cidade}, ${estado}, Brasil`)
-      const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`
-      const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } })
-      const data = await res.json()
+      const dados = await preencherPorCep(digitos)
 
-      if (data.length > 0) {
-        const lat = parseFloat(data[0].lat)
-        const lng = parseFloat(data[0].lon)
-        setLatitude(lat)
-        setLongitude(lng)
-        setFeedbackGeo({ tipo: 'sucesso', mensagem: `Localização encontrada! (${lat.toFixed(5)}, ${lng.toFixed(5)})` })
-      } else {
-        setLatitude(null)
-        setLongitude(null)
-        setFeedbackGeo({ tipo: 'erro', mensagem: 'Localização não encontrada. Verifique o endereço.' })
+      if (!dados.cidadeId) {
+        setFeedbackCep({ tipo: 'aviso', mensagem: `CEP de ${dados.cidade}/${dados.estado}, que ainda não está cadastrada. Cadastre a cidade em Regiões ou escolha abaixo.` })
+        return
       }
+
+      setCidadeId(dados.cidadeId)
+      setBairroId(dados.bairroId)
+      setEstado(dados.estado)
+      setCidade(dados.cidade)
+      setBairro(dados.bairro)
+
+      const novoEndereco = dados.logradouro ? `${dados.logradouro}, ` : endereco
+      setEndereco(novoEndereco)
+
+      setFeedbackCep({
+        tipo: 'sucesso',
+        mensagem: `✓ ${[dados.logradouro, dados.bairro, `${dados.cidade}/${dados.estado}`].filter(Boolean).join(' — ')}`
+          + (dados.criouBairro ? ' (bairro cadastrado agora)' : '')
+          + (dados.logradouro ? '. Complete o número no endereço.' : ''),
+      })
+
+      buscarLocalizacao({ estado: dados.estado, cidade: dados.cidade, bairro: dados.bairro }, novoEndereco, digitos)
     } catch (erro) {
-      console.error('Erro no geocoding:', erro)
-      setLatitude(null)
-      setLongitude(null)
-      setFeedbackGeo({ tipo: 'erro', mensagem: 'Erro ao buscar localização. Tente novamente.' })
+      setFeedbackCep({ tipo: 'erro', mensagem: erro.message })
     }
   }
 
@@ -431,7 +477,11 @@ function DetalhesAbrigo() {
             <div className="form-group">
               <label><FaPhoneAlt /> CEP</label>
               {editando ? (
-                <input value={cep} onChange={(e) => setCep(e.target.value)} placeholder="12345-12" />
+                <>
+                  {/* Ao completar o CEP, preenche estado, cidade, bairro e rua */}
+                  <input value={cep} onChange={(e) => handleCep(e.target.value)} placeholder="Ex: 12090-590" maxLength={9} />
+                  <MensagemFeedback feedback={feedbackCep} />
+                </>
               ) : (
                 <p>{cep || '—'}</p>
               )}
@@ -482,24 +532,23 @@ function DetalhesAbrigo() {
                   >
                     {latitude && longitude ? 'Atualizar localização' : 'Buscar localização'}
                   </button>
-                  {feedbackGeo && (
-                    <p style={{
-                      fontSize: '12px', marginTop: '4px',
-                      color: feedbackGeo.tipo === 'sucesso'   ? '#16a34a'
-                           : feedbackGeo.tipo === 'erro'      ? '#ef4444'
-                           : feedbackGeo.tipo === 'existente' ? '#0ea5e9'
-                           :                                    '#64748b'
-                    }}>
-                      {feedbackGeo.mensagem}
-                    </p>
-                  )}
+                  {feedbackGeo?.tipo === 'existente'
+                    ? <p style={{ fontSize: '12px', marginTop: '4px', color: '#0ea5e9' }}>{feedbackGeo.mensagem}</p>
+                    : <MensagemFeedback feedback={feedbackGeo} />}
                 </>
               ) : (
                 <>
                   <p>{endereco}</p>
-                  {feedbackGeo && (
-                    <p style={{ fontSize: '12px', marginTop: '2px', color: '#0ea5e9' }}>
-                      {feedbackGeo.mensagem}
+                  {latitude && longitude ? (
+                    feedbackGeo && (
+                      <p style={{ fontSize: '12px', marginTop: '2px', color: '#0ea5e9' }}>
+                        {feedbackGeo.mensagem}
+                      </p>
+                    )
+                  ) : (
+                    // Sem coordenadas o abrigo não aparece no mapa — avisa e diz como resolver
+                    <p style={{ fontSize: '12px', marginTop: '2px', color: '#b45309' }}>
+                      ⚠️ Sem localização: este abrigo não aparece no mapa. Clique em "Editar Abrigo" e depois em "Buscar localização".
                     </p>
                   )}
                 </>

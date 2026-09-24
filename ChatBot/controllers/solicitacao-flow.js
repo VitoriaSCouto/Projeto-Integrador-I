@@ -61,17 +61,73 @@ export const solicitacaoFlow = async (msg, from, text, state) => {
   }
 
   // ── ETAPA 2: CEP ─────────────────────────────────────────────
+  // O CEP já define cidade e bairro — a pessoa não precisa escolher em listas
   if (state.step === 'sol_cep') {
-    state.tempData.cep = msg.body.trim();
+    const cep = msg.body.replace(/\D/g, '');
+
+    if (cep.length !== 8) {
+      await msg.reply('❌ O CEP deve ter 8 números. Ex: 12030-000');
+      return true;
+    }
+
+    state.tempData.cep = cep.replace(/^(\d{5})(\d{3})$/, '$1-$2');
+
+    try {
+      const consulta = await api('GET', `/bairros/cep/${cep}`);
+
+      if (consulta.status === 404) {
+        await msg.reply('❌ CEP não encontrado. Confira e digite novamente.');
+        return true;
+      }
+
+      if (consulta.ok) {
+        const dados = consulta.dados;
+
+        // Encontra ou cadastra o bairro (e a cidade, se for nova)
+        if (dados.bairro) {
+          const bairro = await api('POST', '/bot/bairros/cep', { cep });
+          if (bairro.ok) {
+            state.tempData.cidadeId = bairro.dados.bairro.cidadeId;
+            state.tempData.cidade = bairro.dados.bairro.cidade;
+            state.tempData.estado = bairro.dados.bairro.estado;
+            state.tempData.bairroId = bairro.dados.bairro.id_bairro;
+            state.tempData.bairro = bairro.dados.bairro.nome;
+          }
+        } else if (dados.cidadeId) {
+          // CEP sem bairro (cidades pequenas): fica só com a cidade
+          state.tempData.cidadeId = dados.cidadeId;
+          state.tempData.cidade = dados.cidade;
+          state.tempData.estado = dados.uf;
+        }
+
+        state.tempData._logradouro = dados.logradouro;
+      }
+    } catch (erro) {
+      console.error('[SOL] Erro ao consultar CEP:', erro.message);
+    }
+
     userState.set(from, { ...state, step: 'sol_endereco' });
-    await msg.reply('🏠 Qual o endereço completo?\n\nEx: Rua das Flores, 123');
+
+    const d = state.tempData;
+    const local = d.cidadeId
+      ? `📍 ${[d.bairro, `${d.cidade}/${d.estado}`].filter(Boolean).join(' — ')}\n\n`
+      : '';
+    const exemplo = d._logradouro ? `${d._logradouro}, 123` : 'Rua das Flores, 123';
+    await msg.reply(`${local}🏠 Qual o endereço, com o número?\n\nEx: ${exemplo}`);
     return true;
   }
 
   // ── ETAPA 3: Endereço ─────────────────────────────────────────
   if (state.step === 'sol_endereco') {
     state.tempData.endereco = msg.body.trim();
+    delete state.tempData._logradouro;
 
+    // Cidade já veio do CEP: pula a escolha de cidade e bairro
+    if (state.tempData.cidadeId) {
+      return perguntarTipo(msg, from, state);
+    }
+
+    // CEP de cidade ainda não cadastrada: escolhe a cidade na lista
     const cidades = await buscarCidades();
     if (cidades.length === 0) {
       await msg.reply('❌ Não consegui carregar as cidades. Tente novamente mais tarde.\n\nDigite *oi* para voltar ao menu.');

@@ -19,24 +19,67 @@ const LOTE = 20;
 
 const esperar = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Envia a mensagem com a foto do relato (se houver). Se a foto não puder ser
-// baixada, envia só o texto.
+// Muitos contatos chegam com um ID interno do WhatsApp ("123456789@lid") em vez
+// do número ("5512999999999@c.us"). Tentamos primeiro o destino salvo (é o mesmo
+// que as respostas do bot usam) e, se falhar, o número de telefone equivalente.
+const destinosPossiveis = async (client, destino) => {
+  if (!destino.endsWith('@lid')) return [destino];
+
+  try {
+    const [{ pn } = {}] = await client.getContactLidAndPhone([destino]);
+    if (pn) return [destino, pn];
+  } catch (erro) {
+    console.warn(`[NOTIF] Não foi possível converter ${destino} em número:`, erro.message);
+  }
+  return [destino];
+};
+
+// Envia para um destino. Com o whatsapp-web.js 1.34.7 e o WhatsApp Web atual,
+// o envio de IMAGEM falha ("Data passed to getter must include an id property"),
+// enquanto texto funciona. Por isso: tenta a foto com legenda e, se falhar,
+// manda o texto do alerta com o link da foto — o aviso nunca deixa de chegar.
+const enviarPara = async (client, destino, notificacao, media) => {
+  if (media) {
+    try {
+      await client.sendMessage(destino, media, { caption: notificacao.mensagem, sendSeen: false });
+      return 'foto';
+    } catch (erro) {
+      console.warn(`[NOTIF] Foto não enviada para ${destino} (${erro.message.split('\n')[0]}), enviando só o texto`);
+    }
+  }
+
+  const texto = notificacao.fotoUrl
+    ? `${notificacao.mensagem}\n\n📷 Foto da ocorrência: ${notificacao.fotoUrl}`
+    : notificacao.mensagem;
+
+  await client.sendMessage(destino, texto, { sendSeen: false });
+  return 'texto';
+};
+
 const enviar = async (client, notificacao) => {
+  let media = null;
   if (notificacao.fotoUrl) {
-    let media = null;
     try {
       media = await MessageMedia.fromUrl(notificacao.fotoUrl, { unsafeMime: true });
     } catch (erro) {
       console.warn('[NOTIF] Não foi possível baixar a foto, enviando só o texto:', erro.message);
     }
-
-    if (media) {
-      await client.sendMessage(notificacao.destino, media, { caption: notificacao.mensagem });
-      return;
-    }
   }
 
-  await client.sendMessage(notificacao.destino, notificacao.mensagem);
+  // Tenta cada formato do destino; se todos falharem, repassa o último erro
+  // para a notificação ser marcada como falha (e tentada de novo depois)
+  let ultimoErro;
+  for (const destino of await destinosPossiveis(client, notificacao.destino)) {
+    try {
+      const formato = await enviarPara(client, destino, notificacao, media);
+      if (formato === 'texto' && media) console.log(`[NOTIF] Enviado só o texto (com link da foto) para ${destino}`);
+      return;
+    } catch (erro) {
+      ultimoErro = erro;
+      console.warn(`[NOTIF] Falha ao enviar para ${destino}:`, erro.message.split('\n')[0]);
+    }
+  }
+  throw ultimoErro;
 };
 
 let iniciado = false;

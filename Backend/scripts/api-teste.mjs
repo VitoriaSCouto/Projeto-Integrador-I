@@ -6,7 +6,10 @@
 // As variáveis são definidas ANTES de carregar o servidor; o dotenv e o
 // Prisma não sobrescrevem variáveis que já existem, então o .env real é ignorado.
 const PORTA_BANCO = Number(process.env.BANCO_TESTE_PORTA) || 5433
-const URL_TESTE = `postgresql://postgres:postgres@127.0.0.1:${PORTA_BANCO}/postgres?sslmode=disable&connection_limit=1`
+// pgbouncer=true: o Prisma não cria "prepared statements" com nome. O PGlite é
+// uma sessão única de Postgres, então sem isso reiniciar a API de teste (ou abrir
+// duas) dava "prepared statement s0 already exists".
+const URL_TESTE = `postgresql://postgres:postgres@127.0.0.1:${PORTA_BANCO}/postgres?sslmode=disable&connection_limit=1&pgbouncer=true`
 
 Object.assign(process.env, {
   DATABASE_URL: URL_TESTE,

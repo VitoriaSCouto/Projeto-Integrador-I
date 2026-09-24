@@ -53,6 +53,15 @@ export function formatarTempo(dataISO) {
   return `Há ${Math.floor(diffHoras / 24)} dias`
 }
 
+// "5512982487132" → "+55 (12) 98248-7132". Se não parecer um telefone
+// brasileiro, devolve os dígitos como vieram.
+export function formatarTelefone(telefone) {
+  const d = String(telefone ?? '').replace(/\D/g, '')
+  if (!d) return null
+  const m = d.match(/^55(\d{2})(\d{4,5})(\d{4})$/)
+  return m ? `+55 (${m[1]}) ${m[2]}-${m[3]}` : d
+}
+
 export function formatarDataHora(dataISO) {
   if (!dataISO) return '—'
   return new Date(dataISO).toLocaleString('pt-BR', {

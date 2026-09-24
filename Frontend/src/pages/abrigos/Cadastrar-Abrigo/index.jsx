@@ -9,6 +9,8 @@ import {
 import { GoAlertFill } from "react-icons/go";
 import { FaGear } from "react-icons/fa6";
 import SeletorLocalidade from "../../../components/SeletorLocalidade";
+import MensagemFeedback from "../../../components/MensagemFeedback";
+import { preencherPorCep, geocodificar } from "../../../services/localizacao";
 import "../../pg_adm/style.css";
 import "./CadastroAbrigo.css";
 import SidebarAdm from '../../../components/SidebarAdm';
@@ -19,10 +21,13 @@ const CadastrarAbrigo = () => {
   const [fotoAbrigo, setFotoAbrigo] = useState(null);
   const [status, setStatus] = useState('ativo');
 
-  // ── Localização: Estado → Cidade → Bairro ────────────────────────────────
-  // O SeletorLocalidade busca as listas na API e devolve os IDs + os nomes
-  // (os nomes são usados no geocoding do endereço)
+  // ── Localização: CEP → Estado / Cidade / Bairro / Endereço ───────────────
+  // Ao digitar o CEP, o formulário se preenche sozinho (e cadastra o bairro se
+  // ele ainda não existir). Os selects continuam editáveis para ajustes.
+  const [cep, setCep] = useState('')
+  const [endereco, setEndereco] = useState('')
   const [localidade, setLocalidade] = useState({ cidadeId: null, bairroId: null, estado: '', cidade: '', bairro: '' })
+  const [feedbackCep, setFeedbackCep] = useState(null)
 
   const handleLocalidade = (novaLocalidade) => {
     setLocalidade(novaLocalidade)
@@ -45,61 +50,81 @@ const CadastrarAbrigo = () => {
     }
   }
 
-  // ── Estados do geocoding ─────────────────────────────────────────────────
-  // latitude e longitude são preenchidos automaticamente ao sair do campo endereço
+  // ── Coordenadas para o mapa ──────────────────────────────────────────────
+  // Sem latitude/longitude o abrigo NÃO aparece no mapa
   const [latitude, setLatitude] = useState(null)
   const [longitude, setLongitude] = useState(null)
 
-  // feedbackGeo mostra o resultado do geocoding para o usuário
-  // tipo: 'sucesso' | 'erro' | 'buscando'
+  // feedbackGeo mostra o resultado para o usuário
+  // tipo: 'sucesso' | 'aviso' (localização aproximada) | 'erro' | 'buscando'
   const [feedbackGeo, setFeedbackGeo] = useState(null)
-  // ─────────────────────────────────────────────────────────────────────────
 
-  // ── Handler do geocoding ─────────────────────────────────────────────────
-  // Roda quando o usuário sai do campo endereço (onBlur)
-  // Só tenta geocodificar se o endereço E a cidade estiverem preenchidos
-  const handleGeocodificar = async (e) => {
-    const endereco = e.target.value.trim()
-
-    // Se o endereço estiver vazio ou a cidade não foi selecionada ainda, não faz nada
-    if (!endereco || !localidade.cidade) {
-      setFeedbackGeo({ tipo: 'erro', mensagem: 'Preencha a cidade antes de inserir o endereço.' })
+  // Busca as coordenadas tentando do mais preciso ao mais geral
+  // (endereço → rua → CEP → bairro → cidade), veja services/localizacao.js
+  const buscarLocalizacao = async (loc = localidade, end = endereco, cepAtual = cep) => {
+    if (!loc.cidade) {
+      setFeedbackGeo({ tipo: 'erro', mensagem: 'Informe o CEP ou escolha a cidade para localizar o abrigo no mapa.' })
       return
     }
 
-    // Mostra feedback de "buscando" enquanto a requisição acontece
-    setFeedbackGeo({ tipo: 'buscando', mensagem: 'Buscando localização...' })
+    setFeedbackGeo({ tipo: 'buscando', mensagem: 'Buscando localização no mapa...' })
+    const resultado = await geocodificar({
+      endereco: end.trim().replace(/,\s*$/, ''),
+      bairro: loc.bairro, cidade: loc.cidade, estado: loc.estado, cep: cepAtual,
+    })
 
-    try {
-      // Monta a query com o máximo de informação possível para aumentar a precisão
-      // Ex: "Rua das Flores 123, Centro, Taubaté, SP, Brasil"
-      const query = encodeURIComponent(`${endereco}, ${localidade.bairro}, ${localidade.cidade}, ${localidade.estado}, Brasil`)
-      const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`
-
-      const res = await fetch(url, {
-        headers: { 'Accept-Language': 'pt-BR' }
-      })
-      const data = await res.json()
-
-      if (data.length > 0) {
-        // Encontrou — salva as coordenadas nos estados e mostra sucesso
-        const lat = parseFloat(data[0].lat)
-        const lng = parseFloat(data[0].lon)
-        setLatitude(lat)
-        setLongitude(lng)
-        setFeedbackGeo({ tipo: 'sucesso', mensagem: `Localização encontrada! (${lat.toFixed(5)}, ${lng.toFixed(5)})` })
-      } else {
-        // Não encontrou — limpa as coordenadas e avisa o usuário
-        // Isso pode acontecer se o endereço estiver muito abreviado ou incorreto
-        setLatitude(null)
-        setLongitude(null)
-        setFeedbackGeo({ tipo: 'erro', mensagem: 'Localização não encontrada. Verifique o endereço.' })
-      }
-    } catch (erro) {
-      console.error('Erro no geocoding:', erro)
+    if (!resultado) {
       setLatitude(null)
       setLongitude(null)
-      setFeedbackGeo({ tipo: 'erro', mensagem: 'Erro ao buscar localização. Tente novamente.' })
+      setFeedbackGeo({ tipo: 'erro', mensagem: 'Localização não encontrada — o abrigo não aparecerá no mapa. Confira o endereço.' })
+      return
+    }
+
+    setLatitude(resultado.latitude)
+    setLongitude(resultado.longitude)
+    const exata = ['endereco', 'rua'].includes(resultado.precisao)
+    setFeedbackGeo({
+      tipo: exata ? 'sucesso' : 'aviso',
+      mensagem: `📍 Localização encontrada ${resultado.descricao} (${resultado.latitude.toFixed(5)}, ${resultado.longitude.toFixed(5)})`
+        + (exata ? '' : ' — o marcador ficará próximo, não no ponto exato.'),
+    })
+  }
+
+  // Ao completar os 8 números do CEP, preenche o resto sozinho
+  const handleCep = async (valor) => {
+    setCep(valor)
+    const digitos = valor.replace(/\D/g, '')
+    if (digitos.length !== 8) {
+      setFeedbackCep(null)
+      return
+    }
+
+    setFeedbackCep({ tipo: 'buscando', mensagem: 'Buscando endereço pelo CEP...' })
+    try {
+      const dados = await preencherPorCep(digitos)
+
+      if (!dados.cidadeId) {
+        setFeedbackCep({ tipo: 'aviso', mensagem: `CEP de ${dados.cidade}/${dados.estado}, que ainda não está cadastrada. Cadastre a cidade em Regiões ou escolha abaixo.` })
+        return
+      }
+
+      const loc = { cidadeId: dados.cidadeId, bairroId: dados.bairroId, estado: dados.estado, cidade: dados.cidade, bairro: dados.bairro }
+      setLocalidade(loc)
+
+      // Deixa a rua pronta para a pessoa só completar o número
+      const novoEndereco = dados.logradouro ? `${dados.logradouro}, ` : endereco
+      setEndereco(novoEndereco)
+
+      setFeedbackCep({
+        tipo: 'sucesso',
+        mensagem: `✓ ${[dados.logradouro, dados.bairro, `${dados.cidade}/${dados.estado}`].filter(Boolean).join(' — ')}`
+          + (dados.criouBairro ? ' (bairro cadastrado agora)' : '')
+          + (dados.logradouro ? '. Complete o número no endereço.' : ''),
+      })
+
+      buscarLocalizacao(loc, novoEndereco, digitos)
+    } catch (erro) {
+      setFeedbackCep({ tipo: 'erro', mensagem: erro.message })
     }
   }
   // ─────────────────────────────────────────────────────────────────────────
@@ -127,10 +152,10 @@ const CadastrarAbrigo = () => {
     const dados = {
       status: e.target.status.value,
       nome: e.target.nome.value,
-      cep: e.target.cep.value,
+      cep,
       cidadeId: localidade.cidadeId,
       bairroId: localidade.bairroId,
-      endereco: e.target.endereco.value,
+      endereco: endereco.trim().replace(/,s*$/, ''),
       telefone: e.target.telefone.value,
       responsavel: e.target.responsavel.value,
       tipoAbrigo: e.target.tipoAbrigo.value,
@@ -208,12 +233,22 @@ const CadastrarAbrigo = () => {
               <input type="text" name="nome" placeholder="Ex: Escola Municipal Centro" required />
             </div>
 
+            {/* CEP primeiro: ao completar, preenche estado, cidade, bairro e rua */}
             <div className="form-group">
-              <label><FaPhoneAlt /> CEP</label>
-              <input type="text" name="cep" placeholder="12345-12" required />
+              <label><FaMapMarkedAlt /> CEP</label>
+              <input
+                type="text"
+                name="cep"
+                placeholder="Ex: 12090-590"
+                value={cep}
+                onChange={(e) => handleCep(e.target.value)}
+                maxLength={9}
+                required
+              />
+              <MensagemFeedback feedback={feedbackCep} />
             </div>
 
-            {/* Estado → Cidade → Bairro (listas vindas da API de regiões) */}
+            {/* Estado → Cidade → Bairro (preenchidos pelo CEP, mas dá para ajustar) */}
             <SeletorLocalidade
               cidadeId={localidade.cidadeId}
               bairroId={localidade.bairroId}
@@ -221,33 +256,28 @@ const CadastrarAbrigo = () => {
               onChange={handleLocalidade}
             />
 
-            {/* Campo endereço com geocoding automático no onBlur ──────────── */}
-            {/* onBlur = roda quando o usuário sai do campo (clica em outro lugar) */}
-            {/* Isso evita fazer uma requisição a cada letra digitada */}
+            {/* Endereço: ao sair do campo, a localização é buscada de novo com o número */}
             <div className="form-group">
-              <label><FaMapMarkedAlt /> Endereço</label>
+              <label><FaMapMarkerAlt /> Endereço</label>
               <input
                 type="text"
                 name="endereco"
                 placeholder="Ex: Rua das Flores, 123"
+                value={endereco}
+                onChange={(e) => setEndereco(e.target.value)}
+                onBlur={() => endereco.trim() && buscarLocalizacao()}
                 required
-                onBlur={handleGeocodificar}
               />
-
-              {/* Feedback do geocoding — aparece embaixo do campo endereço */}
-              {feedbackGeo && (
-                <p style={{
-                  fontSize: '12px',
-                  marginTop: '4px',
-                  color: feedbackGeo.tipo === 'sucesso' ? '#16a34a'
-                       : feedbackGeo.tipo === 'erro'    ? '#ef4444'
-                       :                                  '#64748b'  // buscando
-                }}>
-                  {feedbackGeo.mensagem}
-                </p>
-              )}
+              <MensagemFeedback feedback={feedbackGeo} />
+              <button
+                type="button"
+                className="btn-upload-trigger"
+                style={{ alignSelf: 'flex-start', marginTop: '4px', border: 'none', cursor: 'pointer' }}
+                onClick={() => buscarLocalizacao()}
+              >
+                <FaLocationArrow /> Localizar no mapa
+              </button>
             </div>
-            {/* ─────────────────────────────────────────────────────────────── */}
 
             <div className="form-group">
               <label><FaPhoneAlt /> Telefone</label>

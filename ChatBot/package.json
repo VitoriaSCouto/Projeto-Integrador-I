@@ -11,6 +11,7 @@
     "whatsapp-web.js": "^1.34.7"
   },
   "scripts": {
+    "postinstall": "node scripts/corrigir-wwebjs-midia.cjs",
     "teste:conversa": "node testes/simular-conversa.mjs",
     "teste:interativo": "node testes/conversa-interativa.mjs"
   }

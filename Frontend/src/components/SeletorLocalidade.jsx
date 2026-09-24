@@ -19,8 +19,11 @@ async function buscarJson(caminho) {
 //   disabled               → trava os selects (modo visualização)
 //   bairroObrigatorio      → exige escolher um bairro
 //   mostrarBairro          → false esconde o select de bairro
+//   obrigatorio            → false: nenhum select é obrigatório (use quando o seletor é
+//                            opcional dentro de um formulário, para não travar o "Salvar")
 function SeletorLocalidade({
-  cidadeId, bairroId, onChange, disabled = false, bairroObrigatorio = false, mostrarBairro = true
+  cidadeId, bairroId, onChange, disabled = false, bairroObrigatorio = false, mostrarBairro = true,
+  obrigatorio = true
 }) {
   const [estados, setEstados] = useState([])
   const [estadoEscolhido, setEstadoEscolhido] = useState(null)
@@ -32,7 +35,8 @@ function SeletorLocalidade({
 
   // O estado vem da escolha do usuário ou, ao abrir um registro já salvo,
   // da cidade que veio preenchida
-  const estadoId = estadoEscolhido ?? (cidadeId ? estadoDaCidade[cidadeId] : null) ?? ''
+  // (a cidade manda: se ela foi preenchida pelo CEP, o estado acompanha)
+  const estadoId = (cidadeId ? estadoDaCidade[cidadeId] : null) ?? estadoEscolhido ?? ''
   const cidades = cidadesPorEstado[estadoId] ?? []
   const bairros = bairrosPorCidade[cidadeId] ?? []
 
@@ -96,7 +100,7 @@ function SeletorLocalidade({
     <>
       <div className="form-group">
         <label><FaMapMarkedAlt /> Estado</label>
-        <select className="select-cidade" value={estadoId} disabled={disabled} onChange={handleEstado} required>
+        <select className="select-cidade" value={estadoId} disabled={disabled} onChange={handleEstado} required={obrigatorio}>
           <option value="" disabled>Selecione o estado</option>
           {estados.map(est => (
             <option key={est.id_estado} value={est.id_estado}>{est.nome} ({est.sigla})</option>
@@ -116,7 +120,7 @@ function SeletorLocalidade({
           value={cidadeId ?? ''}
           disabled={disabled || !estadoId}
           onChange={handleCidade}
-          required
+          required={obrigatorio}
         >
           <option value="" disabled>Selecione a cidade</option>
           {cidades.map(c => (
@@ -133,7 +137,7 @@ function SeletorLocalidade({
             value={bairroId ?? ''}
             disabled={disabled || !cidadeId}
             onChange={handleBairro}
-            required={bairroObrigatorio}
+            required={obrigatorio && bairroObrigatorio}
           >
             <option value="" disabled={bairroObrigatorio}>
               {bairroObrigatorio ? 'Selecione o bairro' : 'Sem bairro definido'}

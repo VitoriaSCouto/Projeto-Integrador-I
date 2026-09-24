@@ -106,6 +106,9 @@ Veja `Backend/.env.example` e `ChatBot/.env.example`.
 ### ChatBot (`ChatBot/`)
 - `index.js` → `controllers/message-controller.js`: ignora status e grupos (em grupos só responde `!alertas ...`, ver `grupo-controller.js`); `oi`/`menu` sempre voltam ao menu; depois despacha para os fluxos conforme `state.step` (`alerta_*`, `help_*`, `psycho_*`, `sol_*`).
 - `alerta-flow.js`: inscrição, gerenciar bairros, relato. `services/api.js` (cliente da API com `x-bot-key`), `services/notificacao-service.js` (envia a fila a cada 15s), `services/midia.js` (download de fotos).
+- **whatsapp-web.js 1.34.7 tem um bug no envio de mídia** desde a atualização do WhatsApp Web de 17/09/2026 (`Data passed to getter must include an id property`). `ChatBot/scripts/corrigir-wwebjs-midia.cjs` roda no `postinstall` e aplica a correção (`delete message.__x_id`) em `node_modules`. Se a foto ainda falhar, o `notificacao-service` manda o texto com o link da foto.
+- Contatos novos chegam como `123...@lid` (código interno), não `55...@c.us`. Para o número real use `numeroReal()` de `services/telefone.js`; ao ligar, o bot corrige inscritos antigos que ficaram com o código no lugar do telefone.
+- Escolha de bairro no bot: a pessoa digita o **CEP ou o nome** do bairro (comparação sem acento/maiúscula); não há listas de cidades/bairros.
 - Menu: 1 = alertas do bairro, 5 = relatar ocorrência. Os fluxos de apoio (2) e psicológico (4) ainda salvam só em memória (`registroService.js`).
 - Atenção: os pedidos do bot **não** são `SolicitacaoAjuda` — esta é uma necessidade criada pelo admin para um abrigo.
 

@@ -111,11 +111,13 @@ export default async function inscritoRoutes(app) {
 
   //----- Atualizar -----
   // URL: PUT http://localhost:3000/api/inscritos/atualizar/:id
-  // Body: { nome?, email?, telefone?, ativo?, bairroId?, bairrosInteresse?: [ids] }
+  // Body: { nome?, email?, ativo?, bairroId?, bairrosInteresse?: [ids] }
+  // O telefone NÃO é editável: ele vem do WhatsApp da pessoa e é usado para
+  // identificá-la — trocar por engano mandaria os alertas para outra pessoa.
   // bairrosInteresse, quando enviado, SUBSTITUI a lista inteira
   app.put('/atualizar/:id', async (request, reply) => {
     const id = Number(request.params.id)
-    const { nome, email, telefone, ativo, bairroId, bairrosInteresse } = request.body ?? {}
+    const { nome, email, ativo, bairroId, bairrosInteresse } = request.body ?? {}
 
     const inscrito = await prisma.inscritoAlerta.findUnique({ where: { id_inscrito: id } })
     if (!inscrito) return reply.status(404).send({ mensagem: 'Inscrito não encontrado.' })
@@ -153,7 +155,6 @@ export default async function inscritoRoutes(app) {
         data: {
           nome:     nome     !== undefined ? nome.trim()                 : undefined,
           email:    email    !== undefined ? email.trim().toLowerCase()  : undefined,
-          telefone: telefone !== undefined ? (telefone?.trim() || null)  : undefined,
           ativo:    ativo    !== undefined ? Boolean(ativo)              : undefined,
           bairroId: novoBairroId,
         }

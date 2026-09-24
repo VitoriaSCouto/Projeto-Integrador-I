@@ -11,6 +11,7 @@ import { userState } from "../state/state.js";
 import { api } from "../services/api.js";
 import { baixarFoto } from "../services/midia.js";
 import { enviarMenuPrincipal } from "./menu.js";
+import { numeroReal } from "../services/telefone.js";
 
 // Mesmas opções do backend (Backend/src/lib/alertas.js) — o valor precisa bater
 const TIPOS = [
@@ -56,15 +57,10 @@ const buscarInscrito = async (from) => {
   return dados.inscrito;
 };
 
-// Número de telefone de quem está conversando (para exibir no painel)
-const obterTelefone = async (msg) => {
-  try {
-    const contato = await msg.getContact();
-    return contato?.number ?? null;
-  } catch {
-    return null;
-  }
-};
+// Número de telefone de quem está conversando (para exibir no painel).
+// Para contatos "@lid" o getContact() devolve o código interno, não o número,
+// então pedimos o número real ao WhatsApp.
+const obterTelefone = async (msg) => numeroReal(msg.client, msg.from);
 
 
 // ── Menus ──────────────────────────────────────────────────────
@@ -129,52 +125,34 @@ export const abrirMenuAlertas = async (msg, from) => {
 };
 
 
-// ── Seleção de bairro (cidade → bairro, ou CEP) ────────────────
+// ── Seleção de bairro (CEP ou nome do bairro) ──────────────────
 // Reaproveitada na inscrição, em "acompanhar outro bairro" e no relato.
 // "proposito" diz o que fazer quando o bairro for escolhido.
+// A pessoa digita o CEP ou o nome do bairro — sem listas enormes.
+
+const PERGUNTA_BAIRRO = `📮 Digite o *CEP* do endereço (ex: 12070-610)
+ou o *nome do bairro* (ex: Centro).`;
 
 const iniciarSelecaoBairro = async (msg, from, tempData, proposito, titulo) => {
-  const { ok, dados } = await api('GET', '/cidades/listar');
-  if (!ok) throw new Error(dados.mensagem);
-
-  const cidades = dados.cidades.map(c => ({ id_cidade: c.id_cidade, nome: c.nome, estado: c.estado }));
-  const selecao = { proposito, titulo, cidades };
-
-  // Nenhuma cidade cadastrada ainda: vai direto para o CEP
-  if (cidades.length === 0) {
-    return pedirCep(msg, from, tempData, selecao);
-  }
-
-  userState.set(from, { step: 'alerta_sel_cidade', tempData, selecao });
-
-  await msg.reply(
-`${titulo}
-
-🌆 Em qual cidade?
-
-${listaNumerada(cidades, c => `${c.nome}/${c.estado}`)}
-
-0 - Minha cidade não está na lista`
-  );
+  userState.set(from, { step: 'alerta_sel_busca', tempData, selecao: { proposito } });
+  await msg.reply(`${titulo}\n\n${PERGUNTA_BAIRRO}`);
 };
 
-const pedirCep = async (msg, from, tempData, selecao) => {
-  userState.set(from, { step: 'alerta_sel_cep', tempData, selecao });
-  await msg.reply('📮 Digite o *CEP* do endereço para localizarmos o bairro.\n\nEx: 12070-610');
+const voltarParaBusca = async (msg, from, state, aviso) => {
+  userState.set(from, { step: 'alerta_sel_busca', tempData: state.tempData, selecao: { proposito: state.selecao.proposito } });
+  await msg.reply(aviso ? `${aviso}\n\n${PERGUNTA_BAIRRO}` : PERGUNTA_BAIRRO);
 };
 
-const mostrarBairros = async (msg, from, state, bairros, cabecalho) => {
-  state.selecao.bairros = bairros;
-  userState.set(from, { ...state, step: 'alerta_sel_bairro' });
+// Mostra uma lista curta de bairros encontrados para a pessoa escolher
+const mostrarOpcoes = async (msg, from, state, opcoes, cabecalho) => {
+  userState.set(from, { ...state, step: 'alerta_sel_escolha', selecao: { ...state.selecao, opcoes } });
 
   await msg.reply(
 `${cabecalho}
 
-${listaNumerada(bairros, b => b.nome)}
+${listaNumerada(opcoes, descreverBairro)}
 
-0 - Não encontrei o bairro (informar CEP)
-
-Digite o número ou o nome do bairro.`
+0 - Nenhum desses (digitar o CEP)`
   );
 };
 
@@ -222,119 +200,110 @@ const concluirSelecao = async (msg, from, state, bairro) => {
   }
 };
 
-const processarSelecao = async (msg, from, text, state) => {
-  const { selecao } = state;
+// Parece um CEP? (8 números, com ou sem traço/ponto/espaço)
+const pareceCep = (texto) => /^[\d\s.-]+$/.test(texto.trim()) && texto.replace(/\D/g, '').length === 8;
 
-  // ── Cidade ──
-  if (state.step === 'alerta_sel_cidade') {
-    if (text === '0') return pedirCep(msg, from, state.tempData, selecao);
+const buscarPorCep = async (msg, from, state, cepDigitado) => {
+  const cep = cepDigitado.replace(/\D/g, '');
+  const { ok, status, dados } = await api('GET', `/bairros/cep/${cep}`);
 
-    const cidade = escolherPorNumero(text, selecao.cidades)
-      ?? selecao.cidades.find(c => normalizar(c.nome) === text);
+  if (status === 404) return voltarParaBusca(msg, from, state, '❌ CEP não encontrado. Confira os números.');
+  if (!ok) throw new Error(dados.mensagem);
 
-    if (!cidade) {
-      await msg.reply(`❌ Digite um número de 1 a ${selecao.cidades.length}, ou 0 se a cidade não estiver na lista.`);
-      return;
-    }
-
-    const { ok, dados } = await api('GET', `/bairros/listar?cidadeId=${cidade.id_cidade}`);
-    if (!ok) throw new Error(dados.mensagem);
-
-    selecao.cidade = cidade;
-    selecao.todosBairros = dados.bairros.map(b => ({
-      id_bairro: b.id_bairro, nome: b.nome, cidade: cidade.nome, estado: cidade.estado
-    }));
-
-    if (selecao.todosBairros.length === 0) {
-      await msg.reply(`Ainda não há bairros cadastrados em ${cidade.nome}.`);
-      return pedirCep(msg, from, state.tempData, selecao);
-    }
-
-    return mostrarBairros(msg, from, state, selecao.todosBairros, `🏘️ Qual o bairro em *${cidade.nome}*?`);
+  if (!dados.bairro) {
+    return voltarParaBusca(msg, from, state, '⚠️ Este CEP não informa o bairro (comum em cidades pequenas). Digite o CEP de uma rua próxima ou o nome do bairro.');
   }
 
-  // ── Bairro (número ou nome) ──
-  if (state.step === 'alerta_sel_bairro') {
-    if (text === '0') return pedirCep(msg, from, state.tempData, selecao);
+  userState.set(from, { ...state, step: 'alerta_sel_cep_confirmar', selecao: { ...state.selecao, cep } });
 
-    const porNumero = escolherPorNumero(text, selecao.bairros);
-    if (porNumero) return concluirSelecao(msg, from, state, porNumero);
-
-    // Digitou o nome: procura em todos os bairros da cidade
-    const exato = selecao.todosBairros.find(b => normalizar(b.nome) === text);
-    if (exato) return concluirSelecao(msg, from, state, exato);
-
-    const parecidos = selecao.todosBairros.filter(b => normalizar(b.nome).includes(text));
-
-    if (parecidos.length === 1) return concluirSelecao(msg, from, state, parecidos[0]);
-
-    if (parecidos.length > 1) {
-      return mostrarBairros(msg, from, state, parecidos, `🔎 Encontrei estes bairros com "${msg.body.trim()}":`);
-    }
-
-    await msg.reply(`❌ Não encontrei o bairro "${msg.body.trim()}" em ${selecao.cidade.nome}.\n\nDigite o número, tente outro nome ou *0* para informar o CEP.`);
-    return;
-  }
-
-  // ── CEP ──
-  if (state.step === 'alerta_sel_cep') {
-    const cep = text.replace(/\D/g, '');
-
-    if (cep.length !== 8) {
-      await msg.reply('❌ O CEP deve ter 8 números. Ex: 12070-610');
-      return;
-    }
-
-    const { ok, status, dados } = await api('GET', `/bairros/cep/${cep}`);
-
-    if (status === 404) {
-      await msg.reply('❌ CEP não encontrado. Confira e digite novamente.');
-      return;
-    }
-    if (!ok) throw new Error(dados.mensagem);
-
-    if (!dados.bairro) {
-      await msg.reply('⚠️ Este CEP não informa o bairro (comum em cidades pequenas). Digite o CEP de uma rua próxima.');
-      return;
-    }
-
-    selecao.cep = cep;
-    userState.set(from, { ...state, step: 'alerta_sel_cep_confirmar' });
-
-    await msg.reply(
+  await msg.reply(
 `📍 Encontrei este endereço:
 
 🏘️ Bairro: *${dados.bairro}*
 🌆 Cidade: *${dados.cidade}/${dados.uf}*
 
 1 - Sim, é esse
-2 - Não, digitar outro CEP`
-    );
+2 - Não, digitar de novo`
+  );
+};
+
+const buscarPorNome = async (msg, from, state, nomeDigitado) => {
+  const termo = normalizar(nomeDigitado);
+
+  if (termo.length < 2) {
+    return voltarParaBusca(msg, from, state, '❌ Digite pelo menos 2 letras do nome do bairro.');
+  }
+
+  const { ok, dados } = await api('GET', '/bairros/listar');
+  if (!ok) throw new Error(dados.mensagem);
+
+  const bairros = dados.bairros.map(b => ({
+    id_bairro: b.id_bairro, nome: b.nome, cidadeId: b.cidadeId, cidade: b.cidade, estado: b.estado
+  }));
+
+  // 1º nome exato (sem acento/maiúscula); se não houver, nomes que contêm o termo
+  const exatos = bairros.filter(b => normalizar(b.nome) === termo);
+  const parecidos = exatos.length > 0 ? exatos : bairros.filter(b => normalizar(b.nome).includes(termo));
+
+  if (parecidos.length === 1) return concluirSelecao(msg, from, state, parecidos[0]);
+
+  if (parecidos.length > 1 && parecidos.length <= 10) {
+    const cabecalho = exatos.length > 1
+      ? `🔎 Existe *${nomeDigitado.trim()}* em mais de uma cidade. Qual é o seu?`
+      : `🔎 Encontrei estes bairros com "${nomeDigitado.trim()}":`;
+    return mostrarOpcoes(msg, from, state, parecidos, cabecalho);
+  }
+
+  if (parecidos.length > 10) {
+    return voltarParaBusca(msg, from, state, `🔎 Muitos bairros com "${nomeDigitado.trim()}". Digite o nome mais completo ou o CEP.`);
+  }
+
+  return voltarParaBusca(msg, from, state, `❌ Não encontrei o bairro "${nomeDigitado.trim()}". Confira o nome ou digite o *CEP* — se o bairro ainda não estiver cadastrado, cadastramos pelo CEP.`);
+};
+
+const processarSelecao = async (msg, from, text, state) => {
+  const { selecao } = state;
+  const digitado = (msg.body ?? '').trim();
+
+  // ── CEP ou nome do bairro ──
+  if (state.step === 'alerta_sel_busca') {
+    if (!digitado || msg.hasMedia) return voltarParaBusca(msg, from, state);
+    return pareceCep(digitado) ? buscarPorCep(msg, from, state, digitado) : buscarPorNome(msg, from, state, digitado);
+  }
+
+  // ── Escolha entre os bairros encontrados ──
+  if (state.step === 'alerta_sel_escolha') {
+    if (text === '0') return voltarParaBusca(msg, from, state, '📮 Tudo bem, vamos pelo CEP.');
+
+    const escolhido = escolherPorNumero(text, selecao.opcoes);
+    if (escolhido) return concluirSelecao(msg, from, state, escolhido);
+
+    // Digitou outro nome ou um CEP em vez do número: busca de novo
+    if (digitado && !/^\d{1,2}$/.test(digitado)) {
+      return pareceCep(digitado) ? buscarPorCep(msg, from, state, digitado) : buscarPorNome(msg, from, state, digitado);
+    }
+
+    await msg.reply(`❌ Digite um número de 1 a ${selecao.opcoes.length}, ou 0 para digitar o CEP.`);
     return;
   }
 
   // ── Confirmar o bairro do CEP ──
   if (state.step === 'alerta_sel_cep_confirmar') {
-    if (text === '2') return pedirCep(msg, from, state.tempData, selecao);
+    if (text === '2') return voltarParaBusca(msg, from, state);
 
     if (text !== '1') {
-      await msg.reply('Digite *1* para confirmar ou *2* para digitar outro CEP.');
+      await msg.reply('Digite *1* para confirmar ou *2* para digitar de novo.');
       return;
     }
 
     // Encontra ou cadastra o bairro (e a cidade, se for nova)
     const { ok, dados } = await api('POST', '/bot/bairros/cep', { cep: selecao.cep });
 
-    if (!ok) {
-      await msg.reply(`❌ ${dados.mensagem}\n\nDigite outro CEP.`);
-      userState.set(from, { ...state, step: 'alerta_sel_cep' });
-      return;
-    }
+    if (!ok) return voltarParaBusca(msg, from, state, `❌ ${dados.mensagem}`);
 
     return concluirSelecao(msg, from, state, dados.bairro);
   }
 };
-
 
 // ── Relato de ocorrência ───────────────────────────────────────
 

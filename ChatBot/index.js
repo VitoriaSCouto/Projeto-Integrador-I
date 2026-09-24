@@ -3,6 +3,7 @@ import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
 import { handleMessage } from "./controllers/message-controller.js";
 import { iniciarEnvioDeNotificacoes } from "./services/notificacao-service.js";
+import { corrigirTelefonesDosInscritos } from "./services/telefone.js";
 
 const { Client, LocalAuth } = pkg;
 
@@ -23,6 +24,8 @@ client.on("ready", () => {
     console.log("Bot conectado!");
     // Começa a enviar os alertas que estão na fila da API
     iniciarEnvioDeNotificacoes(client);
+    // Corrige inscritos que ficaram com o código interno do WhatsApp no lugar do telefone
+    corrigirTelefonesDosInscritos(client);
 });
 
 client.on("message", async (msg) => {

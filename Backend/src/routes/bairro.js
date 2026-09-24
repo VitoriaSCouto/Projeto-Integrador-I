@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma.js'
-import { consultarCep, normalizarTexto } from '../lib/localizacao.js'
+import { consultarCep, normalizarTexto, obterOuCriarBairroPorCep } from '../lib/localizacao.js'
 
 
 const NIVEIS_RISCO = ['baixo', 'medio', 'alto', 'critico']
@@ -116,6 +116,44 @@ export default async function bairroRoutes(app) {
       cidadeId: cidade?.id_cidade ?? null,
       bairroId: bairro?.id_bairro ?? null,
     })
+  })
+
+
+  //----- Encontrar ou cadastrar o bairro pelo CEP (ADM) -----
+  // Usado no cadastro de abrigo: se o bairro do CEP ainda não existe,
+  // cadastra o bairro (e a cidade, se for nova) na hora.
+  // URL: POST http://localhost:3000/api/bairros/cep
+  // Body: { cep }
+  app.post('/cep', { onRequest: [app.authenticateAdmin] }, async (request, reply) => {
+    let dadosCep
+    try {
+      dadosCep = await consultarCep(request.body?.cep)
+    } catch (erro) {
+      request.log.error(erro)
+      return reply.status(502).send({ mensagem: 'Não foi possível consultar o CEP agora. Tente novamente.' })
+    }
+
+    if (!dadosCep) return reply.status(404).send({ mensagem: 'CEP não encontrado.' })
+
+    try {
+      const { bairro, cidade, criouBairro, criouCidade } = await obterOuCriarBairroPorCep(prisma, dadosCep)
+
+      return reply.status(criouBairro ? 201 : 200).send({
+        mensagem: criouBairro ? `Bairro ${bairro.nome} cadastrado a partir do CEP.` : 'Bairro encontrado.',
+        bairro: {
+          id_bairro: bairro.id_bairro,
+          nome:      bairro.nome,
+          cidadeId:  cidade.id_cidade,
+          cidade:    cidade.nome,
+          estadoId:  cidade.estado.id_estado,
+          estado:    cidade.estado.sigla,
+        },
+        criouBairro,
+        criouCidade,
+      })
+    } catch (erro) {
+      return reply.status(erro.statusCode ?? 500).send({ mensagem: erro.message })
+    }
   })
 
 

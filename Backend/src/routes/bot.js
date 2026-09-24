@@ -25,6 +25,46 @@ export default async function botRoutes(app) {
 
   // ═══════════════════════ INSCRITOS ═══════════════════════
 
+  //----- Inscritos sem o número de telefone real -----
+  // Contatos no formato novo do WhatsApp ("123...@lid") chegavam com o código
+  // interno salvo no lugar do telefone. O bot chama esta rota ao ligar,
+  // descobre o número real de cada um e corrige com a rota abaixo.
+  // URL: GET /api/bot/inscritos/sem-telefone
+  app.get('/inscritos/sem-telefone', async (request, reply) => {
+    const inscritos = await prisma.inscritoAlerta.findMany({
+      select: { whatsappId: true, telefone: true }
+    })
+
+    const semTelefone = inscritos
+      // Em "@c.us" o próprio ID é o telefone (está certo); só "@lid" guarda um código
+      .filter(i => !i.telefone || (i.whatsappId.endsWith('@lid') && i.telefone === i.whatsappId.split('@')[0]))
+      .map(i => i.whatsappId)
+
+    return reply.status(200).send({ whatsappIds: semTelefone })
+  })
+
+
+  //----- Corrigir o telefone de um inscrito -----
+  // URL: PATCH /api/bot/inscritos/:whatsappId/telefone
+  // Body: { telefone: "5512999999999" }
+  app.patch('/inscritos/:whatsappId/telefone', async (request, reply) => {
+    const telefone = String(request.body?.telefone ?? '').replace(/\D/g, '')
+
+    if (telefone.length < 10 || telefone.length > 15) {
+      return reply.status(400).send({ mensagem: 'Telefone inválido.' })
+    }
+
+    const { count } = await prisma.inscritoAlerta.updateMany({
+      where: { whatsappId: request.params.whatsappId },
+      data: { telefone }
+    })
+
+    if (count === 0) return reply.status(404).send({ mensagem: 'Número não inscrito.' })
+
+    return reply.status(200).send({ mensagem: 'Telefone atualizado.' })
+  })
+
+
   //----- Buscar inscrito pelo número -----
   // URL: GET /api/bot/inscritos/:whatsappId
   app.get('/inscritos/:whatsappId', async (request, reply) => {
