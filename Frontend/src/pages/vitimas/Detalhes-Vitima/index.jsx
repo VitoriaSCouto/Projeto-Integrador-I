@@ -12,6 +12,9 @@ import { GoAlertFill } from "react-icons/go";
 import "../../pg_adm/style.css";
 import './DetalhesVitima.css';
 import SidebarAdm from '../../../components/SidebarAdm';
+import { fetchAdmin, formatarDataDia, hojeISO } from '../../../services/api';
+import { LIMITES, EXEMPLOS, somenteNome, mascaraCpf, mascaraTelefone, erroDosCampos } from '../../../utils/campos';
+import { Obrigatorio, Opcional } from '../../../components/MarcasCampo';
 
 //------- Começo Função Principal -----
 function DetalhesVitimas() {
@@ -41,13 +44,14 @@ function DetalhesVitimas() {
   useEffect(() => {
     const buscarVitima = async () => {
       try {
-        const resposta = await fetch(`http://localhost:3000/api/vitimas/listar/${id}`);
+        const resposta = await fetchAdmin(`/vitimas/listar/${id}`);
         const dados    = await resposta.json();
 
         setDadosVitima(dados)
         setNomeVitima(dados.nome);
         setCpf(dados.cpf ?? '');
         setTelefone(dados.telefone ?? '');
+        // A API devolve AAAA-MM-DD, o formato que o <input type="date"> entende
         setDataNascimento(dados.dataNascimento ?? '');
         setGenero(dados.genero ?? '');
         setFotoUrl(dados.fotoVitima ? dados.fotoVitima + '?t=' + Date.now() : null)
@@ -79,6 +83,8 @@ function DetalhesVitimas() {
   // ── Handlers ─────────────────────────────────────────────────────────
   const handleImagem = (e) => {
     const arquivo = e.target.files[0]
+    // Cancelou a janela de seleção: não há arquivo
+    if (!arquivo) return
     const limiteMB = 2
     if (arquivo.size > limiteMB * 1024 * 1024) {
       alert(`A imagem deve ter no máximo ${limiteMB}MB.`)
@@ -91,12 +97,24 @@ function DetalhesVitimas() {
 
   const handleSalvar = async (e) => {
     e.preventDefault();
+
+    // Confere CPF e telefone só se foram alterados — cadastros antigos fora do
+    // padrão continuam editáveis (a API faz a mesma coisa)
+    const erroCampos = erroDosCampos({
+      cpf:      cpf      !== (dadosVitima.cpf ?? '')      ? cpf      : null,
+      telefone: telefone !== (dadosVitima.telefone ?? '') ? telefone : null,
+    })
+    if (erroCampos) {
+      alert(erroCampos)
+      return
+    }
+
     try {
-      const resposta = await fetch(`http://localhost:3000/api/vitimas/atualizar/${id}`, {
+      const resposta = await fetchAdmin(`/vitimas/atualizar/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          nome: nomeVitima,
+          nome: nomeVitima.trim(),
           cpf, 
           telefone,
           dataNascimento,
@@ -127,7 +145,13 @@ function DetalhesVitimas() {
   const handleExcluir = async () => {
     if (!confirm('Tem certeza que deseja excluir esta vítima?')) return;
     try {
-      await fetch(`http://localhost:3000/api/vitimas/excluir/${id}`, { method: 'DELETE' });
+      const resposta = await fetchAdmin(`/vitimas/excluir/${id}`, { method: 'DELETE' });
+      // Só volta para a lista se a API excluiu de verdade
+      if (!resposta.ok) {
+        const dados = await resposta.json().catch(() => ({}))
+        alert(dados.mensagem ?? 'Não foi possível excluir a vítima.')
+        return
+      }
       navigate('/vitimas');
     } catch (erro) {
       console.error("Erro ao excluir:", erro);
@@ -145,11 +169,8 @@ function DetalhesVitimas() {
     setGenero(dadosVitima.genero);
   }
 
-  // ── Formata data para exibição ────────────────────────────────────────
-  const formatarData = (data) => {
-    if (!data) return '—'
-    return new Date(data).toLocaleDateString('pt-BR')
-  }
+  // ── Formata data para exibição (em UTC, para não mostrar 1 dia a menos) ──
+  const formatarData = formatarDataDia
 
   // ── Tela de loading ───────────────────────────────────────────────────
   if (carregando) {
@@ -266,45 +287,48 @@ function DetalhesVitimas() {
           <div className="form-column-left">
 
             <div className="form-group">
-              <label><FaBuilding /> Nome da Vítima</label>
+              <label htmlFor="nome-vitima"><FaBuilding /> Nome da Vítima{editando && <Obrigatorio />}</label>
               {editando ? (
-                <input value={nomeVitima} onChange={(e) => setNomeVitima(e.target.value)} />
+                <input id="nome-vitima" value={nomeVitima} maxLength={LIMITES.nomePessoa} minLength={2} required
+                  onChange={(e) => setNomeVitima(somenteNome(e.target.value))} />
               ) : (
                 <p>{nomeVitima}</p>
               )}
             </div>
 
             <div className="form-group">
-              <label><FaIdCard /> CPF</label>
+              <label htmlFor="cpf-vitima"><FaIdCard /> CPF{editando && <Obrigatorio />}</label>
               {editando ? (
-                <input value={cpf} onChange={(e) => setCpf(e.target.value)} />
+                <input id="cpf-vitima" value={cpf} maxLength={LIMITES.cpf} inputMode="numeric" placeholder={EXEMPLOS.cpf} required
+                  onChange={(e) => setCpf(mascaraCpf(e.target.value))} />
               ) : (
                 <p>{cpf || '—'}</p>
               )}
             </div>
 
             <div className="form-group">
-              <label><FaPhoneAlt /> Telefone</label>
+              <label htmlFor="telefone-vitima"><FaPhoneAlt /> Telefone{editando && <Opcional />}</label>
               {editando ? (
-                <input value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+                <input id="telefone-vitima" type="tel" value={telefone} maxLength={LIMITES.telefone} inputMode="numeric" placeholder={EXEMPLOS.telefone}
+                  onChange={(e) => setTelefone(mascaraTelefone(e.target.value))} />
               ) : (
                 <p>{telefone || '—'}</p>
               )}
             </div>
 
             <div className="form-group">
-              <label><FaCalendar /> Data de Nascimento</label>
+              <label htmlFor="nascimento-vitima"><FaCalendar /> Data de Nascimento{editando && <Obrigatorio />}</label>
               {editando ? (
-                <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} />
+                <input id="nascimento-vitima" type="date" value={dataNascimento} min="1900-01-01" max={hojeISO()} required onChange={(e) => setDataNascimento(e.target.value)} />
               ) : (
-                <p>{dataNascimento || '—'}</p>
+                <p>{formatarData(dataNascimento)}</p>
               )}
             </div>
 
             <div className="form-group">
-              <label><FaPersonHalfDress /> Gênero</label>
+              <label htmlFor="genero-vitima"><FaPersonHalfDress /> Gênero{editando && <Obrigatorio />}</label>
               {editando ? (
-                <select value={genero} onChange={(e) => setGenero(e.target.value)} className="select-genero">
+                <select id="genero-vitima" required value={genero} onChange={(e) => setGenero(e.target.value)} className="select-genero">
                   <option value="Masculino">Masculino</option>
                   <option value="Feminino">Feminino</option>
                   <option value="Outro">Outro</option>
@@ -334,9 +358,9 @@ function DetalhesVitimas() {
                     </div>
                   ) : (
                     <label className="upload-dropzone">
-                      <input type="file" accept="image/*" onChange={handleImagem} style={{ display: 'none' }} />
+                      <input type="file" accept="image/jpeg,image/png" onChange={handleImagem} style={{ display: 'none' }} />
                       <FaUpload className="upload-icon" />
-                      <p>Faça upload da foto da vítima</p>
+                      <p>Faça upload da foto da vítima (JPG ou PNG, até 2 MB)</p>
                       <span className="btn-upload-trigger">Selecionar arquivo do computador</span>
                     </label>
                   )}

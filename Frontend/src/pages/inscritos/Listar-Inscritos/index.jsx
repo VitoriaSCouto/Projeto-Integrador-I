@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaUsers, FaEnvelope, FaPhoneAlt, FaHome, FaEye } from 'react-icons/fa';
 import { GoAlertFill } from 'react-icons/go';
 import SidebarAdm from '../../../components/SidebarAdm';
+import { LIMITES } from '../../../utils/campos';
 import { apiAdmin, formatarTelefone } from '../../../services/api';
 import '../../pg_adm/style.css';
 import '../../alertas/alertas.css';
@@ -82,6 +83,8 @@ function ListarInscritos() {
           <div className="barra-filtros">
             <input
               placeholder="Buscar por nome, e-mail ou telefone..."
+              aria-label="Buscar"
+              maxLength={LIMITES.busca}
               value={busca}
               onChange={e => setBusca(e.target.value)}
             />

@@ -9,6 +9,7 @@ import { FaGear } from 'react-icons/fa6';
 import { GoAlertFill } from 'react-icons/go';
 import '../../pg_adm/style.css';
 import SidebarAdm from '../../../components/SidebarAdm';
+import { fetchAdmin } from '../../../services/api';
 
 function ListaSolicitacoesAbrigo() {
 
@@ -23,7 +24,7 @@ function ListaSolicitacoesAbrigo() {
   useEffect(() => {
     const buscarSolicitacoes = async () => {
       try {
-        const resposta = await fetch('http://localhost:3000/api/solicitacoes/listar')
+        const resposta = await fetchAdmin('/solicitacoes/listar')
         const dados = await resposta.json()
         setSolicitacoes(dados.solicitacoes)
       } catch (erro) {

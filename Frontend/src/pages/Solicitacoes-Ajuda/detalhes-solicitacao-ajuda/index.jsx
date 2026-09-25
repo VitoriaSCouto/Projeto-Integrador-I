@@ -9,6 +9,9 @@ import { FaGear } from 'react-icons/fa6';
 import { GoAlertFill } from 'react-icons/go';
 import '../../pg_adm/style.css';
 import SidebarAdm from '../../../components/SidebarAdm';
+import { fetchAdmin } from '../../../services/api';
+import { LIMITES } from '../../../utils/campos';
+import { Opcional, ContadorCaracteres } from '../../../components/MarcasCampo';
 
 // ─── Badges e labels ──────────────────────────────────────────────────────────
 const badgeStatus = {
@@ -62,12 +65,12 @@ function DetalhesSolicitacaoAjuda() {
     const buscar = async () => {
       try {
         // Rota do backend é /listar/:id, não /:id
-        const res = await fetch(`http://localhost:3000/api/solicitacoes-ajuda/listar/${id}`)
+        const res = await fetchAdmin(`/solicitacoes-ajuda/listar/${id}`)
         const d = await res.json()
         setDados(d.solicitacao ?? d)
 
         // Busca lista de voluntários para o select de "quem atendeu"
-        const resVol = await fetch('http://localhost:3000/api/voluntarios/listar')
+        const resVol = await fetchAdmin('/voluntarios/listar')
         const dVol = await resVol.json()
         setVoluntarios(dVol.voluntarios ?? [])
       } catch (err) {
@@ -95,7 +98,7 @@ function DetalhesSolicitacaoAjuda() {
       }
 
       // Rota do backend é PUT /atualizar/:id, não PATCH /:id
-      const res = await fetch(`http://localhost:3000/api/solicitacoes-ajuda/atualizar/${id}`, {
+      const res = await fetchAdmin(`/solicitacoes-ajuda/atualizar/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -123,7 +126,13 @@ function DetalhesSolicitacaoAjuda() {
     if (!confirm('Tem certeza que deseja apagar esta solicitação? Esta ação não pode ser desfeita.')) return
     try {
       // Rota do backend é DELETE /excluir/:id, não DELETE /:id
-      await fetch(`http://localhost:3000/api/solicitacoes-ajuda/excluir/${id}`, { method: 'DELETE' })
+      const resposta = await fetchAdmin(`/solicitacoes-ajuda/excluir/${id}`, { method: 'DELETE' })
+      // Só sai da tela se a API excluiu de verdade
+      if (!resposta.ok) {
+        const d = await resposta.json().catch(() => ({}))
+        alert(d.mensagem ?? 'Não foi possível excluir a solicitação.')
+        return
+      }
       navigate(`/abrigos/${dados.abrigoId}/solicitacoes-ajuda`)
     } catch (err) {
       console.error('Erro ao excluir:', err)
@@ -395,15 +404,18 @@ function DetalhesSolicitacaoAjuda() {
 
               {/* Observação */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                  Observação (opcional)
+                <label htmlFor="observacao-fechamento" style={{ fontSize: '13px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                  Observação<Opcional />
                 </label>
                 <textarea
+                  id="observacao-fechamento"
+                  maxLength={LIMITES.observacao}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', resize: 'vertical', minHeight: '80px', fontFamily: 'inherit' }}
                   value={observacao}
                   onChange={e => setObservacao(e.target.value)}
                   placeholder="Ex: Recebemos 40 cobertores doados pela empresa X..."
                 />
+                <ContadorCaracteres valor={observacao} limite={LIMITES.observacao} />
               </div>
 
               {/* Botões do modal */}

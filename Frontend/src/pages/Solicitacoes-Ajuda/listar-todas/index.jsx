@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { FaHandHoldingHeart, FaBuilding, FaClock, FaHeart, FaUser, FaPlus, FaPhoneAlt } from 'react-icons/fa';
 import { FaLocationDot } from 'react-icons/fa6';
 import SidebarAdm from '../../../components/SidebarAdm';
-import { API_URL, formatarTempo } from '../../../services/api';
+import { LIMITES } from '../../../utils/campos';
+import { API_URL, fetchAdmin, formatarTempo } from '../../../services/api';
 import '../../pg_adm/style.css';
 import '../../alertas/alertas.css';
 
@@ -63,7 +64,7 @@ function ListarSolicitacoesAjuda() {
     const buscar = async () => {
       try {
         const [resSolicitacoes, resAbrigos] = await Promise.all([
-          fetch(`${API_URL}/api/solicitacoes-ajuda/listar`),
+          fetchAdmin('/solicitacoes-ajuda/listar'),
           fetch(`${API_URL}/api/abrigos/listar`),
         ])
         if (!resSolicitacoes.ok || !resAbrigos.ok) throw new Error('Não foi possível carregar as solicitações.')
@@ -192,6 +193,8 @@ function ListarSolicitacoesAjuda() {
           <div className="barra-filtros">
             <input
               placeholder="Buscar por título, descrição ou abrigo..."
+              aria-label="Buscar"
+              maxLength={LIMITES.busca}
               value={busca}
               onChange={e => setBusca(e.target.value)}
             />

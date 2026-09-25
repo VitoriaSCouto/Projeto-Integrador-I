@@ -1,5 +1,8 @@
 
-import { FaUser, FaEnvelope, FaIdBadge, FaPhone} from "react-icons/fa";
+// TELA DESCONTINUADA — era só um teste de layout, sem lógica de cadastro.
+// Não tem rota: "/cadastro" redireciona para a tela inicial (ver App.jsx).
+// FaLock, FaEye e FaUsers eram usados sem import e deixavam a tela em branco.
+import { FaUser, FaEnvelope, FaLock, FaEye, FaUsers } from "react-icons/fa";
 
 const Cadastro = () => {
   return (

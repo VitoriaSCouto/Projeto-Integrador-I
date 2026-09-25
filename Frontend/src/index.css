@@ -390,3 +390,32 @@
 .btnEntrar_M:hover {
     background: #061f42;
 }
+/* ── Marcas dos formulários (components/MarcasCampo.jsx) ─────────────────── */
+.campo-obrigatorio {
+    color: #ef4444;
+    font-weight: 700;
+}
+
+.campo-opcional {
+    color: #94a3b8;
+    font-weight: 400;
+    font-size: 0.85em;
+}
+
+.aviso-obrigatorios {
+    font-size: 12px;
+    color: #64748b;
+    margin: 0 0 4px;
+}
+
+.contador-caracteres {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+    text-align: right;
+}
+
+.contador-caracteres--perto {
+    color: #b45309;
+}

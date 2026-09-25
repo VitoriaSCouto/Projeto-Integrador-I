@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fa';
 import { FaLocationDot } from 'react-icons/fa6';
 import SidebarVoluntario from '../../../components/SidebarVoluntario';
+import { LIMITES } from '../../../utils/campos';
 import { API_URL } from '../../../services/api';
 import { alterarVinculoAbrigo } from '../../../services/voluntario';
 import {
@@ -212,6 +213,8 @@ function AbrigosVoluntario() {
               <FaSearch className="lg-busca-icone" />
               <input
                 placeholder="Buscar por nome, bairro ou endereço..."
+                aria-label="Buscar"
+                maxLength={LIMITES.busca}
                 value={filtros.busca}
                 onChange={e => mudarFiltro('busca', e.target.value)}
               />

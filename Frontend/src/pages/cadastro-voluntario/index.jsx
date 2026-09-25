@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { FaEnvelope, FaLock, FaUser, FaPhone, FaIdCard } from "react-icons/fa";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { API_URL, hojeISO } from '../../services/api';
+import { LIMITES, EXEMPLOS, somenteNome, mascaraCpf, mascaraTelefone, erroDosCampos } from '../../utils/campos';
+import { Obrigatorio, Opcional, AvisoObrigatorios } from '../../components/MarcasCampo';
+// Importada (e não "src/assets/logo.png"): o caminho de texto quebrava no build
+import logo from '../../assets/logo.png';
 
 const CadastroVoluntario = () => {
     const navigate = useNavigate();
@@ -19,17 +24,25 @@ const CadastroVoluntario = () => {
     const fazerCadastro = async (e) => {
         e.preventDefault(); // impede a página de recarregar
         setErro("");
+
+        // Confere CPF (dígitos verificadores) e telefone antes de enviar
+        const erroCampos = erroDosCampos({ cpf, telefone });
+        if (erroCampos) {
+            setErro(erroCampos);
+            return;
+        }
+
         setCarregando(true);
 
         try {
-            const response = await fetch("http://localhost:3000/api/voluntarios/cadastrar", {
+            const response = await fetch(`${API_URL}/api/voluntarios/cadastrar`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    nome,
-                    email,
+                    nome:           nome.trim(),
+                    email:          email.trim(),
                     senha,
                     telefone:       telefone       || null, // opcional — manda null se vazio
                     cpf:            cpf            || null, // opcional — manda null se vazio
@@ -62,23 +75,27 @@ const CadastroVoluntario = () => {
             <div className="card-cadastro">
                 <div className="header-card">
                     <div className="icon-user-header">
-                        <img src="src/assets/logo.png" width="120" />
+                        <img src={logo} width="120" alt="Logo S.O.S Vale" />
                     </div>
                     <h1>Cadastro de Voluntário</h1>
                     <p className="subtitle">Preencha seus dados para se cadastrar</p>
                 </div>
 
                 <form onSubmit={fazerCadastro}>
+                    <AvisoObrigatorios />
                     {/* Nome — obrigatório */}
                     <div className="input-group">
-                        <label>Nome completo</label>
+                        <label htmlFor="nome-vol">Nome completo<Obrigatorio /></label>
                         <div className="box1">
                             <FaUser className="icon" />
                             <input
+                                id="nome-vol"
                                 type="text"
                                 placeholder="Seu nome completo"
+                                maxLength={LIMITES.nomePessoa}
+                                minLength={2}
                                 value={nome}
-                                onChange={(e) => setNome(e.target.value)}
+                                onChange={(e) => setNome(somenteNome(e.target.value))}
                                 required
                             />
                         </div>
@@ -86,12 +103,14 @@ const CadastroVoluntario = () => {
 
                     {/* E-mail — obrigatório e único no banco */}
                     <div className="input-group">
-                        <label>E-mail</label>
+                        <label htmlFor="email-vol">E-mail<Obrigatorio /></label>
                         <div className="box1">
                             <FaEnvelope className="icon" />
                             <input
+                                id="email-vol"
                                 type="email"
-                                placeholder="seu@email.com"
+                                placeholder={EXEMPLOS.email}
+                                maxLength={LIMITES.email}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
@@ -101,12 +120,16 @@ const CadastroVoluntario = () => {
 
                     {/* Senha — obrigatório, criptografada no backend com bcrypt */}
                     <div className="input-group">
-                        <label>Senha</label>
+                        <label htmlFor="senha-vol">Senha<Obrigatorio /></label>
                         <div className="box1">
                             <FaLock className="icon" />
                             <input
+                                id="senha-vol"
                                 type="password"
-                                placeholder="Crie uma senha"
+                                placeholder={`De ${LIMITES.senhaMin} a ${LIMITES.senhaMax} caracteres`}
+                                minLength={LIMITES.senhaMin}
+                                maxLength={LIMITES.senhaMax}
+                                autoComplete="new-password"
                                 value={senha}
                                 onChange={(e) => setSenha(e.target.value)}
                                 required
@@ -116,38 +139,47 @@ const CadastroVoluntario = () => {
 
                     {/* Telefone — opcional no banco (VarChar 15) */}
                     <div className="input-group">
-                        <label>Telefone <span className="opcional">(opcional)</span></label>
+                        <label htmlFor="telefone-vol">Telefone<Opcional /></label>
                         <div className="box1">
                             <FaPhone className="icon" />
                             <input
+                                id="telefone-vol"
                                 type="tel"
-                                placeholder="(11) 99999-9999"
+                                maxLength={LIMITES.telefone}
+                                inputMode="numeric"
+                                placeholder={EXEMPLOS.telefone}
                                 value={telefone}
-                                onChange={(e) => setTelefone(e.target.value)}
+                                onChange={(e) => setTelefone(mascaraTelefone(e.target.value))}
                             />
                         </div>
                     </div>
 
                     {/* CPF — opcional no banco (VarChar 14) */}
                     <div className="input-group">
-                        <label>CPF <span className="opcional">(opcional)</span></label>
+                        <label htmlFor="cpf-vol">CPF<Opcional /></label>
                         <div className="box1">
                             <FaIdCard className="icon" />
                             <input
+                                id="cpf-vol"
                                 type="text"
-                                placeholder="000.000.000-00"
+                                maxLength={LIMITES.cpf}
+                                inputMode="numeric"
+                                placeholder={EXEMPLOS.cpf}
                                 value={cpf}
-                                onChange={(e) => setCpf(e.target.value)}
+                                onChange={(e) => setCpf(mascaraCpf(e.target.value))}
                             />
                         </div>
                     </div>
 
                     {/* Data de nascimento — obrigatório no schema */}
                     <div className="input-group">
-                        <label>Data de nascimento</label>
+                        <label htmlFor="nascimento-vol">Data de nascimento<Obrigatorio /></label>
                         <div className="box1">
                             <input
+                                id="nascimento-vol"
                                 type="date"
+                                min="1900-01-01"
+                                max={hojeISO()}
                                 value={dataNascimento}
                                 onChange={(e) => setDataNascimento(e.target.value)}
                                 required
@@ -157,9 +189,10 @@ const CadastroVoluntario = () => {
 
                     {/* Gênero — obrigatório no schema */}
                     <div className="input-group">
-                        <label>Gênero</label>
+                        <label htmlFor="genero-vol">Gênero<Obrigatorio /></label>
                         <div className="box1">
                             <select
+                                id="genero-vol"
                                 value={genero}
                                 onChange={(e) => setGenero(e.target.value)}
                                 required
@@ -174,7 +207,7 @@ const CadastroVoluntario = () => {
                     </div>
 
                     {/* Exibe mensagem de erro se o cadastro falhar */}
-                    {erro && <p className="mensagem-erro">{erro}</p>}
+                    {erro && <p className="mensagem-erro" role="alert">{erro}</p>}
 
                     <div className="button-cad1">
                         {/* Desabilita o botão enquanto aguarda resposta da API */}
@@ -184,12 +217,10 @@ const CadastroVoluntario = () => {
                     </div>
                 </form>
 
-                {/* Link para quem já tem conta */}
+                {/* Link para quem já tem conta (Link = <a>: dá para usar pelo teclado) */}
                 <p className="link-secundario">
                     Já tem uma conta?{" "}
-                    <span onClick={() => navigate('/login-voluntario')}>
-                        Faça login
-                    </span>
+                    <Link to="/login-voluntario">Faça login</Link>
                 </p>
             </div>
         </div>

@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { FaEnvelope, FaLock } from "react-icons/fa";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { API_URL } from '../../services/api';
+import { LIMITES, EXEMPLOS } from '../../utils/campos';
+// Importada (e não "src/assets/logo.png"): o caminho de texto quebrava no build
+import logo from '../../assets/logo.png';
 
 const LoginVoluntario = () => {
     const navigate = useNavigate();
@@ -15,7 +19,7 @@ const LoginVoluntario = () => {
         setErro(""); // limpa erro anterior antes de tentar
 
         try {
-            const response = await fetch("http://localhost:3000/api/voluntarios/login", {
+            const response = await fetch(`${API_URL}/api/voluntarios/login`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -52,7 +56,7 @@ const LoginVoluntario = () => {
             <div className="card-cadastro">
                 <div className="header-card">
                     <div className="icon-user-header">
-                        <img src="src/assets/logo.png" width="120" />
+                        <img src={logo} width="120" alt="Logo S.O.S Vale" />
                     </div>
                     <h1>Login Voluntário</h1>
                     <p className="subtitle">Acesse sua conta para continuar</p>
@@ -60,12 +64,15 @@ const LoginVoluntario = () => {
 
                 <form onSubmit={fazerLogin}>
                     <div className="input-group">
-                        <label>E-mail</label>
+                        <label htmlFor="email-voluntario">E-mail</label>
                         <div className="box1">
                             <FaEnvelope className="icon" />
                             <input
+                                id="email-voluntario"
                                 type="email"
-                                placeholder="seu@email.com"
+                                placeholder={EXEMPLOS.email}
+                                maxLength={LIMITES.email}
+                                autoComplete="username"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
@@ -74,12 +81,15 @@ const LoginVoluntario = () => {
                     </div>
 
                     <div className="input-group">
-                        <label>Senha</label>
+                        <label htmlFor="senha-voluntario">Senha</label>
                         <div className="box1">
                             <FaLock className="icon" />
                             <input
+                                id="senha-voluntario"
                                 type="password"
                                 placeholder="Sua senha"
+                                maxLength={LIMITES.senhaMax}
+                                autoComplete="current-password"
                                 value={senha}
                                 onChange={(e) => setSenha(e.target.value)}
                                 required
@@ -88,19 +98,17 @@ const LoginVoluntario = () => {
                     </div>
 
                     {/* Exibe mensagem de erro se o login falhar */}
-                    {erro && <p className="mensagem-erro">{erro}</p>}
+                    {erro && <p className="mensagem-erro" role="alert">{erro}</p>}
 
                     <div className="button-cad1">
                         <button type="submit">Entrar</button>
                     </div>
                 </form>
 
-                {/* Link para quem ainda não tem conta */}
+                {/* Link para quem ainda não tem conta (Link = <a>: dá para usar pelo teclado) */}
                 <p className="link-secundario">
                     Ainda não tem conta?{" "}
-                    <span onClick={() => navigate('/cadastro-voluntario')}>
-                        Cadastre-se
-                    </span>
+                    <Link to="/cadastro-voluntario">Cadastre-se</Link>
                 </p>
             </div>
         </div>

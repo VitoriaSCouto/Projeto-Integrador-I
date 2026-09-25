@@ -5,6 +5,8 @@ import { FaIdCard, FaEnvelope, FaPhoneAlt, FaWhatsapp, FaPlus, FaClock } from 'r
 import SidebarAdm from '../../../components/SidebarAdm';
 import SeletorLocalidade from '../../../components/SeletorLocalidade';
 import { apiAdmin, formatarDataHora, formatarTempo, formatarTelefone } from '../../../services/api';
+import { LIMITES, EXEMPLOS } from '../../../utils/campos';
+import { Obrigatorio } from '../../../components/MarcasCampo';
 import { STATUS_ALERTA } from '../../alertas/constantes';
 import '../../pg_adm/style.css';
 import '../../Solicitacoes-Abrigo/Detalhes-solicitacao/DetalhesSolicitacao.css';
@@ -165,13 +167,14 @@ function DetalhesInscrito() {
             <h3 className="secao-titulo">Dados pessoais</h3>
 
             <div className="form-group">
-              <label><FaIdCard /> Nome</label>
-              <input value={nome} onChange={e => setNome(e.target.value)} required minLength={2} />
+              <label htmlFor="nome-inscrito"><FaIdCard /> Nome<Obrigatorio /></label>
+              <input id="nome-inscrito" value={nome} onChange={e => setNome(e.target.value)} required minLength={2} maxLength={LIMITES.nomePessoa} />
             </div>
 
             <div className="form-group">
-              <label><FaEnvelope /> E-mail</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+              <label htmlFor="email-inscrito"><FaEnvelope /> E-mail<Obrigatorio /></label>
+              <input id="email-inscrito" type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                maxLength={LIMITES.email} placeholder={EXEMPLOS.email} />
             </div>
 
             {/* Telefone e WhatsApp só leitura: vêm do WhatsApp da pessoa e são o que

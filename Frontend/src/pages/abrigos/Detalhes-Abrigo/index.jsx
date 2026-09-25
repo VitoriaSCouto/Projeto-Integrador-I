@@ -15,6 +15,9 @@ import { preencherPorCep, geocodificar } from '../../../services/localizacao';
 import "../../pg_adm/style.css";
 import './DetalhesAbrigo.css';
 import SidebarAdm from '../../../components/SidebarAdm';
+import { fetchAdmin } from '../../../services/api';
+import { LIMITES, EXEMPLOS, somenteNome, somenteNumeros, mascaraCep, mascaraTelefone, erroDosCampos } from '../../../utils/campos';
+import { Obrigatorio, AvisoObrigatorios } from '../../../components/MarcasCampo';
 
 // ─── Badges das solicitações de ajuda ────────────────────────────────────────
 const badgeAjuda = {
@@ -108,7 +111,7 @@ function DetalhesAbrigo() {
 
     const buscarAbrigo = async () => {
       try {
-        const resposta = await fetch(`http://localhost:3000/api/abrigos/listar/${id}`);
+        const resposta = await fetchAdmin(`/abrigos/listar/${id}`);
         const dados = await resposta.json();
 
         setDadosAbrigo(dados)
@@ -163,7 +166,7 @@ function DetalhesAbrigo() {
     // ─── NOVO: busca as 3 últimas solicitações deste abrigo ──────────────────
     const buscarSolicitacoesAjuda = async () => {
       try {
-        const resposta = await fetch(`http://localhost:3000/api/solicitacoes-ajuda/abrigo/${id}?limite=3`)
+        const resposta = await fetchAdmin(`/solicitacoes-ajuda/abrigo/${id}?limite=3`)
         const dados = await resposta.json()
         setSolicitacoesAjuda(dados.solicitacoes ?? [])
       } catch (erro) {
@@ -183,6 +186,8 @@ function DetalhesAbrigo() {
 
   const handleImagem = (e) => {
     const arquivo = e.target.files[0]
+    // Cancelou a janela de seleção: não há arquivo
+    if (!arquivo) return
     const limiteMB = 2
     if (arquivo.size > limiteMB * 1024 * 1024) {
       alert(`A imagem deve ter no máximo ${limiteMB}MB.`)
@@ -283,8 +288,19 @@ function DetalhesAbrigo() {
       if (erroCapacidade) return
     }
 
+    // Confere telefone e CEP só se foram alterados — cadastros antigos fora do
+    // padrão continuam editáveis (a API faz a mesma coisa)
+    const erroCampos = erroDosCampos({
+      telefone: telefone !== (dadosAbrigo.telefone ?? '') ? telefone : null,
+      cep:      cep      !== (dadosAbrigo.cep ?? '')      ? cep      : null,
+    })
+    if (erroCampos) {
+      alert(erroCampos)
+      return
+    }
+
     try {
-      const resposta = await fetch(`http://localhost:3000/api/abrigos/atualizar/${id}`, {
+      const resposta = await fetchAdmin(`/abrigos/atualizar/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -346,7 +362,14 @@ function DetalhesAbrigo() {
   const handleExcluir = async () => {
     if (!confirm('Tem certeza que deseja excluir este abrigo?')) return;
     try {
-      await fetch(`http://localhost:3000/api/abrigos/excluir/${id}`, { method: 'DELETE' });
+      const resposta = await fetchAdmin(`/abrigos/excluir/${id}`, { method: 'DELETE' });
+      // Só volta para a lista se a API excluiu de verdade
+      // (ex: abrigo com solicitações de ajuda → a API recusa e explica o motivo)
+      if (!resposta.ok) {
+        const dados = await resposta.json().catch(() => ({}))
+        alert(dados.mensagem ?? 'Não foi possível excluir o abrigo.')
+        return
+      }
       navigate('/abrigos');
     } catch (erro) {
       console.error("Erro ao excluir:", erro);
@@ -449,8 +472,10 @@ function DetalhesAbrigo() {
           {/* ── COLUNA ESQUERDA ── */}
           <div className="form-column-left">
 
+            {editando && <AvisoObrigatorios />}
+
             <div className="form-group">
-              <label htmlFor="status">Status</label>
+              <label htmlFor="status">Status{editando && <Obrigatorio />}</label>
               <select
                 id="status"
                 value={status}
@@ -466,20 +491,22 @@ function DetalhesAbrigo() {
             </div>
 
             <div className="form-group">
-              <label><FaBuilding /> Nome do Abrigo</label>
+              <label htmlFor="nome-abrigo"><FaBuilding /> Nome do Abrigo{editando && <Obrigatorio />}</label>
               {editando ? (
-                <input value={nomeAbrigo} onChange={(e) => setNomeAbrigo(e.target.value)} />
+                <input id="nome-abrigo" value={nomeAbrigo} maxLength={LIMITES.nomeLocal} minLength={3} required
+                  onChange={(e) => setNomeAbrigo(e.target.value)} />
               ) : (
                 <p>{nomeAbrigo}</p>
               )}
             </div>
 
             <div className="form-group">
-              <label><FaPhoneAlt /> CEP</label>
+              <label htmlFor="cep-abrigo"><FaMapMarkedAlt /> CEP{editando && <Obrigatorio />}</label>
               {editando ? (
                 <>
-                  {/* Ao completar o CEP, preenche estado, cidade, bairro e rua */}
-                  <input value={cep} onChange={(e) => handleCep(e.target.value)} placeholder="Ex: 12090-590" maxLength={9} />
+                  {/* Ao completar o CEP, preenche estado, cidade, bairro e rua (só números; o hífen é automático) */}
+                  <input id="cep-abrigo" value={cep} inputMode="numeric" required
+                    onChange={(e) => handleCep(mascaraCep(e.target.value))} placeholder={EXEMPLOS.cep} maxLength={LIMITES.cep} />
                   <MensagemFeedback feedback={feedbackCep} />
                 </>
               ) : (
@@ -514,10 +541,11 @@ function DetalhesAbrigo() {
             )}
 
             <div className="form-group">
-              <label><FaMapMarkerAlt /> Endereço</label>
+              <label htmlFor="endereco-abrigo"><FaMapMarkerAlt /> Endereço{editando && <Obrigatorio />}</label>
               {editando ? (
                 <>
-                  <input value={endereco} onChange={(e) => setEndereco(e.target.value)} />
+                  <input id="endereco-abrigo" value={endereco} maxLength={LIMITES.endereco} required
+                    placeholder="Ex: Rua das Flores, 123" onChange={(e) => setEndereco(e.target.value)} />
                   <button
                     type="button"
                     onClick={handleGeocodificar}
@@ -556,27 +584,29 @@ function DetalhesAbrigo() {
             </div>
 
             <div className="form-group">
-              <label><FaPhoneAlt /> Telefone</label>
+              <label htmlFor="telefone-abrigo"><FaPhoneAlt /> Telefone{editando && <Obrigatorio />}</label>
               {editando ? (
-                <input value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+                <input id="telefone-abrigo" type="tel" value={telefone} inputMode="numeric" placeholder={EXEMPLOS.telefone}
+                  maxLength={LIMITES.telefone} required onChange={(e) => setTelefone(mascaraTelefone(e.target.value))} />
               ) : (
                 <p>{telefone}</p>
               )}
             </div>
 
             <div className="form-group">
-              <label><FaUser /> Responsável</label>
+              <label htmlFor="responsavel-abrigo"><FaUser /> Responsável{editando && <Obrigatorio />}</label>
               {editando ? (
-                <input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
+                <input id="responsavel-abrigo" value={responsavel} maxLength={LIMITES.nomePessoa} minLength={2} required
+                  onChange={(e) => setResponsavel(somenteNome(e.target.value))} />
               ) : (
                 <p>{responsavel}</p>
               )}
             </div>
 
             <div className="form-group">
-              <label><FaBuilding /> Tipo de Abrigo</label>
+              <label htmlFor="tipo-abrigo"><FaBuilding /> Tipo de Abrigo{editando && <Obrigatorio />}</label>
               {editando ? (
-                <select value={tipoAbrigo} onChange={(e) => setTipoAbrigo(e.target.value)} className="select-tipo-abrigo">
+                <select id="tipo-abrigo" required value={tipoAbrigo} onChange={(e) => setTipoAbrigo(e.target.value)} className="select-tipo-abrigo">
                   <option value="Escola">Escola</option>
                   <option value="Ginásio">Ginásio</option>
                   <option value="Igreja">Igreja</option>
@@ -592,17 +622,21 @@ function DetalhesAbrigo() {
             </div>
 
             <div className="form-group">
-              <label><FaPeopleArrows /> Capacidade Total</label>
+              <label htmlFor="capacidade-total"><FaPeopleArrows /> Capacidade Total{editando && <Obrigatorio />}</label>
               {editando ? (
                 <input
-                  type="number"
+                  type="text"
+                  id="capacidade-total"
                   name="capacidadeTotal"
+                  inputMode="numeric"
+                  maxLength={LIMITES.capacidadeDigitos}
                   value={capacidadeTotal}
                   required
                   onChange={(e) => {
-                    const total = parseInt(e.target.value)
-                    setCapacidadeTotal(total)
-                    validarCapacidade(capacidadeOcupada, total)
+                    // Só números (o type="number" aceitava "e", "+" e "-")
+                    const texto = somenteNumeros(e.target.value, LIMITES.capacidadeDigitos)
+                    setCapacidadeTotal(texto === '' ? '' : Number(texto))
+                    validarCapacidade(capacidadeOcupada, Number(texto) || 0)
                   }}
                 />
               ) : (
@@ -611,17 +645,21 @@ function DetalhesAbrigo() {
             </div>
 
             <div className="form-group">
-              <label><FaPeopleArrows /> Capacidade Ocupada</label>
+              <label htmlFor="capacidade-ocupada"><FaPeopleArrows /> Capacidade Ocupada{editando && <Obrigatorio />}</label>
               {editando ? (
                 <input
-                  type="number"
+                  type="text"
+                  id="capacidade-ocupada"
                   name="capacidadeOcupada"
+                  inputMode="numeric"
+                  maxLength={LIMITES.capacidadeDigitos}
                   value={capacidadeOcupada}
+                  required
                   className={`input-capacidade ${erroCapacidade ? 'input-erro' : ''}`}
                   onChange={(e) => {
-                    const ocupada = parseInt(e.target.value)
-                    setCapacidadeOcupada(ocupada)
-                    validarCapacidade(ocupada, capacidadeTotal)
+                    const texto = somenteNumeros(e.target.value, LIMITES.capacidadeDigitos)
+                    setCapacidadeOcupada(texto === '' ? '' : Number(texto))
+                    validarCapacidade(Number(texto) || 0, capacidadeTotal)
                   }}
                 />
               ) : (
@@ -690,9 +728,9 @@ function DetalhesAbrigo() {
                     </div>
                   ) : (
                     <label className="upload-dropzone">
-                      <input type="file" accept="image/*" onChange={handleImagem} style={{ display: 'none' }} />
+                      <input type="file" accept="image/jpeg,image/png" onChange={handleImagem} style={{ display: 'none' }} />
                       <FaUpload className="upload-icon" />
-                      <p>Faça upload da foto principal do abrigo</p>
+                      <p>Faça upload da foto principal do abrigo (JPG ou PNG, até 2 MB)</p>
                       <span className="btn-upload-trigger">Selecionar arquivo do computador</span>
                     </label>
                   )}

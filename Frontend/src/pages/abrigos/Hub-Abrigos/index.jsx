@@ -10,6 +10,7 @@ import { GoAlertFill } from "react-icons/go";
 import "../../pg_adm/style.css";
 import "../../../styles/listagem.css";
 import SidebarAdm from '../../../components/SidebarAdm';
+import { LIMITES } from '../../../utils/campos';
 import { API_URL } from '../../../services/api';
 import {
   ESTRUTURAS, SITUACOES, ocupacaoDe, vagasDe, corOcupacao, passaSituacao, normalizar, plural
@@ -166,6 +167,8 @@ const ListarAbrigos = () => {
               <FaSearch className="lg-busca-icone" />
               <input
                 placeholder="Buscar nome, bairro, responsável..."
+                aria-label="Buscar"
+                maxLength={LIMITES.busca}
                 value={filtros.busca}
                 onChange={e => mudarFiltro('busca', e.target.value)}
               />

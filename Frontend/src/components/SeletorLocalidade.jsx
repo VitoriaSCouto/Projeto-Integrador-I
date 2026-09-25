@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { FaMapMarkedAlt } from 'react-icons/fa';
 import { API_URL } from '../services/api';
+import { Obrigatorio, Opcional } from './MarcasCampo';
 
 // Busca uma rota pública da API (estados, cidades e bairros não exigem login)
 async function buscarJson(caminho) {
@@ -26,6 +27,11 @@ function SeletorLocalidade({
   obrigatorio = true
 }) {
   const [estados, setEstados] = useState([])
+  // ids únicos para ligar cada <label> ao seu <select> (pode haver mais de um seletor na tela)
+  const idBase = useId()
+
+  // Marca * / (opcional) só quando dá para editar
+  const marca = (exigido) => disabled ? null : (exigido ? <Obrigatorio /> : <Opcional />)
   const [estadoEscolhido, setEstadoEscolhido] = useState(null)
 
   // Listas guardadas por id para não buscar de novo a cada troca
@@ -99,8 +105,8 @@ function SeletorLocalidade({
   return (
     <>
       <div className="form-group">
-        <label><FaMapMarkedAlt /> Estado</label>
-        <select className="select-cidade" value={estadoId} disabled={disabled} onChange={handleEstado} required={obrigatorio}>
+        <label htmlFor={`${idBase}-estado`}><FaMapMarkedAlt /> Estado{marca(obrigatorio)}</label>
+        <select id={`${idBase}-estado`} className="select-cidade" value={estadoId} disabled={disabled} onChange={handleEstado} required={obrigatorio}>
           <option value="" disabled>Selecione o estado</option>
           {estados.map(est => (
             <option key={est.id_estado} value={est.id_estado}>{est.nome} ({est.sigla})</option>
@@ -114,8 +120,9 @@ function SeletorLocalidade({
       </div>
 
       <div className="form-group">
-        <label><FaMapMarkedAlt /> Cidade</label>
+        <label htmlFor={`${idBase}-cidade`}><FaMapMarkedAlt /> Cidade{marca(obrigatorio)}</label>
         <select
+          id={`${idBase}-cidade`}
           className="select-cidade"
           value={cidadeId ?? ''}
           disabled={disabled || !estadoId}
@@ -131,8 +138,9 @@ function SeletorLocalidade({
 
       {mostrarBairro && (
         <div className="form-group">
-          <label><FaMapMarkedAlt /> Bairro</label>
+          <label htmlFor={`${idBase}-bairro`}><FaMapMarkedAlt /> Bairro{marca(obrigatorio && bairroObrigatorio)}</label>
           <select
+            id={`${idBase}-bairro`}
             className="select-cidade"
             value={bairroId ?? ''}
             disabled={disabled || !cidadeId}
